@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { open } from "@tauri-apps/plugin-dialog";
 import "./App.css";
 
 interface EntryItem {
@@ -19,6 +20,7 @@ function App() {
     isOpen: boolean;
     currentIndex: number;
   }>({ isOpen: false, currentIndex: -1 });
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   const loadDirectory = async (path: string) => {
     if (!path) return;
@@ -32,19 +34,33 @@ function App() {
       setError(e.toString());
     } finally {
       setLoading(false);
+      setActiveMenu(null);
+    }
+  };
+
+  const openFolderDialog = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "フォルダを選択してください"
+      });
+      if (selected && typeof selected === 'string') {
+        loadDirectory(selected);
+      }
+    } catch (e: any) {
+      console.error(e);
     }
   };
 
   const goUp = () => {
     if (!currentPath) return;
-    // Simple parent directory logic for Windows/Unix
     const separator = currentPath.includes("\\") ? "\\" : "/";
     const parts = currentPath.split(separator).filter(Boolean);
     if (parts.length > 1) {
       const parent = currentPath.substring(0, currentPath.lastIndexOf(separator));
       loadDirectory(parent);
     } else if (parts.length === 1 && currentPath.includes(separator)) {
-      // Handle drive root case like C:\
       const driveRoot = parts[0] + separator;
       if (currentPath !== driveRoot) {
         loadDirectory(driveRoot);
@@ -55,7 +71,6 @@ function App() {
   const images = entries.filter(e => !e.is_dir);
 
   useEffect(() => {
-    // Setup drag and drop
     const unlisten = getCurrentWindow().onDragDropEvent((event) => {
       if (event.payload.type === 'drop') {
         const droppedPaths = event.payload.paths;
@@ -64,10 +79,7 @@ function App() {
         }
       }
     });
-
-    return () => {
-      unlisten.then(fn => fn());
-    };
+    return () => { unlisten.then(fn => fn()); };
   }, []);
 
   useEffect(() => {
@@ -89,19 +101,16 @@ function App() {
           setViewerState({ isOpen: false, currentIndex: -1 });
         }
       } else {
-        // Navigation shortcuts when viewer is closed
         if (e.key === "Escape" || e.key === "Backspace") {
           goUp();
         }
       }
-
       if (e.key.toLowerCase() === "f") {
         const win = getCurrentWindow();
         const isFull = await win.isFullscreen();
         await win.setFullscreen(!isFull);
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [viewerState.isOpen, images.length, currentPath]);
@@ -115,17 +124,41 @@ function App() {
     }
   };
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClick = () => setActiveMenu(null);
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
+
   return (
     <div className="app-container">
+      {/* Menu Bar (Windows style) */}
+      <nav className="menu-bar" onClick={(e) => e.stopPropagation()}>
+        <div className="menu-item">
+          <button 
+            className={`menu-button ${activeMenu === "file" ? "active" : ""}`}
+            onClick={() => setActiveMenu(activeMenu === "file" ? null : "file")}
+          >
+            ファイル(F)
+          </button>
+          {activeMenu === "file" && (
+            <ul className="menu-dropdown">
+              <li onClick={openFolderDialog}>フォルダを開く(O)...</li>
+              <li className="separator"></li>
+              <li onClick={() => getCurrentWindow().close()}>終了(X)</li>
+            </ul>
+          )}
+        </div>
+        <div className="menu-item">
+          <button className="menu-button">ヘルプ(H)</button>
+        </div>
+      </nav>
+
       <header className="top-bar">
-        <input
-          type="text"
-          value={currentPath}
-          onChange={(e) => setCurrentPath(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && loadDirectory(currentPath)}
-          placeholder="Folder path or drop a folder here"
-        />
-        <button onClick={() => loadDirectory(currentPath)}>Go</button>
+        <div className="current-path-display">
+          {currentPath || "フォルダを開くか、ここにドラッグ＆ドロップしてください"}
+        </div>
       </header>
 
       {error && <div className="error">{error}</div>}
