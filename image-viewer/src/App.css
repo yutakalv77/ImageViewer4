@@ -1,0 +1,206 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #1a1a1a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.top-bar {
+  padding: 10px;
+  background: #2a2a2a;
+  display: flex;
+  gap: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  z-index: 10;
+}
+
+.top-bar input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #333;
+  color: white;
+  outline: none;
+}
+
+.top-bar button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  background: #0066cc;
+  color: white;
+  cursor: pointer;
+}
+
+.error {
+  color: #ff4d4d;
+  padding: 8px 15px;
+  background: #331111;
+  font-size: 0.9em;
+  border-bottom: 1px solid #551111;
+}
+
+.main-content {
+  flex: 1;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto; /* ここで縦スクロールを制御 */
+  position: relative;
+  background: #1a1a1a;
+}
+
+.gallery {
+  display: grid;
+  /* 横160pxの固定幅で、画面幅に合わせて自動で折り返す */
+  grid-template-columns: repeat(auto-fill, 160px);
+  gap: 20px;
+  padding: 20px;
+  justify-content: center; /* 中央寄せ */
+}
+
+.entry-card {
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  background: #222;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  border: 1px solid #333;
+}
+
+.entry-card:hover {
+  transform: translateY(-4px);
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+.thumbnail-container {
+  width: 160px;
+  height: 226px; /* 縦長B5比率 */
+  background: #000;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.thumbnail-container img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain; /* 枠内に収める */
+}
+
+.no-thumbnail {
+  color: #444;
+  font-size: 0.8em;
+}
+
+.folder-icon {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: 1.2em;
+  background: rgba(0,0,0,0.5);
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.entry-name {
+  padding: 6px;
+  font-size: 0.75em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ccc;
+  background: #222;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #0066cc;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ビューアの設定 */
+.viewer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.98);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+.viewer-overlay img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.viewer-info {
+  position: absolute;
+  bottom: 20px;
+  background: rgba(0,0,0,0.6);
+  padding: 5px 15px;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 0.8em;
+}
