@@ -253,3 +253,156 @@ body {
   color: #fff;
   font-size: 0.8em;
 }
+
+/* Settings Modal */
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.settings-modal {
+  width: 700px;
+  height: 500px;
+  background: #2a2a2a;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid #444;
+}
+
+.settings-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #3a3a3a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 1.1em;
+  color: #eee;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 1.5em;
+  cursor: pointer;
+}
+
+.close-button:hover {
+  color: white;
+}
+
+.settings-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.settings-sidebar {
+  width: 180px;
+  background: #222;
+  border-right: 1px solid #3a3a3a;
+  padding: 10px 0;
+}
+
+.settings-menu-item {
+  padding: 10px 20px;
+  cursor: pointer;
+  color: #aaa;
+  font-size: 0.9em;
+}
+
+.settings-menu-item:hover {
+  background: #333;
+  color: #eee;
+}
+
+.settings-menu-item.active {
+  background: #0066cc;
+  color: white;
+}
+
+.settings-content {
+  flex: 1;
+  padding: 20px 30px;
+  overflow-y: auto;
+  color: #eee;
+}
+
+.settings-section h3 {
+  margin-top: 0;
+  font-size: 1em;
+  border-bottom: 1px solid #444;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.settings-group {
+  margin-bottom: 20px;
+}
+
+.settings-group label {
+  display: block;
+  font-size: 0.85em;
+  color: #aaa;
+  margin-bottom: 8px;
+}
+
+.path-input-group {
+  display: flex;
+  gap: 10px;
+}
+
+.path-input-group input {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #444;
+  color: #eee;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.settings-button {
+  background: #444;
+  border: 1px solid #555;
+  color: #eee;
+  padding: 6px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.settings-button:hover {
+  background: #555;
+}
+
+.settings-button.primary {
+  background: #0066cc;
+  border-color: #0077ee;
+}
+
+.settings-button.primary:hover {
+  background: #0077ee;
+}
+
+.settings-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #3a3a3a;
+  display: flex;
+  justify-content: flex-end;
+}

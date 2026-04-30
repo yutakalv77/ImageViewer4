@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
+import { appDataDir } from "@tauri-apps/api/path";
 import "./App.css";
 
 interface EntryItem {
@@ -21,6 +22,29 @@ function App() {
     currentIndex: number;
   }>({ isOpen: false, currentIndex: -1 });
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  // Settings states
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeSettingsTab, setActiveSettingsTab] = useState("storage");
+  const [dataStoragePath, setDataStoragePath] = useState("");
+
+  useEffect(() => {
+    const initSettings = async () => {
+      const savedPath = localStorage.getItem("dataStoragePath");
+      if (savedPath) {
+        setDataStoragePath(savedPath);
+      } else {
+        try {
+          const defaultPath = await appDataDir();
+          setDataStoragePath(defaultPath);
+          localStorage.setItem("dataStoragePath", defaultPath);
+        } catch (e) {
+          console.error("Failed to get default app data dir:", e);
+        }
+      }
+    };
+    initSettings();
+  }, []);
 
   const loadDirectory = async (path: string) => {
     if (!path) return;
@@ -47,6 +71,22 @@ function App() {
       });
       if (selected && typeof selected === 'string') {
         loadDirectory(selected);
+      }
+    } catch (e: any) {
+      console.error(e);
+    }
+  };
+
+  const changeStoragePath = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "保存先フォルダを選択してください"
+      });
+      if (selected && typeof selected === 'string') {
+        setDataStoragePath(selected);
+        localStorage.setItem("dataStoragePath", selected);
       }
     } catch (e: any) {
       console.error(e);
@@ -100,6 +140,10 @@ function App() {
         } else if (e.key === "Escape") {
           setViewerState({ isOpen: false, currentIndex: -1 });
         }
+      } else if (isSettingsOpen) {
+        if (e.key === "Escape") {
+          setIsSettingsOpen(false);
+        }
       } else {
         if (e.key === "Escape" || e.key === "Backspace") {
           goUp();
@@ -113,7 +157,7 @@ function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewerState.isOpen, images.length, currentPath]);
+  }, [viewerState.isOpen, images.length, currentPath, isSettingsOpen]);
 
   const handleEntryClick = (entry: EntryItem) => {
     if (entry.is_dir) {
@@ -149,6 +193,14 @@ function App() {
               <li onClick={() => getCurrentWindow().close()}>終了(X)</li>
             </ul>
           )}
+        </div>
+        <div className="menu-item">
+          <button 
+            className={`menu-button ${activeMenu === "settings" ? "active" : ""}`}
+            onClick={() => { setIsSettingsOpen(true); setActiveMenu(null); }}
+          >
+            設定(S)
+          </button>
         </div>
         <div className="menu-item">
           <button className="menu-button">ヘルプ(H)</button>
@@ -204,6 +256,60 @@ function App() {
           />
           <div className="viewer-info">
             {viewerState.currentIndex + 1} / {images.length} : {images[viewerState.currentIndex].name}
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="settings-overlay" onClick={() => setIsSettingsOpen(false)}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-header">
+              <h2>設定</h2>
+              <button className="close-button" onClick={() => setIsSettingsOpen(false)}>&times;</button>
+            </div>
+            <div className="settings-body">
+              <div className="settings-sidebar">
+                <div 
+                  className={`settings-menu-item ${activeSettingsTab === "storage" ? "active" : ""}`}
+                  onClick={() => setActiveSettingsTab("storage")}
+                >
+                  データ保存
+                </div>
+                <div 
+                  className={`settings-menu-item ${activeSettingsTab === "general" ? "active" : ""}`}
+                  onClick={() => setActiveSettingsTab("general")}
+                >
+                  一般
+                </div>
+              </div>
+              <div className="settings-content">
+                {activeSettingsTab === "storage" && (
+                  <div className="settings-section">
+                    <h3>データ保存の設定</h3>
+                    <div className="settings-group">
+                      <label>お気に入り・履歴データの保存先</label>
+                      <div className="path-input-group">
+                        <input type="text" value={dataStoragePath} readOnly />
+                        <button className="settings-button" onClick={changeStoragePath}>変更...</button>
+                      </div>
+                      <p style={{fontSize: '0.8em', color: '#888', marginTop: '10px'}}>
+                        ※お気に入りや閲覧履歴などの情報は、このフォルダ内に保存されます。
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {activeSettingsTab === "general" && (
+                  <div className="settings-section">
+                    <h3>一般設定</h3>
+                    <p>今後のアップデートで機能が追加される予定です。</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="settings-footer">
+              <button className="settings-button primary" onClick={() => setIsSettingsOpen(false)}>閉じる</button>
+            </div>
           </div>
         </div>
       )}
