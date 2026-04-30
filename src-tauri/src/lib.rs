@@ -34,9 +34,21 @@ fn find_first_image_in_dir(dir_path: &Path) -> Option<String> {
     None
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DirectoryResult {
+    entries: Vec<EntryItem>,
+    path: String,
+}
+
 #[tauri::command]
-fn get_directory_entries(path: String) -> Result<Vec<EntryItem>, String> {
-    let root = Path::new(&path);
+fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
+    let p = Path::new(&path);
+    let root = if p.is_file() {
+        p.parent().ok_or("No parent directory")?
+    } else {
+        p
+    };
+
     if !root.is_dir() {
         return Err("Not a directory".to_string());
     }
@@ -78,7 +90,10 @@ fn get_directory_entries(path: String) -> Result<Vec<EntryItem>, String> {
         }
     });
 
-    Ok(result)
+    Ok(DirectoryResult {
+        entries: result,
+        path: root.to_string_lossy().to_string(),
+    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

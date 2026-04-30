@@ -26,10 +26,10 @@ function App() {
     if (!path) return;
     setLoading(true);
     try {
-      const result: EntryItem[] = await invoke("get_directory_entries", { path });
-      setEntries(result);
+      const result: { entries: EntryItem[], path: string } = await invoke("get_directory_entries", { path });
+      setEntries(result.entries);
       setError(null);
-      setCurrentPath(path);
+      setCurrentPath(result.path);
     } catch (e: any) {
       setError(e.toString());
     } finally {
