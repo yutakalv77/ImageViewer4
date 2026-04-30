@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { HistoryEntry } from "../types";
 
 interface MenuBarProps {
+  history: HistoryEntry[];
   onOpenFolder: () => void;
   onOpenSettings: () => void;
+  onSelectHistory: (path: string) => void;
 }
 
-export function MenuBar({ onOpenFolder, onOpenSettings }: MenuBarProps) {
+export function MenuBar({ history, onOpenFolder, onOpenSettings, onSelectHistory }: MenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   useEffect(() => {
@@ -14,6 +17,8 @@ export function MenuBar({ onOpenFolder, onOpenSettings }: MenuBarProps) {
     window.addEventListener("click", handleClick);
     return () => window.removeEventListener("click", handleClick);
   }, []);
+
+  const latestHistory = history.slice(0, 10);
 
   return (
     <nav className="menu-bar" onClick={(e) => e.stopPropagation()}>
@@ -32,6 +37,29 @@ export function MenuBar({ onOpenFolder, onOpenSettings }: MenuBarProps) {
           </ul>
         )}
       </div>
+
+      <div className="menu-item">
+        <button 
+          className={`menu-button ${activeMenu === "history" ? "active" : ""}`}
+          onClick={() => setActiveMenu(activeMenu === "history" ? null : "history")}
+        >
+          履歴(R)
+        </button>
+        {activeMenu === "history" && (
+          <ul className="menu-dropdown history-dropdown">
+            {latestHistory.length > 0 ? (
+              latestHistory.map((entry, idx) => (
+                <li key={idx} onClick={() => { onSelectHistory(entry.path); setActiveMenu(null); }}>
+                  {entry.path}
+                </li>
+              ))
+            ) : (
+              <li className="disabled">履歴はありません</li>
+            )}
+          </ul>
+        )}
+      </div>
+
       <div className="menu-item">
         <button 
           className={`menu-button ${activeMenu === "settings" ? "active" : ""}`}

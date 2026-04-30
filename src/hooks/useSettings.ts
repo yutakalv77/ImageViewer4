@@ -6,9 +6,12 @@ export function useSettings() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState("storage");
   const [dataStoragePath, setDataStoragePath] = useState("");
+  const [historyRetentionDays, setHistoryRetentionDays] = useState(30);
+  const [startupFolderType, setStartupFolderType] = useState<string>("none"); // "none" or "last"
 
   useEffect(() => {
     const initSettings = async () => {
+      // Storage Path
       const savedPath = localStorage.getItem("dataStoragePath");
       if (savedPath) {
         setDataStoragePath(savedPath);
@@ -20,6 +23,18 @@ export function useSettings() {
         } catch (e) {
           console.error("Failed to get default app data dir:", e);
         }
+      }
+
+      // History Retention
+      const savedDays = localStorage.getItem("historyRetentionDays");
+      if (savedDays !== null) {
+        setHistoryRetentionDays(parseInt(savedDays, 10));
+      }
+
+      // Startup Folder Type
+      const savedStartupType = localStorage.getItem("startupFolderType");
+      if (savedStartupType !== null) {
+        setStartupFolderType(savedStartupType);
       }
     };
     initSettings();
@@ -41,6 +56,17 @@ export function useSettings() {
     }
   };
 
+  const updateHistoryRetention = (days: number) => {
+    const value = Math.max(0, Math.min(1000, days));
+    setHistoryRetentionDays(value);
+    localStorage.setItem("historyRetentionDays", value.toString());
+  };
+
+  const updateStartupFolderType = (type: string) => {
+    setStartupFolderType(type);
+    localStorage.setItem("startupFolderType", type);
+  };
+
   return {
     isSettingsOpen,
     setIsSettingsOpen,
@@ -48,5 +74,9 @@ export function useSettings() {
     setActiveSettingsTab,
     dataStoragePath,
     changeStoragePath,
+    historyRetentionDays,
+    updateHistoryRetention,
+    startupFolderType,
+    updateStartupFolderType,
   };
 }

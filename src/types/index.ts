@@ -14,3 +14,8 @@ export interface DirectoryResult {
   entries: EntryItem[];
   path: string;
 }
+
+export interface HistoryEntry {
+  path: string;
+  lastVisited: number; // timestamp
+}

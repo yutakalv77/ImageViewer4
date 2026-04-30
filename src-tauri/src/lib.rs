@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
@@ -28,7 +28,7 @@ fn find_first_image_in_dir(dir_path: &Path) -> Option<String> {
                 return Some(path.to_string_lossy().to_string());
             }
         }
-        // If no image in top level, maybe search one level deeper? 
+        // If no image in top level, maybe search one level deeper?
         // For simplicity, we just check top level for now as per requirements.
     }
     None
@@ -58,7 +58,8 @@ fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
         for entry in entries.flatten() {
             let entry_path = entry.path();
             let is_dir = entry_path.is_dir();
-            let name = entry_path.file_name()
+            let name = entry_path
+                .file_name()
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_default();
 
@@ -99,6 +100,7 @@ fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![get_directory_entries])

@@ -73,10 +73,17 @@ body {
   z-index: 101;
 }
 
+.menu-dropdown.history-dropdown {
+  min-width: 540px; /* 180px * 3 */
+}
+
 .menu-dropdown li {
   padding: 6px 20px;
   color: #ccc;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .menu-dropdown li:hover {

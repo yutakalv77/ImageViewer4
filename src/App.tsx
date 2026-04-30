@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useFileSystem } from "./hooks/useFileSystem";
 import { useSettings } from "./hooks/useSettings";
+import { useHistory } from "./hooks/useHistory";
 import { MenuBar } from "./components/MenuBar";
 import { TopBar } from "./components/TopBar";
 import { Gallery } from "./components/Gallery";
@@ -27,15 +28,44 @@ function App() {
     activeSettingsTab,
     setActiveSettingsTab,
     dataStoragePath,
-    changeStoragePath
+    changeStoragePath,
+    historyRetentionDays,
+    updateHistoryRetention,
+    startupFolderType,
+    updateStartupFolderType,
   } = useSettings();
+
+  const {
+    history,
+    recordHistory,
+    isLoaded: isHistoryLoaded,
+  } = useHistory(dataStoragePath, historyRetentionDays);
 
   const [viewerState, setViewerState] = useState<ViewerState>({ 
     isOpen: false, 
     currentIndex: -1 
   });
 
+  const [isStarted, setIsStarted] = useState(false);
+
+  // Handle Startup Path
+  useEffect(() => {
+    if (isHistoryLoaded && !isStarted) {
+      if (startupFolderType === "last" && history.length > 0) {
+        loadDirectory(history[0].path);
+      }
+      setIsStarted(true);
+    }
+  }, [isHistoryLoaded, isStarted, startupFolderType, history, loadDirectory]);
+
   const images = useMemo(() => entries.filter(e => !e.is_dir), [entries]);
+
+  // Record history when currentPath changes
+  useEffect(() => {
+    if (currentPath && isStarted) {
+      recordHistory(currentPath);
+    }
+  }, [currentPath, recordHistory, isStarted]);
 
   // Drag and Drop
   useEffect(() => {
@@ -102,8 +132,10 @@ function App() {
   return (
     <div className="app-container">
       <MenuBar 
+        history={history}
         onOpenFolder={openFolderDialog} 
         onOpenSettings={() => setIsSettingsOpen(true)} 
+        onSelectHistory={loadDirectory}
       />
 
       <TopBar currentPath={currentPath} />
@@ -127,9 +159,13 @@ function App() {
         isOpen={isSettingsOpen}
         activeTab={activeSettingsTab}
         dataStoragePath={dataStoragePath}
+        historyRetentionDays={historyRetentionDays}
+        startupFolderType={startupFolderType}
         onClose={() => setIsSettingsOpen(false)}
         onTabChange={setActiveSettingsTab}
         onChangeStoragePath={changeStoragePath}
+        onUpdateHistoryRetention={updateHistoryRetention}
+        onUpdateStartupFolderType={updateStartupFolderType}
       />
     </div>
   );
