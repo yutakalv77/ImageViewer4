@@ -1,115 +1,43 @@
-import { useState, useEffect } from "react";
-import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { useState, useEffect, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { open } from "@tauri-apps/plugin-dialog";
-import { appDataDir } from "@tauri-apps/api/path";
+import { useFileSystem } from "./hooks/useFileSystem";
+import { useSettings } from "./hooks/useSettings";
+import { MenuBar } from "./components/MenuBar";
+import { TopBar } from "./components/TopBar";
+import { Gallery } from "./components/Gallery";
+import { ImageViewer } from "./components/ImageViewer";
+import { SettingsModal } from "./components/SettingsModal";
+import { EntryItem, ViewerState } from "./types";
 import "./App.css";
 
-interface EntryItem {
-  name: string;
-  path: string;
-  is_dir: boolean;
-  thumbnail_path: string | null;
-}
-
 function App() {
-  const [currentPath, setCurrentPath] = useState("");
-  const [entries, setEntries] = useState<EntryItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [viewerState, setViewerState] = useState<{
-    isOpen: boolean;
-    currentIndex: number;
-  }>({ isOpen: false, currentIndex: -1 });
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const { 
+    currentPath, 
+    entries, 
+    loading, 
+    error, 
+    loadDirectory, 
+    openFolderDialog, 
+    goUp 
+  } = useFileSystem();
 
-  // Settings states
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [activeSettingsTab, setActiveSettingsTab] = useState("storage");
-  const [dataStoragePath, setDataStoragePath] = useState("");
+  const {
+    isSettingsOpen,
+    setIsSettingsOpen,
+    activeSettingsTab,
+    setActiveSettingsTab,
+    dataStoragePath,
+    changeStoragePath
+  } = useSettings();
 
-  useEffect(() => {
-    const initSettings = async () => {
-      const savedPath = localStorage.getItem("dataStoragePath");
-      if (savedPath) {
-        setDataStoragePath(savedPath);
-      } else {
-        try {
-          const defaultPath = await appDataDir();
-          setDataStoragePath(defaultPath);
-          localStorage.setItem("dataStoragePath", defaultPath);
-        } catch (e) {
-          console.error("Failed to get default app data dir:", e);
-        }
-      }
-    };
-    initSettings();
-  }, []);
+  const [viewerState, setViewerState] = useState<ViewerState>({ 
+    isOpen: false, 
+    currentIndex: -1 
+  });
 
-  const loadDirectory = async (path: string) => {
-    if (!path) return;
-    setLoading(true);
-    try {
-      const result: { entries: EntryItem[], path: string } = await invoke("get_directory_entries", { path });
-      setEntries(result.entries);
-      setError(null);
-      setCurrentPath(result.path);
-    } catch (e: any) {
-      setError(e.toString());
-    } finally {
-      setLoading(false);
-      setActiveMenu(null);
-    }
-  };
+  const images = useMemo(() => entries.filter(e => !e.is_dir), [entries]);
 
-  const openFolderDialog = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: "フォルダを選択してください"
-      });
-      if (selected && typeof selected === 'string') {
-        loadDirectory(selected);
-      }
-    } catch (e: any) {
-      console.error(e);
-    }
-  };
-
-  const changeStoragePath = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: "保存先フォルダを選択してください"
-      });
-      if (selected && typeof selected === 'string') {
-        setDataStoragePath(selected);
-        localStorage.setItem("dataStoragePath", selected);
-      }
-    } catch (e: any) {
-      console.error(e);
-    }
-  };
-
-  const goUp = () => {
-    if (!currentPath) return;
-    const separator = currentPath.includes("\\") ? "\\" : "/";
-    const parts = currentPath.split(separator).filter(Boolean);
-    if (parts.length > 1) {
-      const parent = currentPath.substring(0, currentPath.lastIndexOf(separator));
-      loadDirectory(parent);
-    } else if (parts.length === 1 && currentPath.includes(separator)) {
-      const driveRoot = parts[0] + separator;
-      if (currentPath !== driveRoot) {
-        loadDirectory(driveRoot);
-      }
-    }
-  };
-
-  const images = entries.filter(e => !e.is_dir);
-
+  // Drag and Drop
   useEffect(() => {
     const unlisten = getCurrentWindow().onDragDropEvent((event) => {
       if (event.payload.type === 'drop') {
@@ -120,8 +48,9 @@ function App() {
       }
     });
     return () => { unlisten.then(fn => fn()); };
-  }, []);
+  }, [loadDirectory]);
 
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (viewerState.isOpen) {
@@ -149,15 +78,17 @@ function App() {
           goUp();
         }
       }
+
       if (e.key.toLowerCase() === "f") {
         const win = getCurrentWindow();
         const isFull = await win.isFullscreen();
         await win.setFullscreen(!isFull);
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewerState.isOpen, images.length, currentPath, isSettingsOpen]);
+  }, [viewerState.isOpen, isSettingsOpen, images.length, goUp]);
 
   const handleEntryClick = (entry: EntryItem) => {
     if (entry.is_dir) {
@@ -168,151 +99,38 @@ function App() {
     }
   };
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClick = () => setActiveMenu(null);
-    window.addEventListener("click", handleClick);
-    return () => window.removeEventListener("click", handleClick);
-  }, []);
-
   return (
     <div className="app-container">
-      {/* Menu Bar (Windows style) */}
-      <nav className="menu-bar" onClick={(e) => e.stopPropagation()}>
-        <div className="menu-item">
-          <button 
-            className={`menu-button ${activeMenu === "file" ? "active" : ""}`}
-            onClick={() => setActiveMenu(activeMenu === "file" ? null : "file")}
-          >
-            ファイル(F)
-          </button>
-          {activeMenu === "file" && (
-            <ul className="menu-dropdown">
-              <li onClick={openFolderDialog}>フォルダを開く(O)...</li>
-              <li className="separator"></li>
-              <li onClick={() => getCurrentWindow().close()}>終了(X)</li>
-            </ul>
-          )}
-        </div>
-        <div className="menu-item">
-          <button 
-            className={`menu-button ${activeMenu === "settings" ? "active" : ""}`}
-            onClick={() => { setIsSettingsOpen(true); setActiveMenu(null); }}
-          >
-            設定(S)
-          </button>
-        </div>
-        <div className="menu-item">
-          <button className="menu-button">ヘルプ(H)</button>
-        </div>
-      </nav>
+      <MenuBar 
+        onOpenFolder={openFolderDialog} 
+        onOpenSettings={() => setIsSettingsOpen(true)} 
+      />
 
-      <header className="top-bar">
-        <div className="current-path-display">
-          {currentPath || "フォルダを開くか、ここにドラッグ＆ドロップしてください"}
-        </div>
-      </header>
+      <TopBar currentPath={currentPath} />
 
       {error && <div className="error">{error}</div>}
 
-      <div className="main-content">
-        {loading && (
-          <div className="loading-overlay">
-            <div className="spinner"></div>
-            <p>Loading...</p>
-          </div>
-        )}
+      <Gallery 
+        entries={entries} 
+        loading={loading} 
+        currentPath={currentPath} 
+        onEntryClick={handleEntryClick} 
+      />
 
-        <div className="gallery">
-          {entries.map((entry, idx) => (
-            <div 
-              key={idx} 
-              className={`entry-card ${entry.is_dir ? 'is-dir' : ''}`}
-              onClick={() => handleEntryClick(entry)}
-            >
-              <div className="thumbnail-container">
-                {entry.thumbnail_path ? (
-                  <img src={convertFileSrc(entry.thumbnail_path)} alt={entry.name} loading="lazy" />
-                ) : (
-                  <div className="no-thumbnail">Folder</div>
-                )}
-                {entry.is_dir && <div className="folder-icon">📁</div>}
-              </div>
-              <div className="entry-name" title={entry.name}>{entry.name}</div>
-            </div>
-          ))}
-          {!loading && entries.length === 0 && currentPath && (
-            <div className="empty-msg">No images or folders found.</div>
-          )}
-        </div>
-      </div>
+      <ImageViewer 
+        images={images} 
+        currentIndex={viewerState.currentIndex} 
+        onClose={() => setViewerState({ isOpen: false, currentIndex: -1 })} 
+      />
 
-      {viewerState.isOpen && viewerState.currentIndex >= 0 && (
-        <div className="viewer-overlay" onClick={() => setViewerState({ isOpen: false, currentIndex: -1 })}>
-          <img 
-            src={convertFileSrc(images[viewerState.currentIndex].path)} 
-            alt="Full View" 
-            onClick={(e) => e.stopPropagation()}
-          />
-          <div className="viewer-info">
-            {viewerState.currentIndex + 1} / {images.length} : {images[viewerState.currentIndex].name}
-          </div>
-        </div>
-      )}
-
-      {/* Settings Modal */}
-      {isSettingsOpen && (
-        <div className="settings-overlay" onClick={() => setIsSettingsOpen(false)}>
-          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="settings-header">
-              <h2>設定</h2>
-              <button className="close-button" onClick={() => setIsSettingsOpen(false)}>&times;</button>
-            </div>
-            <div className="settings-body">
-              <div className="settings-sidebar">
-                <div 
-                  className={`settings-menu-item ${activeSettingsTab === "storage" ? "active" : ""}`}
-                  onClick={() => setActiveSettingsTab("storage")}
-                >
-                  データ保存
-                </div>
-                <div 
-                  className={`settings-menu-item ${activeSettingsTab === "general" ? "active" : ""}`}
-                  onClick={() => setActiveSettingsTab("general")}
-                >
-                  一般
-                </div>
-              </div>
-              <div className="settings-content">
-                {activeSettingsTab === "storage" && (
-                  <div className="settings-section">
-                    <h3>データ保存の設定</h3>
-                    <div className="settings-group">
-                      <label>お気に入り・履歴データの保存先</label>
-                      <div className="path-input-group">
-                        <input type="text" value={dataStoragePath} readOnly />
-                        <button className="settings-button" onClick={changeStoragePath}>変更...</button>
-                      </div>
-                      <p style={{fontSize: '0.8em', color: '#888', marginTop: '10px'}}>
-                        ※お気に入りや閲覧履歴などの情報は、このフォルダ内に保存されます。
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {activeSettingsTab === "general" && (
-                  <div className="settings-section">
-                    <h3>一般設定</h3>
-                    <p>今後のアップデートで機能が追加される予定です。</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="settings-footer">
-              <button className="settings-button primary" onClick={() => setIsSettingsOpen(false)}>閉じる</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsModal 
+        isOpen={isSettingsOpen}
+        activeTab={activeSettingsTab}
+        dataStoragePath={dataStoragePath}
+        onClose={() => setIsSettingsOpen(false)}
+        onTabChange={setActiveSettingsTab}
+        onChangeStoragePath={changeStoragePath}
+      />
     </div>
   );
 }
