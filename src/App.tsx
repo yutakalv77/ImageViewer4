@@ -83,8 +83,21 @@ function App() {
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      const win = getCurrentWindow();
+
       if (viewerState.isOpen) {
-        if (e.key === "ArrowDown" || e.key === " ") {
+        if (e.key.toLowerCase() === "f" || e.code === "KeyF") {
+          // Toggle full screen in viewer
+          const isFull = await win.isFullscreen();
+          await win.setFullscreen(!isFull);
+        } else if (e.key === "Escape" || e.key === "Backspace") {
+          // Exit full screen if active and close viewer
+          const isFull = await win.isFullscreen();
+          if (isFull) {
+            await win.setFullscreen(false);
+          }
+          setViewerState({ isOpen: false, currentIndex: -1 });
+        } else if (e.key === "ArrowDown" || e.key === " ") {
           e.preventDefault();
           setViewerState(prev => ({
             ...prev,
@@ -96,8 +109,6 @@ function App() {
             ...prev,
             currentIndex: Math.max(prev.currentIndex - 1, 0)
           }));
-        } else if (e.key === "Escape") {
-          setViewerState({ isOpen: false, currentIndex: -1 });
         }
       } else if (isSettingsOpen) {
         if (e.key === "Escape") {
@@ -107,12 +118,9 @@ function App() {
         if (e.key === "Escape" || e.key === "Backspace") {
           goUp();
         }
-      }
-
-      if (e.key.toLowerCase() === "f") {
-        const win = getCurrentWindow();
-        const isFull = await win.isFullscreen();
-        await win.setFullscreen(!isFull);
+        
+        // Optional: toggle full screen even in gallery? 
+        // User asked specifically "when viewing a single image", so kept it above.
       }
     };
 
