@@ -1,100 +1,89 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { EntryItem } from "../types";
 import { EntryCard } from "./EntryCard";
+import { ContextMenu } from "./ContextMenu";
+import { useGalleryNavigation } from "../hooks/useGalleryNavigation";
 
 interface GalleryProps {
   entries: EntryItem[];
   loading: boolean;
   currentPath: string;
   onEntryClick: (entry: EntryItem) => void;
+  onRefresh: () => void;
 }
 
-export function Gallery({ entries, loading, currentPath, onEntryClick }: GalleryProps) {
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const galleryRef = useRef<HTMLDivElement>(null);
+export function Gallery({ entries, loading, currentPath, onEntryClick, onRefresh }: GalleryProps) {
+  const {
+    selectedIndex,
+    setSelectedIndex,
+    editingIndex,
+    setEditingIndex,
+    galleryRef,
+    reset
+  } = useGalleryNavigation(entries, onEntryClick);
 
-  // Reset selection when path changes
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, entry: EntryItem, index: number } | null>(null);
+
+  // Reset navigation state when path changes
   useEffect(() => {
-    setSelectedIndex(-1);
-  }, [currentPath]);
+    reset();
+    setContextMenu(null);
+  }, [currentPath, reset]);
 
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if some overlay is open (viewer, settings)
-      if (document.querySelector('.viewer-overlay') || document.querySelector('.settings-overlay')) {
-        return;
-      }
+  const handleContextMenu = (e: React.MouseEvent, entry: EntryItem, index: number) => {
+    e.preventDefault();
+    setSelectedIndex(index);
+    setContextMenu({ x: e.clientX, y: e.clientY, entry, index });
+  };
 
-      if (entries.length === 0) return;
+  const handleRename = useCallback(async (index: number, newName: string) => {
+    const entry = entries[index];
+    setEditingIndex(-1);
+    
+    if (!newName || newName === entry.name) return;
 
-      let nextIndex = selectedIndex;
+    try {
+      const oldPath = entry.path;
+      const separator = oldPath.includes('\\') ? '\\' : '/';
+      const pathParts = oldPath.split(separator);
+      pathParts.pop();
+      const newPath = [...pathParts, newName].join(separator);
 
-      const getColumnCount = () => {
-        if (!galleryRef.current) return 0;
-        const style = window.getComputedStyle(galleryRef.current);
-        const gridTemplateColumns = style.getPropertyValue('grid-template-columns');
-        // split by space and filter out empty strings (e.g. from multiple spaces or trailing space)
-        return gridTemplateColumns.split(/\s+/).filter(c => c !== '').length;
-      };
-
-      if (e.key === "ArrowRight") {
-        if (selectedIndex === -1) {
-          nextIndex = 0;
-        } else {
-          nextIndex = Math.min(selectedIndex + 1, entries.length - 1);
-        }
-      } else if (e.key === "ArrowLeft") {
-        if (selectedIndex === -1) {
-          nextIndex = 0;
-        } else {
-          nextIndex = Math.max(selectedIndex - 1, 0);
-        }
-      } else if (e.key === "ArrowDown") {
-        const cols = getColumnCount();
-        if (selectedIndex === -1) {
-          nextIndex = 0;
-        } else {
-          nextIndex = Math.min(selectedIndex + cols, entries.length - 1);
-        }
-      } else if (e.key === "ArrowUp") {
-        const cols = getColumnCount();
-        if (selectedIndex === -1) {
-          nextIndex = 0;
-        } else {
-          nextIndex = Math.max(selectedIndex - cols, 0);
-        }
-      } else if (e.key === "Enter") {
-        if (selectedIndex >= 0) {
-          onEntryClick(entries[selectedIndex]);
-        }
-        return;
-      } else {
-        return;
-      }
-
-      if (nextIndex !== selectedIndex) {
-        e.preventDefault();
-        setSelectedIndex(nextIndex);
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [entries, selectedIndex, onEntryClick]);
-
-  // Scroll into view when selection changes
-  useEffect(() => {
-    if (selectedIndex >= 0 && galleryRef.current) {
-      const selectedEl = galleryRef.current.children[selectedIndex] as HTMLElement;
-      if (selectedEl) {
-        // use scrollIntoView with block: 'nearest' to avoid unnecessary scrolling if already in view
-        selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
+      await invoke("rename_entry", { oldPath, newPath });
+      onRefresh();
+    } catch (err) {
+      console.error("Failed to rename:", err);
+      alert("名前の変更に失敗しました");
     }
-  }, [selectedIndex]);
+  }, [entries, onRefresh, setEditingIndex]);
+
+  const copyToClipboard = async (path: string) => {
+    try {
+      await writeText(path);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleReveal = async (path: string) => {
+    try {
+      await revealItemInDir(path);
+    } catch (err) {
+      console.error("Failed to reveal:", err);
+    }
+  };
+
+  const menuItems = contextMenu ? [
+    { label: "エクスプローラーで表示", onClick: () => handleReveal(contextMenu.entry.path) },
+    { label: "クリップボードにコピー", onClick: () => copyToClipboard(contextMenu.entry.path) },
+    { separator: true, label: "名前を変更", onClick: () => setEditingIndex(contextMenu.index) },
+  ] : [];
 
   return (
-    <div className="main-content">
+    <div className="main-content" onContextMenu={(e) => e.preventDefault()}>
       {loading && (
         <div className="loading-overlay">
           <div className="spinner"></div>
@@ -108,16 +97,29 @@ export function Gallery({ entries, loading, currentPath, onEntryClick }: Gallery
             key={`${entry.path}-${idx}`} 
             entry={entry} 
             isSelected={idx === selectedIndex}
+            isEditing={idx === editingIndex}
             onClick={() => {
               setSelectedIndex(idx);
               onEntryClick(entry);
             }} 
+            onContextMenu={(e) => handleContextMenu(e, entry, idx)}
+            onRenameComplete={(newName) => handleRename(idx, newName)}
+            onRenameCancel={() => setEditingIndex(-1)}
           />
         ))}
         {!loading && entries.length === 0 && currentPath && (
           <div className="empty-msg">No images or folders found.</div>
         )}
       </div>
+
+      {contextMenu && (
+        <ContextMenu 
+          x={contextMenu.x} 
+          y={contextMenu.y} 
+          items={menuItems} 
+          onClose={() => setContextMenu(null)} 
+        />
+      )}
     </div>
   );
 }

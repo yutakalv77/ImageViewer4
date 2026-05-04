@@ -21,6 +21,7 @@
     "core:window:allow-start-dragging",
     "core:window:allow-start-resize-dragging",
     "window-state:default",
+    "clipboard-manager:allow-write-text",
     "core:path:default",
     "dialog:default",
     "fs:default",
@@ -38,6 +39,10 @@
     },
     {
       "identifier": "fs:allow-mkdir",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "fs:allow-rename",
       "allow": [{ "path": "**" }]
     }
   ]

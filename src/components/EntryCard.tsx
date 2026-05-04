@@ -1,17 +1,50 @@
+import { useState, useEffect, useRef } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { EntryItem } from "../types";
 
 interface EntryCardProps {
   entry: EntryItem;
   isSelected?: boolean;
+  isEditing?: boolean;
   onClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  onRenameComplete: (newName: string) => void;
+  onRenameCancel: () => void;
 }
 
-export function EntryCard({ entry, isSelected, onClick }: EntryCardProps) {
+export function EntryCard({ 
+  entry, 
+  isSelected, 
+  isEditing, 
+  onClick, 
+  onContextMenu,
+  onRenameComplete,
+  onRenameCancel
+}: EntryCardProps) {
+  const [tempName, setLocalName] = useState(entry.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setLocalName(entry.name);
+      setTimeout(() => inputRef.current?.focus(), 50);
+      inputRef.current?.select();
+    }
+  }, [isEditing, entry.name]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      onRenameComplete(tempName);
+    } else if (e.key === "Escape") {
+      onRenameCancel();
+    }
+  };
+
   return (
     <div 
       className={`entry-card ${entry.is_dir ? 'is-dir' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
+      onContextMenu={onContextMenu}
     >
       <div className="thumbnail-container">
         {entry.thumbnail_path ? (
@@ -21,7 +54,22 @@ export function EntryCard({ entry, isSelected, onClick }: EntryCardProps) {
         )}
         {entry.is_dir && <div className="folder-icon">📁</div>}
       </div>
-      <div className="entry-name" title={entry.name}>{entry.name}</div>
+      
+      <div className="entry-name-container">
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            className="rename-input"
+            value={tempName}
+            onChange={(e) => setLocalName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={() => onRenameComplete(tempName)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <div className="entry-name" title={entry.name}>{entry.name}</div>
+        )}
+      </div>
     </div>
   );
 }

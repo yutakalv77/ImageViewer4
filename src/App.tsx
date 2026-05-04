@@ -119,9 +119,6 @@ function App() {
         if (e.key === "Escape" || e.key === "Backspace") {
           goUp();
         }
-        
-        // Optional: toggle full screen even in gallery? 
-        // User asked specifically "when viewing a single image", so kept it above.
       }
     };
 
@@ -158,6 +155,7 @@ function App() {
         loading={loading} 
         currentPath={currentPath} 
         onEntryClick={handleEntryClick} 
+        onRefresh={() => loadDirectory(currentPath)}
       />
 
       <ImageViewer 

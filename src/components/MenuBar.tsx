@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { HistoryEntry } from "../types";
-import { useOs } from "../hooks/useOs";
+import { useWindow } from "../hooks/useWindow";
 
 interface MenuBarProps {
   history: HistoryEntry[];
@@ -12,40 +11,13 @@ interface MenuBarProps {
 
 export function MenuBar({ history, onOpenFolder, onOpenSettings, onSelectHistory }: MenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const [isMaximized, setIsMaximized] = useState(false);
-  const os = useOs();
-  const appWindow = getCurrentWindow();
+  const { os, isMaximized, handleDrag, toggleMaximize, minimize, close } = useWindow();
 
   useEffect(() => {
     const handleClick = () => setActiveMenu(null);
     window.addEventListener("click", handleClick);
-    
-    // Check initial maximization state and listen for changes
-    appWindow.isMaximized().then(setIsMaximized);
-    const unlisten = appWindow.onResized(() => {
-      appWindow.isMaximized().then(setIsMaximized);
-    });
-
-    return () => {
-      window.removeEventListener("click", handleClick);
-      unlisten.then(fn => fn());
-    };
-  }, [appWindow]);
-
-  const handleDrag = async (e: React.MouseEvent) => {
-    // Only drag on left click and not on buttons
-    if (e.button !== 0) return;
-    
-    // If maximized, we need to unmaximize first to allow dragging to restore
-    if (await appWindow.isMaximized()) {
-      await appWindow.unmaximize();
-    }
-    await appWindow.startDragging();
-  };
-
-  const handleDoubleClick = () => {
-    appWindow.toggleMaximize();
-  };
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
 
   const latestHistory = history.slice(0, 10);
 
@@ -54,7 +26,7 @@ export function MenuBar({ history, onOpenFolder, onOpenSettings, onSelectHistory
       className={`menu-bar ${os === 'macos' ? 'macos' : ''}`} 
       onClick={(e) => e.stopPropagation()} 
       onMouseDown={handleDrag}
-      onDoubleClick={handleDoubleClick}
+      onDoubleClick={toggleMaximize}
     >
       <div className="menu-items-container">
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
@@ -68,7 +40,7 @@ export function MenuBar({ history, onOpenFolder, onOpenSettings, onSelectHistory
             <ul className="menu-dropdown">
               <li onClick={() => { onOpenFolder(); setActiveMenu(null); }}>フォルダを開く(O)...</li>
               <li className="separator"></li>
-              <li onClick={() => appWindow.close()}>終了(X)</li>
+              <li onClick={close}>終了(X)</li>
             </ul>
           )}
         </div>
@@ -110,10 +82,10 @@ export function MenuBar({ history, onOpenFolder, onOpenSettings, onSelectHistory
 
       {os !== 'macos' && (
         <div className="window-controls" onMouseDown={(e) => e.stopPropagation()}>
-          <div className="window-control-button minimize" onClick={() => appWindow.minimize()}>
+          <div className="window-control-button minimize" onClick={minimize}>
             <svg width="10" height="1" viewBox="0 0 10 1"><path d="M0 0h10v1H0z" fill="currentColor"/></svg>
           </div>
-          <div className="window-control-button maximize" onClick={() => appWindow.toggleMaximize()}>
+          <div className="window-control-button maximize" onClick={toggleMaximize}>
             {isMaximized ? (
               <svg width="10" height="10" viewBox="0 0 10 10">
                 <path d="M2.1 0v2H0v8h8V7.9h2V0H2.1zm4.9 8.9H1V3.1h6v5.8zm2-2.1h-1V2.1H3.1v-1h5.9v5.8z" fill="currentColor"/>
@@ -124,7 +96,7 @@ export function MenuBar({ history, onOpenFolder, onOpenSettings, onSelectHistory
               </svg>
             )}
           </div>
-          <div className="window-control-button close" onClick={() => appWindow.close()}>
+          <div className="window-control-button close" onClick={close}>
             <svg width="10" height="10" viewBox="0 0 10 10">
               <path d="M0 0l10 10M10 0L0 10" stroke="currentColor" strokeWidth="1.2" fill="none"/>
             </svg>
