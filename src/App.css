@@ -170,22 +170,89 @@ body {
 }
 
 .top-bar {
-  padding: 5px 15px;
+  padding: 5px 10px;
   background: #222;
   border-bottom: 1px solid #333;
   display: flex;
   align-items: center;
+  gap: 10px;
   min-height: 24px;
   z-index: 10;
 }
 
+.nav-button {
+  background: transparent;
+  border: none;
+  color: #ccc;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.nav-button:hover:not(:disabled) {
+  background: #444;
+  color: white;
+}
+
+.nav-button:disabled {
+  color: #555;
+  cursor: default;
+}
+
+.breadcrumbs {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  font-size: 0.85em;
+  color: #888;
+  overflow: hidden;
+}
+
+.breadcrumbs-list {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none; /* Hide scrollbar for Chrome/Safari needs more */
+}
+
+.breadcrumbs-list::-webkit-scrollbar {
+  display: none;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-name {
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.breadcrumb-name:hover {
+  background: #333;
+  color: #eee;
+}
+
+.breadcrumb-separator {
+  padding: 0 4px;
+  color: #555;
+  user-select: none;
+}
+
 .current-path-display {
   color: #888;
-  font-size: 0.85em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  user-select: text; /* パスをコピーできるようにする */
+  user-select: text;
 }
 
 .error {

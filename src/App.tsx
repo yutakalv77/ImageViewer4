@@ -81,6 +81,18 @@ function App() {
     return () => { unlisten.then(fn => fn()); };
   }, [loadDirectory]);
 
+  // Mouse Side Buttons
+  useEffect(() => {
+    const handleMouseUp = (e: MouseEvent) => {
+      // Button 3 is "Back" (usually assigned to go back in history or go up in file managers)
+      if (e.button === 3) {
+        goUp();
+      }
+    };
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => window.removeEventListener("mouseup", handleMouseUp);
+  }, [goUp]);
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -146,7 +158,11 @@ function App() {
         onSelectHistory={loadDirectory}
       />
 
-      <TopBar currentPath={currentPath} />
+      <TopBar 
+        currentPath={currentPath} 
+        onNavigate={loadDirectory}
+        onGoUp={goUp}
+      />
 
       {error && <div className="error">{error}</div>}
 
