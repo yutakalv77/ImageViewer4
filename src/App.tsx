@@ -8,6 +8,7 @@ import { TopBar } from "./components/TopBar";
 import { Gallery } from "./components/Gallery";
 import { ImageViewer } from "./components/ImageViewer";
 import { SettingsModal } from "./components/SettingsModal";
+import { ResizeHandles } from "./components/ResizeHandles";
 import { EntryItem, ViewerState } from "./types";
 import "./App.css";
 
@@ -139,6 +140,8 @@ function App() {
 
   return (
     <div className="app-container">
+      <ResizeHandles />
+
       <MenuBar 
         history={history}
         onOpenFolder={openFolderDialog} 

@@ -3,13 +3,14 @@ import { EntryItem } from "../types";
 
 interface EntryCardProps {
   entry: EntryItem;
+  isSelected?: boolean;
   onClick: () => void;
 }
 
-export function EntryCard({ entry, onClick }: EntryCardProps) {
+export function EntryCard({ entry, isSelected, onClick }: EntryCardProps) {
   return (
     <div 
-      className={`entry-card ${entry.is_dir ? 'is-dir' : ''}`}
+      className={`entry-card ${entry.is_dir ? 'is-dir' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
     >
       <div className="thumbnail-container">

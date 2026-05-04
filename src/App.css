@@ -29,16 +29,58 @@ body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  position: relative;
 }
+
+/* Resize Handles */
+.resize-handles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Important: allow clicking through to content */
+  z-index: 9999;
+}
+
+.resize-handle {
+  position: absolute;
+  pointer-events: auto; /* Re-enable for handles */
+}
+
+/* Edges */
+.resize-handle.n { top: 0; left: 8px; right: 8px; height: 5px; cursor: n-resize; }
+.resize-handle.s { bottom: 0; left: 8px; right: 8px; height: 5px; cursor: s-resize; }
+.resize-handle.e { top: 8px; bottom: 8px; right: 0; width: 5px; cursor: e-resize; }
+.resize-handle.w { top: 8px; bottom: 8px; left: 0; width: 5px; cursor: w-resize; }
+
+/* Corners */
+.resize-handle.nw { top: 0; left: 0; width: 8px; height: 8px; cursor: nw-resize; }
+.resize-handle.ne { top: 0; right: 0; width: 8px; height: 8px; cursor: ne-resize; }
+.resize-handle.sw { bottom: 0; left: 0; width: 8px; height: 8px; cursor: sw-resize; }
+.resize-handle.se { bottom: 0; right: 0; width: 8px; height: 8px; cursor: se-resize; }
 
 /* Menu Bar */
 .menu-bar {
   background: #2a2a2a;
   display: flex;
-  padding: 2px 5px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
   border-bottom: 1px solid #3a3a3a;
   font-size: 0.8em;
   z-index: 100;
+  height: 30px;
+  user-select: none;
+}
+
+.menu-bar.macos {
+  padding-left: 70px; /* Space for macOS traffic light buttons */
+}
+
+.menu-items-container {
+  display: flex;
+  padding-left: 5px;
 }
 
 .menu-item {
@@ -49,13 +91,42 @@ body {
   background: transparent;
   border: none;
   color: #ccc;
-  padding: 4px 10px;
+  padding: 0 10px;
+  height: 30px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
 }
 
 .menu-button:hover, .menu-button.active {
   background: #444;
+  color: white;
+}
+
+.window-controls {
+  display: flex;
+  height: 100%;
+}
+
+.window-control-button {
+  width: 45px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ccc;
+  transition: background 0.1s;
+}
+
+.window-control-button:hover {
+  background: #444;
+  color: white;
+}
+
+.window-control-button.close:hover {
+  background: #e81123;
   color: white;
 }
 
@@ -154,10 +225,11 @@ body {
   border: 1px solid #333;
 }
 
-.entry-card:hover {
+.entry-card:hover, .entry-card.selected {
   transform: translateY(-4px);
   background: #2a2a2a;
-  border-color: #555;
+  border-color: #0066cc;
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.5);
 }
 
 .thumbnail-container {
