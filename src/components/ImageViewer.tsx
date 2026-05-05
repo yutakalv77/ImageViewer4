@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { EntryItem } from "../types";
 import { getNextIndex, getPrevIndex } from "../utils/viewerUtils";
@@ -24,6 +25,7 @@ export function ImageViewer({
   onNavigate,
   onManualInteraction
 }: ImageViewerProps) {
+  const { t } = useTranslation();
 
   const handleNext = useCallback(() => {
     onManualInteraction();
@@ -105,7 +107,7 @@ export function ImageViewer({
         {viewMode === "single" ? (
           `${currentIndex + 1} / ${images.length} - ${images[currentIndex].name}`
         ) : (
-          `見開き表示: ${currentIndex + 1}ページ付近 / ${images.length}`
+          t('slideshow.viewer_info', { page: currentIndex + 1, total: images.length })
         )}
       </div>
     </div>

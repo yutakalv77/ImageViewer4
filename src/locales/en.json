@@ -1,0 +1,77 @@
+{
+  "menu": {
+    "file": "File(F)",
+    "view": "View(V)",
+    "slide": "Slide(S)",
+    "favorites": "Favorites(B)",
+    "history": "History(R)",
+    "settings": "Settings(S)",
+    "help": "Help(H)"
+  },
+  "file_menu": {
+    "open_folder": "Open Folder(O)...",
+    "reveal_in_explorer": "Reveal in Explorer",
+    "exit": "Exit(X)"
+  },
+  "view_menu": {
+    "single": "Single View",
+    "spread": "Spread View",
+    "rtl": "Right to Left (Japanese)",
+    "ltr": "Left to Right (Western)",
+    "first_page_cover": "First Page is Cover"
+  },
+  "slide_menu": {
+    "start": "Start Slideshow",
+    "loop": "Repeat",
+    "interval_unit": "s",
+    "interval_custom": "Custom Interval"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "path": "Path",
+    "date": "Date Added",
+    "operation": "Operation",
+    "loading": "Loading...",
+    "empty_gallery": "No images or folders found.",
+    "error_rename": "Failed to rename",
+    "no_history": "No history available",
+    "drag_hint": "Open a folder or drag & drop here"
+  },
+  "context_menu": {
+    "reveal": "Reveal in Explorer",
+    "copy_path": "Copy Path to Clipboard",
+    "fav_add": "Add to Favorites",
+    "fav_remove": "Remove from Favorites",
+    "rename": "Rename"
+  },
+  "favorites": {
+    "title": "Manage Favorites",
+    "empty": "No favorites registered",
+    "reveal_hint": "Navigate to this folder"
+  },
+  "settings": {
+    "title": "Settings",
+    "tab_storage": "Storage",
+    "tab_history": "History",
+    "tab_general": "General",
+    "storage_title": "Storage Settings",
+    "storage_label": "Save path for favorites and history",
+    "storage_change": "Change...",
+    "storage_hint": "* Favorites and history data will be saved in this folder.",
+    "history_title": "History Settings",
+    "history_label": "History retention period (days)",
+    "history_hint": "* Set to 0 to disable history. Maximum is 1000 days.",
+    "general_title": "General Settings",
+    "startup_folder_label": "Open folder on startup",
+    "startup_none": "(None)",
+    "startup_last": "Last visited folder"
+  },
+  "slideshow": {
+    "interval_dialog_title": "Interval Settings",
+    "interval_label": "Display interval (0.1 - 99.9 seconds)",
+    "viewer_info": "Spread: Around page {{page}} / {{total}}"
+  }
+}

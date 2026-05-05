@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useWindow } from "../hooks/useWindow";
 
 interface TopBarProps {
@@ -21,6 +22,7 @@ export function TopBar({
   onGoForward 
 }: TopBarProps) {
   const { handleDrag, toggleMaximize } = useWindow();
+  const { t } = useTranslation();
 
   const breadcrumbs = useMemo(() => {
     if (!currentPath) return [];
@@ -99,7 +101,7 @@ export function TopBar({
       
       <div className="breadcrumbs" onMouseDown={(e) => e.stopPropagation()}>
         {!currentPath ? (
-          <div className="current-path-display">フォルダを開くか、ここにドラッグ＆ドロップしてください</div>
+          <div className="current-path-display">{t('common.drag_hint')}</div>
         ) : (
           <div className="breadcrumbs-list">
             {breadcrumbs.map((crumb, idx) => (

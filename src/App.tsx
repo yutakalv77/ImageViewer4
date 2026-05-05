@@ -28,7 +28,8 @@ function App() {
     dataStoragePath, changeStoragePath, historyRetentionDays, updateHistoryRetention,
     startupFolderType, updateStartupFolderType, slideInterval, updateSlideInterval,
     slideLoop, toggleSlideLoop, viewMode, updateViewMode, readingDirection,
-    updateReadingDirection, firstPageIsCover, toggleFirstPageIsCover
+    updateReadingDirection, firstPageIsCover, toggleFirstPageIsCover,
+    language, updateLanguage, theme, updateTheme
   } = useSettings();
 
   const { history, recordHistory, isLoaded: isHistoryLoaded } = useHistory(dataStoragePath, historyRetentionDays);
@@ -41,7 +42,7 @@ function App() {
 
   const images = useMemo(() => entries.filter(e => !e.is_dir), [entries]);
 
-  // Slideshow Logic (Refactored to Hook)
+  // Slideshow Logic
   const { start: startTimer, stop: stopTimer } = useSlideshow(
     { viewMode, firstPageIsCover, totalImages: images.length },
     slideInterval,
@@ -107,7 +108,6 @@ function App() {
   const handleRevealCurrentPath = useCallback(async () => {
     if (currentPath) {
       try {
-        // use openPath to open the folder itself, not reveal it in parent
         await openPath(currentPath);
       } catch (err) {
         console.error("Failed to open current path:", err);
@@ -217,11 +217,15 @@ function App() {
         dataStoragePath={dataStoragePath}
         historyRetentionDays={historyRetentionDays}
         startupFolderType={startupFolderType}
+        language={language}
+        theme={theme}
         onClose={() => setIsSettingsOpen(false)}
         onTabChange={setActiveSettingsTab}
         onChangeStoragePath={changeStoragePath}
         onUpdateHistoryRetention={updateHistoryRetention}
         onUpdateStartupFolderType={updateStartupFolderType}
+        onUpdateLanguage={updateLanguage}
+        onUpdateTheme={updateTheme}
       />
 
       <FavoritesModal

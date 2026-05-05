@@ -1,0 +1,77 @@
+{
+  "menu": {
+    "file": "ファイル(F)",
+    "view": "表示(V)",
+    "slide": "スライド(S)",
+    "favorites": "お気に入り(B)",
+    "history": "履歴(R)",
+    "settings": "設定(S)",
+    "help": "ヘルプ(H)"
+  },
+  "file_menu": {
+    "open_folder": "フォルダを開く(O)...",
+    "reveal_in_explorer": "エクスプローラーで表示",
+    "exit": "終了(X)"
+  },
+  "view_menu": {
+    "single": "単一表示",
+    "spread": "見開き表示",
+    "rtl": "右から左（日本語）",
+    "ltr": "左から右（洋書）",
+    "first_page_cover": "最初の1枚を表紙にする"
+  },
+  "slide_menu": {
+    "start": "スライドショー開始",
+    "loop": "繰り返し",
+    "interval_unit": "秒",
+    "interval_custom": "時間指定"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "delete": "削除",
+    "path": "パス",
+    "date": "登録日時",
+    "operation": "操作",
+    "loading": "読み込み中...",
+    "empty_gallery": "画像やフォルダが見つかりません。",
+    "error_rename": "名前の変更に失敗しました",
+    "no_history": "履歴はありません",
+    "drag_hint": "フォルダを開くか、ここにドラッグ＆ドロップしてください"
+  },
+  "context_menu": {
+    "reveal": "エクスプローラーで表示",
+    "copy_path": "クリップボードにコピー",
+    "fav_add": "お気に入りに追加",
+    "fav_remove": "お気に入りから削除",
+    "rename": "名前を変更"
+  },
+  "favorites": {
+    "title": "お気に入り管理",
+    "empty": "お気に入りは登録されていません",
+    "reveal_hint": "このフォルダへ移動"
+  },
+  "settings": {
+    "title": "設定",
+    "tab_storage": "データ保存",
+    "tab_history": "履歴",
+    "tab_general": "一般",
+    "storage_title": "データ保存の設定",
+    "storage_label": "お気に入り・履歴データの保存先",
+    "storage_change": "変更...",
+    "storage_hint": "※お気に入りや閲覧履歴などの情報は、このフォルダ内に保存されます。",
+    "history_title": "履歴の設定",
+    "history_label": "履歴の保存期間 (日)",
+    "history_hint": "※0日に設定すると履歴を保存しません。最大1000日まで設定可能です。",
+    "general_title": "一般設定",
+    "startup_folder_label": "起動時にフォルダ",
+    "startup_none": "（なし）",
+    "startup_last": "最後に表示したフォルダ"
+  },
+  "slideshow": {
+    "interval_dialog_title": "表示間隔の設定",
+    "interval_label": "表示間隔 (0.1 ～ 99.9 秒)",
+    "viewer_info": "見開き表示: {{page}}ページ付近 / {{total}}"
+  }
+}

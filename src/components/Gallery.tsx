@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { EntryItem } from "../types";
@@ -26,6 +27,7 @@ export function Gallery({
   onEntryClick, 
   onRefresh 
 }: GalleryProps) {
+  const { t } = useTranslation();
   const {
     selectedIndex,
     setSelectedIndex,
@@ -66,9 +68,9 @@ export function Gallery({
       onRefresh();
     } catch (err) {
       console.error("Failed to rename:", err);
-      alert("名前の変更に失敗しました");
+      alert(t('common.error_rename'));
     }
-  }, [entries, onRefresh, setEditingIndex]);
+  }, [entries, onRefresh, setEditingIndex, t]);
 
   const copyToClipboard = async (path: string) => {
     try {
@@ -87,13 +89,13 @@ export function Gallery({
   };
 
   const menuItems = contextMenu ? [
-    { label: "エクスプローラーで表示", onClick: () => handleReveal(contextMenu.entry.path) },
-    { label: "クリップボードにコピー", onClick: () => copyToClipboard(contextMenu.entry.path) },
+    { label: t('context_menu.reveal'), onClick: () => handleReveal(contextMenu.entry.path) },
+    { label: t('context_menu.copy_path'), onClick: () => copyToClipboard(contextMenu.entry.path) },
     { 
-      label: isFavorite(contextMenu.entry.path) ? "お気に入りから削除" : "お気に入りに追加", 
+      label: isFavorite(contextMenu.entry.path) ? t('context_menu.fav_remove') : t('context_menu.fav_add'), 
       onClick: () => onToggleFavorite(contextMenu.entry.path) 
     },
-    { separator: true, label: "名前を変更", onClick: () => setEditingIndex(contextMenu.index) },
+    { separator: true, label: t('context_menu.rename'), onClick: () => setEditingIndex(contextMenu.index) },
   ] : [];
 
   return (
@@ -101,7 +103,7 @@ export function Gallery({
       {loading && (
         <div className="loading-overlay">
           <div className="spinner"></div>
-          <p>Loading...</p>
+          <p>{t('common.loading')}</p>
         </div>
       )}
 
@@ -123,7 +125,7 @@ export function Gallery({
           />
         ))}
         {!loading && entries.length === 0 && currentPath && (
-          <div className="empty-msg">No images or folders found.</div>
+          <div className="empty-msg">{t('common.empty_gallery')}</div>
         )}
       </div>
 

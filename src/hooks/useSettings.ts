@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { appDataDir } from "@tauri-apps/api/path";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
+import i18n from "../i18n";
 
 export function useSettings() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [activeSettingsTab, setActiveSettingsTab] = useState("storage");
+  const [activeSettingsTab, setActiveSettingsTab] = useState("general");
   const [dataStoragePath, setDataStoragePath] = useState("");
   const [historyRetentionDays, setHistoryRetentionDays] = useState(30);
-  const [startupFolderType, setStartupFolderType] = useState<string>("none"); // "none" or "last"
+  const [startupFolderType, setStartupFolderType] = useState<string>("none");
   
   // Slideshow settings
   const [slideInterval, setSlideInterval] = useState(3.0);
@@ -17,6 +19,12 @@ export function useSettings() {
   const [viewMode, setViewMode] = useState<"single" | "spread">("single");
   const [readingDirection, setReadingDirection] = useState<"rtl" | "ltr">("rtl");
   const [firstPageIsCover, setFirstPageIsCover] = useState(true);
+
+  // Language setting
+  const [language, setLanguage] = useState<string>(i18n.language || "ja");
+
+  // Theme setting
+  const [theme, setTheme] = useState<string>("dark"); // dark, light, system
 
   useEffect(() => {
     const initSettings = async () => {
@@ -55,9 +63,48 @@ export function useSettings() {
       if (savedDirection) setReadingDirection(savedDirection);
       const savedCover = localStorage.getItem("firstPageIsCover");
       if (savedCover !== null) setFirstPageIsCover(savedCover === "true");
+
+      // Language setting
+      const savedLang = localStorage.getItem("language");
+      if (savedLang) {
+        setLanguage(savedLang);
+        i18n.changeLanguage(savedLang);
+      }
+
+      // Theme setting
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme) {
+        setTheme(savedTheme);
+        applyTheme(savedTheme);
+      } else {
+        applyTheme("dark");
+      }
     };
     initSettings();
   }, []);
+
+  const applyTheme = async (targetTheme: string) => {
+    const appWindow = getCurrentWindow();
+    let effectiveTheme = targetTheme;
+    
+    if (targetTheme === "system") {
+      const osTheme = await appWindow.theme();
+      effectiveTheme = osTheme || "dark";
+    }
+    
+    document.documentElement.setAttribute("data-theme", effectiveTheme);
+  };
+
+  // Listen for OS theme changes
+  useEffect(() => {
+    if (theme !== "system") return;
+    
+    const unlisten = getCurrentWindow().onThemeChanged(({ payload: newTheme }) => {
+      document.documentElement.setAttribute("data-theme", newTheme);
+    });
+    
+    return () => { unlisten.then(fn => fn()); };
+  }, [theme]);
 
   const changeStoragePath = async () => {
     try {
@@ -114,6 +161,18 @@ export function useSettings() {
     localStorage.setItem("firstPageIsCover", newValue.toString());
   };
 
+  const updateLanguage = (newLang: string) => {
+    setLanguage(newLang);
+    localStorage.setItem("language", newLang);
+    i18n.changeLanguage(newLang);
+  };
+
+  const updateTheme = (newTheme: string) => {
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    applyTheme(newTheme);
+  };
+
   return {
     isSettingsOpen,
     setIsSettingsOpen,
@@ -134,6 +193,10 @@ export function useSettings() {
     readingDirection,
     updateReadingDirection,
     firstPageIsCover,
-    toggleFirstPageIsCover
+    toggleFirstPageIsCover,
+    language,
+    updateLanguage,
+    theme,
+    updateTheme
   };
 }

@@ -1,14 +1,20 @@
+import { useTranslation } from "react-i18next";
+
 interface SettingsModalProps {
   isOpen: boolean;
   activeTab: string;
   dataStoragePath: string;
   historyRetentionDays: number;
   startupFolderType: string;
+  language: string;
+  theme: string;
   onClose: () => void;
   onTabChange: (tab: string) => void;
   onChangeStoragePath: () => void;
   onUpdateHistoryRetention: (days: number) => void;
   onUpdateStartupFolderType: (type: string) => void;
+  onUpdateLanguage: (lang: string) => void;
+  onUpdateTheme: (theme: string) => void;
 }
 
 export function SettingsModal({
@@ -17,63 +23,101 @@ export function SettingsModal({
   dataStoragePath,
   historyRetentionDays,
   startupFolderType,
+  language,
+  theme,
   onClose,
   onTabChange,
   onChangeStoragePath,
   onUpdateHistoryRetention,
   onUpdateStartupFolderType,
+  onUpdateLanguage,
+  onUpdateTheme,
 }: SettingsModalProps) {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
-          <h2>設定</h2>
+          <h2>{t('settings.title')}</h2>
           <button className="close-button" onClick={onClose}>&times;</button>
         </div>
         <div className="settings-body">
           <div className="settings-sidebar">
             <div 
-              className={`settings-menu-item ${activeTab === "storage" ? "active" : ""}`}
-              onClick={() => onTabChange("storage")}
+              className={`settings-menu-item ${activeTab === "general" ? "active" : ""}`}
+              onClick={() => onTabChange("general")}
             >
-              データ保存
+              {t('settings.tab_general')}
             </div>
             <div 
               className={`settings-menu-item ${activeTab === "history" ? "active" : ""}`}
               onClick={() => onTabChange("history")}
             >
-              履歴
+              {t('settings.tab_history')}
             </div>
             <div 
-              className={`settings-menu-item ${activeTab === "general" ? "active" : ""}`}
-              onClick={() => onTabChange("general")}
+              className={`settings-menu-item ${activeTab === "storage" ? "active" : ""}`}
+              onClick={() => onTabChange("storage")}
             >
-              一般
+              {t('settings.tab_storage')}
             </div>
           </div>
           <div className="settings-content">
-            {activeTab === "storage" && (
+            {activeTab === "general" && (
               <div className="settings-section">
-                <h3>データ保存の設定</h3>
+                <h3>{t('settings.general_title')}</h3>
                 <div className="settings-group">
-                  <label>お気に入り・履歴データの保存先</label>
+                  <label>{t('settings.startup_folder_label')}</label>
                   <div className="path-input-group">
-                    <input type="text" value={dataStoragePath} readOnly />
-                    <button className="settings-button" onClick={onChangeStoragePath}>変更...</button>
+                    <select 
+                      className="settings-select"
+                      value={startupFolderType} 
+                      onChange={(e) => onUpdateStartupFolderType(e.target.value)}
+                    >
+                      <option value="none">{t('settings.startup_none')}</option>
+                      <option value="last">{t('settings.startup_last')}</option>
+                    </select>
                   </div>
-                  <p style={{fontSize: '0.8em', color: '#888', marginTop: '10px'}}>
-                    ※お気に入りや閲覧履歴などの情報は、このフォルダ内に保存されます。
-                  </p>
+                </div>
+
+                <div className="settings-group" style={{ marginTop: '20px' }}>
+                  <label>{t('settings.theme_label', 'テーマ / Theme')}</label>
+                  <div className="path-input-group">
+                    <select 
+                      className="settings-select"
+                      value={theme} 
+                      onChange={(e) => onUpdateTheme(e.target.value)}
+                    >
+                      <option value="dark">{t('settings.theme_dark', 'ダーク (Dark)')}</option>
+                      <option value="light">{t('settings.theme_light', 'ライト (Light)')}</option>
+                      <option value="system">{t('settings.theme_system', 'システム設定に準拠 (System)')}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="settings-group" style={{ marginTop: '20px' }}>
+                  <label>{t('settings.language_label', '言語 / Language')}</label>
+                  <div className="path-input-group">
+                    <select 
+                      className="settings-select"
+                      value={language} 
+                      onChange={(e) => onUpdateLanguage(e.target.value)}
+                    >
+                      <option value="ja">日本語 (Japanese)</option>
+                      <option value="en">English</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             )}
             {activeTab === "history" && (
               <div className="settings-section">
-                <h3>履歴の設定</h3>
+                <h3>{t('settings.history_title')}</h3>
                 <div className="settings-group">
-                  <label>履歴の保存期間 (日)</label>
+                  <label>{t('settings.history_label')}</label>
                   <div className="path-input-group">
                     <input 
                       type="number" 
@@ -83,43 +127,31 @@ export function SettingsModal({
                       onChange={(e) => onUpdateHistoryRetention(parseInt(e.target.value, 10) || 0)}
                     />
                   </div>
-                  <p style={{fontSize: '0.8em', color: '#888', marginTop: '10px'}}>
-                    ※0日に設定すると履歴を保存しません。最大1000日まで設定可能です。
+                  <p style={{fontSize: '0.8em', color: 'var(--text-dim)', marginTop: '10px'}}>
+                    {t('settings.history_hint')}
                   </p>
                 </div>
               </div>
             )}
-            {activeTab === "general" && (
+            {activeTab === "storage" && (
               <div className="settings-section">
-                <h3>一般設定</h3>
+                <h3>{t('settings.storage_title')}</h3>
                 <div className="settings-group">
-                  <label>起動時にフォルダ</label>
+                  <label>{t('settings.storage_label')}</label>
                   <div className="path-input-group">
-                    <select 
-                      className="settings-select"
-                      value={startupFolderType} 
-                      onChange={(e) => onUpdateStartupFolderType(e.target.value)}
-                      style={{
-                        width: '100%',
-                        background: '#1a1a1a',
-                        border: '1px solid #444',
-                        color: '#eee',
-                        padding: '6px 10px',
-                        borderRadius: '4px',
-                        fontSize: '0.9em'
-                      }}
-                    >
-                      <option value="none">（なし）</option>
-                      <option value="last">最後に表示したフォルダ</option>
-                    </select>
+                    <input type="text" value={dataStoragePath} readOnly />
+                    <button className="settings-button" onClick={onChangeStoragePath}>{t('settings.storage_change')}</button>
                   </div>
+                  <p style={{fontSize: '0.8em', color: 'var(--text-dim)', marginTop: '10px'}}>
+                    {t('settings.storage_hint')}
+                  </p>
                 </div>
               </div>
             )}
           </div>
         </div>
         <div className="settings-footer">
-          <button className="settings-button primary" onClick={onClose}>閉じる</button>
+          <button className="settings-button primary" onClick={onClose}>{t('common.close')}</button>
         </div>
       </div>
     </div>

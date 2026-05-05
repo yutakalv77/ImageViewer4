@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { FavoriteEntry } from "../types";
 
 interface FavoritesModalProps {
@@ -11,6 +12,7 @@ interface FavoritesModalProps {
 
 export function FavoritesModal({ isOpen, favorites, onClose, onSave, onNavigate }: FavoritesModalProps) {
   const [tempFavorites, setTempFavorites] = useState<FavoriteEntry[]>([]);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isOpen) {
@@ -33,7 +35,7 @@ export function FavoritesModal({ isOpen, favorites, onClose, onSave, onNavigate 
     <div className="settings-overlay favorites-overlay" onClick={onClose}>
       <div className="settings-modal favorites-modal" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
-          <h2>お気に入り管理</h2>
+          <h2>{t('favorites.title')}</h2>
           <button className="close-button" onClick={onClose}>&times;</button>
         </div>
         
@@ -43,9 +45,9 @@ export function FavoritesModal({ isOpen, favorites, onClose, onSave, onNavigate 
               <table className="favorites-table">
                 <thead>
                   <tr>
-                    <th>パス</th>
-                    <th>登録日時</th>
-                    <th>操作</th>
+                    <th>{t('common.path')}</th>
+                    <th>{t('common.date')}</th>
+                    <th>{t('common.operation')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -54,7 +56,7 @@ export function FavoritesModal({ isOpen, favorites, onClose, onSave, onNavigate 
                       <td 
                         className="fav-path" 
                         onClick={() => { onNavigate(fav.path); onClose(); }}
-                        title="このフォルダへ移動"
+                        title={t('favorites.reveal_hint')}
                       >
                         {fav.path}
                       </td>
@@ -62,21 +64,21 @@ export function FavoritesModal({ isOpen, favorites, onClose, onSave, onNavigate 
                         {new Date(fav.addedAt).toLocaleString()}
                       </td>
                       <td>
-                        <button className="fav-remove-btn" onClick={() => handleRemove(fav.path)}>削除</button>
+                        <button className="fav-remove-btn" onClick={() => handleRemove(fav.path)}>{t('common.delete')}</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <div className="empty-msg">お気に入りは登録されていません</div>
+              <div className="empty-msg">{t('favorites.empty')}</div>
             )}
           </div>
         </div>
 
         <div className="settings-footer">
-          <button className="settings-button" onClick={onClose}>キャンセル</button>
-          <button className="settings-button primary" onClick={handleOk}>OK</button>
+          <button className="settings-button" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="settings-button primary" onClick={handleOk}>{t('common.ok')}</button>
         </div>
       </div>
     </div>

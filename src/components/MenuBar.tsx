@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { HistoryEntry } from "../types";
 import { useWindow } from "../hooks/useWindow";
 
@@ -45,6 +46,7 @@ export function MenuBar({
 }: MenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const { os, toggleMaximize, minimize, close, handleDrag } = useWindow();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const handleClick = () => setActiveMenu(null);
@@ -74,14 +76,14 @@ export function MenuBar({
             className={`menu-button ${activeMenu === "file" ? "active" : ""}`}
             onClick={() => setActiveMenu(activeMenu === "file" ? null : "file")}
           >
-            ファイル(F)
+            {t('menu.file')}
           </button>
           {activeMenu === "file" && (
             <ul className="menu-dropdown">
-              <li onClick={() => { onOpenFolder(); setActiveMenu(null); }}>フォルダを開く(O)...</li>
-              <li onClick={() => { onRevealCurrentPath(); setActiveMenu(null); }}>エクスプローラーで表示</li>
+              <li onClick={() => { onOpenFolder(); setActiveMenu(null); }}>{t('file_menu.open_folder')}</li>
+              <li onClick={() => { onRevealCurrentPath(); setActiveMenu(null); }}>{t('file_menu.reveal_in_explorer')}</li>
               <li className="separator"></li>
-              <li onClick={close}>終了(X)</li>
+              <li onClick={close}>{t('file_menu.exit')}</li>
             </ul>
           )}
         </div>
@@ -92,35 +94,35 @@ export function MenuBar({
             className={`menu-button ${activeMenu === "view" ? "active" : ""}`}
             onClick={() => setActiveMenu(activeMenu === "view" ? null : "view")}
           >
-            表示(V)
+            {t('menu.view')}
           </button>
           {activeMenu === "view" && (
             <ul className="menu-dropdown">
               <li onClick={(e) => { e.stopPropagation(); onUpdateViewMode("single"); }}>
-                {renderCheck(viewMode === "single")} 単一表示
+                {renderCheck(viewMode === "single")} {t('view_menu.single')}
               </li>
               <li onClick={(e) => { e.stopPropagation(); onUpdateViewMode("spread"); }}>
-                {renderCheck(viewMode === "spread")} 見開き表示
+                {renderCheck(viewMode === "spread")} {t('view_menu.spread')}
               </li>
               <li className="separator"></li>
               <li 
                 className={viewMode === "single" ? "disabled" : ""}
                 onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); onUpdateReadingDirection("rtl"); } }}
               >
-                {renderCheck(readingDirection === "rtl")} 右から左（日本語）
+                {renderCheck(readingDirection === "rtl")} {t('view_menu.rtl')}
               </li>
               <li 
                 className={viewMode === "single" ? "disabled" : ""}
                 onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); onUpdateReadingDirection("ltr"); } }}
               >
-                {renderCheck(readingDirection === "ltr")} 左から右（洋書）
+                {renderCheck(readingDirection === "ltr")} {t('view_menu.ltr')}
               </li>
               <li className="separator"></li>
               <li 
                 className={viewMode === "single" ? "disabled" : ""}
                 onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); onToggleFirstPageIsCover(); } }}
               >
-                {renderCheck(firstPageIsCover)} 最初の1枚を表紙にする
+                {renderCheck(firstPageIsCover)} {t('view_menu.first_page_cover')}
               </li>
             </ul>
           )}
@@ -132,23 +134,23 @@ export function MenuBar({
             className={`menu-button ${activeMenu === "slide" ? "active" : ""}`}
             onClick={() => setActiveMenu(activeMenu === "slide" ? null : "slide")}
           >
-            スライド(S)
+            {t('menu.slide')}
           </button>
           {activeMenu === "slide" && (
             <ul className="menu-dropdown">
-              <li onClick={() => { onStartSlideshow(); setActiveMenu(null); }}>スライドショー開始</li>
+              <li onClick={() => { onStartSlideshow(); setActiveMenu(null); }}>{t('slide_menu.start')}</li>
               <li onClick={(e) => { e.stopPropagation(); onToggleLoop(); }}>
-                {renderCheck(slideLoop)} 繰り返し
+                {renderCheck(slideLoop)} {t('slide_menu.loop')}
               </li>
               <li className="separator"></li>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(sec => (
                 <li key={sec} onClick={(e) => { e.stopPropagation(); onUpdateInterval(sec); }}>
-                  {renderCheck(slideInterval === sec)} {sec.toFixed(1)}秒
+                  {renderCheck(slideInterval === sec)} {sec.toFixed(1)}{t('slide_menu.interval_unit')}
                 </li>
               ))}
               <li className="separator"></li>
               <li onClick={() => { onOpenIntervalDialog(); setActiveMenu(null); }}>
-                {renderCheck(!isStandardInterval)} 時間指定（{slideInterval.toFixed(1)}秒）
+                {renderCheck(!isStandardInterval)} {t('slide_menu.interval_custom')}（{slideInterval.toFixed(1)}{t('slide_menu.interval_unit')}）
               </li>
             </ul>
           )}
@@ -160,7 +162,7 @@ export function MenuBar({
             className={`menu-button ${activeMenu === "favorites" ? "active" : ""}`}
             onClick={() => { onOpenFavorites(); setActiveMenu(null); }}
           >
-            お気に入り(B)
+            {t('menu.favorites')}
           </button>
         </div>
 
@@ -170,7 +172,7 @@ export function MenuBar({
             className={`menu-button ${activeMenu === "history" ? "active" : ""}`}
             onClick={() => setActiveMenu(activeMenu === "history" ? null : "history")}
           >
-            履歴(R)
+            {t('menu.history')}
           </button>
           {activeMenu === "history" && (
             <ul className="menu-dropdown history-dropdown">
@@ -181,7 +183,7 @@ export function MenuBar({
                   </li>
                 ))
               ) : (
-                <li className="disabled">履歴はありません</li>
+                <li className="disabled">{t('common.no_history')}</li>
               )}
             </ul>
           )}
@@ -193,13 +195,13 @@ export function MenuBar({
             className={`menu-button ${activeMenu === "settings" ? "active" : ""}`}
             onClick={() => { onOpenSettings(); setActiveMenu(null); }}
           >
-            設定(S)
+            {t('menu.settings')}
           </button>
         </div>
 
         {/* 7. ヘルプ */}
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
-          <button className="menu-button">ヘルプ(H)</button>
+          <button className="menu-button">{t('menu.help')}</button>
         </div>
       </div>
 
