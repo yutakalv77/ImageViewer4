@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { EntryItem } from "../types";
+import { getNextIndex, getPrevIndex } from "../utils/viewerUtils";
 
 interface ImageViewerProps {
   images: EntryItem[];
@@ -10,6 +11,7 @@ interface ImageViewerProps {
   firstPageIsCover: boolean;
   onClose: () => void;
   onNavigate: (index: number) => void;
+  onManualInteraction: () => void;
 }
 
 export function ImageViewer({ 
@@ -19,40 +21,38 @@ export function ImageViewer({
   readingDirection, 
   firstPageIsCover, 
   onClose,
-  onNavigate
+  onNavigate,
+  onManualInteraction
 }: ImageViewerProps) {
+
+  const handleNext = useCallback(() => {
+    onManualInteraction();
+    onNavigate(getNextIndex(currentIndex, { viewMode, firstPageIsCover, totalImages: images.length }));
+  }, [currentIndex, images.length, viewMode, firstPageIsCover, onNavigate, onManualInteraction]);
+
+  const handlePrev = useCallback(() => {
+    onManualInteraction();
+    onNavigate(getPrevIndex(currentIndex, { viewMode, firstPageIsCover, totalImages: images.length }));
+  }, [currentIndex, images.length, viewMode, firstPageIsCover, onNavigate, onManualInteraction]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isRtl = readingDirection === "rtl";
-      
-      // Map keys to actions based on reading direction
       const nextKey = isRtl ? "ArrowLeft" : "ArrowRight";
       const prevKey = isRtl ? "ArrowRight" : "ArrowLeft";
 
-      if (e.key === nextKey) {
-        if (viewMode === "single") {
-          onNavigate(Math.min(currentIndex + 1, images.length - 1));
-        } else {
-          const step = (currentIndex === 0 && firstPageIsCover) ? 1 : 2;
-          onNavigate(Math.min(currentIndex + step, images.length - 1));
-        }
+      if (e.key === nextKey || e.key === " ") {
+        e.preventDefault();
+        handleNext();
       } else if (e.key === prevKey) {
-        if (viewMode === "single") {
-          onNavigate(Math.max(currentIndex - 1, 0));
-        } else {
-          const prevIndex = firstPageIsCover 
-            ? (currentIndex <= 2 ? 0 : currentIndex - 2)
-            : Math.max(currentIndex - 2, 0);
-          onNavigate(prevIndex);
-        }
+        e.preventDefault();
+        handlePrev();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, images.length, viewMode, firstPageIsCover, readingDirection, onNavigate]);
+  }, [handleNext, handlePrev, readingDirection]);
 
-  // Determine which images to show in spread mode
   const spreadImages = useMemo(() => {
     if (viewMode === "single" || currentIndex < 0) return [images[currentIndex]];
 
@@ -105,7 +105,7 @@ export function ImageViewer({
         {viewMode === "single" ? (
           `${currentIndex + 1} / ${images.length} - ${images[currentIndex].name}`
         ) : (
-          `見開き表示: ${currentIndex + 1}ページ付近`
+          `見開き表示: ${currentIndex + 1}ページ付近 / ${images.length}`
         )}
       </div>
     </div>
