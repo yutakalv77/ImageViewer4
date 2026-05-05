@@ -4,13 +4,31 @@ import { useWindow } from "../hooks/useWindow";
 
 interface MenuBarProps {
   history: HistoryEntry[];
+  slideInterval: number;
+  slideLoop: boolean;
   onOpenFolder: () => void;
   onOpenSettings: () => void;
   onOpenFavorites: () => void;
   onSelectHistory: (path: string) => void;
+  onStartSlideshow: () => void;
+  onToggleLoop: () => void;
+  onUpdateInterval: (seconds: number) => void;
+  onOpenIntervalDialog: () => void;
 }
 
-export function MenuBar({ history, onOpenFolder, onOpenSettings, onOpenFavorites, onSelectHistory }: MenuBarProps) {
+export function MenuBar({ 
+  history, 
+  slideInterval,
+  slideLoop,
+  onOpenFolder, 
+  onOpenSettings, 
+  onOpenFavorites, 
+  onSelectHistory,
+  onStartSlideshow,
+  onToggleLoop,
+  onUpdateInterval,
+  onOpenIntervalDialog
+}: MenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const { os, isMaximized, handleDrag, toggleMaximize, minimize, close } = useWindow();
 
@@ -21,6 +39,12 @@ export function MenuBar({ history, onOpenFolder, onOpenSettings, onOpenFavorites
   }, []);
 
   const latestHistory = history.slice(0, 10);
+
+  const renderCheck = (condition: boolean) => {
+    return condition ? <span className="menu-check">✓</span> : <span className="menu-check-placeholder"></span>;
+  };
+
+  const isStandardInterval = [1, 2, 3, 4, 5, 6, 7, 8, 9].includes(slideInterval);
 
   return (
     <nav 
@@ -75,6 +99,33 @@ export function MenuBar({ history, onOpenFolder, onOpenSettings, onOpenFavorites
           >
             お気に入り(B)
           </button>
+        </div>
+
+        <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
+          <button 
+            className={`menu-button ${activeMenu === "slide" ? "active" : ""}`}
+            onClick={() => setActiveMenu(activeMenu === "slide" ? null : "slide")}
+          >
+            スライド(S)
+          </button>
+          {activeMenu === "slide" && (
+            <ul className="menu-dropdown">
+              <li onClick={() => { onStartSlideshow(); setActiveMenu(null); }}>スライドショー開始</li>
+              <li onClick={(e) => { e.stopPropagation(); onToggleLoop(); }}>
+                {renderCheck(slideLoop)} 繰り返し
+              </li>
+              <li className="separator"></li>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(sec => (
+                <li key={sec} onClick={(e) => { e.stopPropagation(); onUpdateInterval(sec); }}>
+                  {renderCheck(slideInterval === sec)} {sec.toFixed(1)}秒
+                </li>
+              ))}
+              <li className="separator"></li>
+              <li onClick={() => { onOpenIntervalDialog(); setActiveMenu(null); }}>
+                {renderCheck(!isStandardInterval)} 時間指定（{slideInterval.toFixed(1)}秒）
+              </li>
+            </ul>
+          )}
         </div>
 
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>

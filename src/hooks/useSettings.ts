@@ -8,6 +8,10 @@ export function useSettings() {
   const [dataStoragePath, setDataStoragePath] = useState("");
   const [historyRetentionDays, setHistoryRetentionDays] = useState(30);
   const [startupFolderType, setStartupFolderType] = useState<string>("none"); // "none" or "last"
+  
+  // Slideshow settings
+  const [slideInterval, setSlideInterval] = useState(3.0); // seconds
+  const [slideLoop, setSlideLoop] = useState(true);
 
   useEffect(() => {
     const initSettings = async () => {
@@ -35,6 +39,16 @@ export function useSettings() {
       const savedStartupType = localStorage.getItem("startupFolderType");
       if (savedStartupType !== null) {
         setStartupFolderType(savedStartupType);
+      }
+
+      // Slideshow settings
+      const savedSlideInterval = localStorage.getItem("slideInterval");
+      if (savedSlideInterval !== null) {
+        setSlideInterval(parseFloat(savedSlideInterval));
+      }
+      const savedSlideLoop = localStorage.getItem("slideLoop");
+      if (savedSlideLoop !== null) {
+        setSlideLoop(savedSlideLoop === "true");
       }
     };
     initSettings();
@@ -67,6 +81,18 @@ export function useSettings() {
     localStorage.setItem("startupFolderType", type);
   };
 
+  const updateSlideInterval = (seconds: number) => {
+    const value = Math.max(0.1, Math.min(99.9, seconds));
+    setSlideInterval(value);
+    localStorage.setItem("slideInterval", value.toString());
+  };
+
+  const toggleSlideLoop = () => {
+    const newValue = !slideLoop;
+    setSlideLoop(newValue);
+    localStorage.setItem("slideLoop", newValue.toString());
+  };
+
   return {
     isSettingsOpen,
     setIsSettingsOpen,
@@ -78,5 +104,9 @@ export function useSettings() {
     updateHistoryRetention,
     startupFolderType,
     updateStartupFolderType,
+    slideInterval,
+    updateSlideInterval,
+    slideLoop,
+    toggleSlideLoop,
   };
 }

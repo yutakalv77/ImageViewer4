@@ -155,11 +155,25 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
 }
 
 .menu-dropdown li:hover {
   background: #0066cc;
   color: white;
+}
+
+.menu-check {
+  display: inline-block;
+  width: 20px;
+  color: #ffcc00;
+  font-weight: bold;
+}
+
+.menu-check-placeholder {
+  display: inline-block;
+  width: 20px;
 }
 
 .menu-dropdown .separator {
@@ -558,6 +572,11 @@ body {
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   border: 1px solid #444;
+}
+
+.interval-modal {
+  width: 400px !important;
+  height: 300px !important;
 }
 
 .settings-header {

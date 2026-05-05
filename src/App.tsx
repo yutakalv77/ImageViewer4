@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useFileSystem } from "./hooks/useFileSystem";
 import { useSettings } from "./hooks/useSettings";
@@ -10,6 +10,7 @@ import { Gallery } from "./components/Gallery";
 import { ImageViewer } from "./components/ImageViewer";
 import { SettingsModal } from "./components/SettingsModal";
 import { FavoritesModal } from "./components/FavoritesModal";
+import { SlideIntervalModal } from "./components/SlideIntervalModal";
 import { ResizeHandles } from "./components/ResizeHandles";
 import { EntryItem, ViewerState } from "./types";
 import "./App.css";
@@ -40,6 +41,10 @@ function App() {
     updateHistoryRetention,
     startupFolderType,
     updateStartupFolderType,
+    slideInterval,
+    updateSlideInterval,
+    slideLoop,
+    toggleSlideLoop,
   } = useSettings();
 
   const {
@@ -61,7 +66,9 @@ function App() {
   });
 
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const [isIntervalDialogOpen, setIsIntervalDialogOpen] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
+  const [isSlideshowActive, setIsSlideshowActive] = useState(false);
 
   // Handle Startup Path
   useEffect(() => {
@@ -108,6 +115,52 @@ function App() {
     return () => window.removeEventListener("mouseup", handleMouseUp);
   }, [goBack, goForward]);
 
+  // Slideshow logic
+  useEffect(() => {
+    let timer: number | undefined;
+    if (isSlideshowActive && viewerState.isOpen && images.length > 0) {
+      timer = window.setInterval(() => {
+        setViewerState(prev => {
+          const nextIndex = prev.currentIndex + 1;
+          if (nextIndex >= images.length) {
+            if (slideLoop) {
+              return { ...prev, currentIndex: 0 };
+            } else {
+              setIsSlideshowActive(false);
+              return prev;
+            }
+          }
+          return { ...prev, currentIndex: nextIndex };
+        });
+      }, slideInterval * 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isSlideshowActive, viewerState.isOpen, images.length, slideInterval, slideLoop]);
+
+  const startSlideshow = useCallback(async () => {
+    if (images.length === 0) return;
+    
+    // Start from current selection or index 0
+    const startIndex = viewerState.currentIndex >= 0 ? viewerState.currentIndex : 0;
+    setViewerState({ isOpen: true, currentIndex: startIndex });
+    setIsSlideshowActive(true);
+    
+    // Enter fullscreen
+    const win = getCurrentWindow();
+    await win.setFullscreen(true);
+  }, [images.length, viewerState.currentIndex]);
+
+  const stopSlideshow = useCallback(async () => {
+    setIsSlideshowActive(false);
+    // Exit fullscreen if closing viewer
+    const win = getCurrentWindow();
+    if (await win.isFullscreen()) {
+      await win.setFullscreen(false);
+    }
+  }, []);
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -118,26 +171,28 @@ function App() {
           const isFull = await win.isFullscreen();
           await win.setFullscreen(!isFull);
         } else if (e.key === "Escape" || e.key === "Backspace") {
-          const isFull = await win.isFullscreen();
-          if (isFull) await win.setFullscreen(false);
+          await stopSlideshow();
           setViewerState({ isOpen: false, currentIndex: -1 });
         } else if (e.key === "ArrowDown" || e.key === " ") {
           e.preventDefault();
+          setIsSlideshowActive(false); // Manual navigation stops slideshow
           setViewerState(prev => ({
             ...prev,
             currentIndex: Math.min(prev.currentIndex + 1, images.length - 1)
           }));
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
+          setIsSlideshowActive(false); // Manual navigation stops slideshow
           setViewerState(prev => ({
             ...prev,
             currentIndex: Math.max(prev.currentIndex - 1, 0)
           }));
         }
-      } else if (isSettingsOpen || isFavoritesOpen) {
+      } else if (isSettingsOpen || isFavoritesOpen || isIntervalDialogOpen) {
         if (e.key === "Escape") {
           setIsSettingsOpen(false);
           setIsFavoritesOpen(false);
+          setIsIntervalDialogOpen(false);
         }
       } else {
         if (e.key === "Escape" || e.key === "Backspace") {
@@ -154,7 +209,7 @@ function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewerState.isOpen, isSettingsOpen, isFavoritesOpen, images.length, goUp, goBack, goForward]);
+  }, [viewerState.isOpen, isSettingsOpen, isFavoritesOpen, isIntervalDialogOpen, images.length, goUp, goBack, goForward, stopSlideshow]);
 
   const handleEntryClick = (entry: EntryItem) => {
     if (entry.is_dir) {
@@ -171,10 +226,16 @@ function App() {
 
       <MenuBar 
         history={history}
+        slideInterval={slideInterval}
+        slideLoop={slideLoop}
         onOpenFolder={openFolderDialog} 
         onOpenSettings={() => setIsSettingsOpen(true)} 
         onOpenFavorites={() => setIsFavoritesOpen(true)}
         onSelectHistory={loadDirectory}
+        onStartSlideshow={startSlideshow}
+        onToggleLoop={toggleSlideLoop}
+        onUpdateInterval={updateSlideInterval}
+        onOpenIntervalDialog={() => setIsIntervalDialogOpen(true)}
       />
 
       <TopBar 
@@ -202,7 +263,10 @@ function App() {
       <ImageViewer 
         images={images} 
         currentIndex={viewerState.currentIndex} 
-        onClose={() => setViewerState({ isOpen: false, currentIndex: -1 })} 
+        onClose={() => {
+          stopSlideshow();
+          setViewerState({ isOpen: false, currentIndex: -1 });
+        }} 
       />
 
       <SettingsModal 
@@ -224,6 +288,13 @@ function App() {
         onClose={() => setIsFavoritesOpen(false)}
         onSave={updateAllFavorites}
         onNavigate={loadDirectory}
+      />
+
+      <SlideIntervalModal
+        isOpen={isIntervalDialogOpen}
+        currentInterval={slideInterval}
+        onClose={() => setIsIntervalDialogOpen(false)}
+        onSave={updateSlideInterval}
       />
     </div>
   );
