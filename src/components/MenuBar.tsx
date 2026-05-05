@@ -68,6 +68,7 @@ export function MenuBar({
       onDoubleClick={toggleMaximize}
     >
       <div className="menu-items-container">
+        {/* 1. ファイル */}
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "file" ? "active" : ""}`}
@@ -85,37 +86,7 @@ export function MenuBar({
           )}
         </div>
 
-        <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
-          <button 
-            className={`menu-button ${activeMenu === "history" ? "active" : ""}`}
-            onClick={() => setActiveMenu(activeMenu === "history" ? null : "history")}
-          >
-            履歴(R)
-          </button>
-          {activeMenu === "history" && (
-            <ul className="menu-dropdown history-dropdown">
-              {latestHistory.length > 0 ? (
-                latestHistory.map((entry, idx) => (
-                  <li key={idx} onClick={() => { onSelectHistory(entry.path); setActiveMenu(null); }}>
-                    {entry.path}
-                  </li>
-                ))
-              ) : (
-                <li className="disabled">履歴はありません</li>
-              )}
-            </ul>
-          )}
-        </div>
-
-        <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
-          <button 
-            className={`menu-button ${activeMenu === "favorites" ? "active" : ""}`}
-            onClick={() => { onOpenFavorites(); setActiveMenu(null); }}
-          >
-            お気に入り(B)
-          </button>
-        </div>
-
+        {/* 2. 表示 */}
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "view" ? "active" : ""}`}
@@ -155,6 +126,7 @@ export function MenuBar({
           )}
         </div>
 
+        {/* 3. スライド */}
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "slide" ? "active" : ""}`}
@@ -182,6 +154,40 @@ export function MenuBar({
           )}
         </div>
 
+        {/* 4. お気に入り */}
+        <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
+          <button 
+            className={`menu-button ${activeMenu === "favorites" ? "active" : ""}`}
+            onClick={() => { onOpenFavorites(); setActiveMenu(null); }}
+          >
+            お気に入り(B)
+          </button>
+        </div>
+
+        {/* 5. 履歴 */}
+        <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
+          <button 
+            className={`menu-button ${activeMenu === "history" ? "active" : ""}`}
+            onClick={() => setActiveMenu(activeMenu === "history" ? null : "history")}
+          >
+            履歴(R)
+          </button>
+          {activeMenu === "history" && (
+            <ul className="menu-dropdown history-dropdown">
+              {latestHistory.length > 0 ? (
+                latestHistory.map((entry, idx) => (
+                  <li key={idx} onClick={() => { onSelectHistory(entry.path); setActiveMenu(null); }}>
+                    {entry.path}
+                  </li>
+                ))
+              ) : (
+                <li className="disabled">履歴はありません</li>
+              )}
+            </ul>
+          )}
+        </div>
+
+        {/* 6. 設定 */}
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "settings" ? "active" : ""}`}
@@ -190,6 +196,8 @@ export function MenuBar({
             設定(S)
           </button>
         </div>
+
+        {/* 7. ヘルプ */}
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button className="menu-button">ヘルプ(H)</button>
         </div>
