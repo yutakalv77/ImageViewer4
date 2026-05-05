@@ -31,6 +31,7 @@
     "cancel": "Cancel",
     "close": "Close",
     "delete": "Delete",
+    "reset": "Reset",
     "path": "Path",
     "date": "Date Added",
     "operation": "Operation",
@@ -45,7 +46,8 @@
     "copy_path": "Copy Path to Clipboard",
     "fav_add": "Add to Favorites",
     "fav_remove": "Remove from Favorites",
-    "rename": "Rename"
+    "rename": "Rename",
+    "set_bg": "Set as Background"
   },
   "favorites": {
     "title": "Manage Favorites",
@@ -67,7 +69,17 @@
     "general_title": "General Settings",
     "startup_folder_label": "Open folder on startup",
     "startup_none": "(None)",
-    "startup_last": "Last visited folder"
+    "startup_last": "Last visited folder",
+    "theme_label": "Theme",
+    "language_label": "Language",
+    "bg_title": "Background Image Settings",
+    "bg_label": "Select background image",
+    "bg_opacity": "Opacity",
+    "bg_blur": "Blur",
+    "bg_style": "Display Style",
+    "bg_style_cover": "Cover",
+    "bg_style_contain": "Fit",
+    "bg_style_tile": "Tile"
   },
   "slideshow": {
     "interval_dialog_title": "Interval Settings",

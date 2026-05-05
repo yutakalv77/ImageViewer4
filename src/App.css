@@ -65,6 +65,48 @@ body {
   width: 100vw;
   overflow: hidden;
   position: relative;
+  background-color: var(--bg-app);
+}
+
+.app-background-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Make UI semi-transparent when background is set */
+.has-background .menu-bar,
+.has-background .top-bar {
+  background-color: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.has-background .main-content {
+  background: transparent;
+}
+
+.has-background .entry-card {
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(5px);
+}
+
+[data-theme="light"].has-background .menu-bar,
+[data-theme="light"].has-background .top-bar {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="light"].has-background .entry-card {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Z-index fixes for background */
+.menu-bar, .top-bar, .main-content {
+  position: relative;
+  z-index: 1;
 }
 
 /* Resize Handles */

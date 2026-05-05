@@ -16,6 +16,7 @@ interface GalleryProps {
   onToggleFavorite: (path: string) => void;
   onEntryClick: (entry: EntryItem) => void;
   onRefresh: () => void;
+  onSetBackground: (path: string) => void;
 }
 
 export function Gallery({ 
@@ -25,7 +26,8 @@ export function Gallery({
   isFavorite,
   onToggleFavorite,
   onEntryClick, 
-  onRefresh 
+  onRefresh,
+  onSetBackground
 }: GalleryProps) {
   const { t } = useTranslation();
   const {
@@ -95,6 +97,9 @@ export function Gallery({
       label: isFavorite(contextMenu.entry.path) ? t('context_menu.fav_remove') : t('context_menu.fav_add'), 
       onClick: () => onToggleFavorite(contextMenu.entry.path) 
     },
+    ...(!contextMenu.entry.is_dir ? [
+      { label: t('context_menu.set_bg'), onClick: () => onSetBackground(contextMenu.entry.path) }
+    ] : []),
     { separator: true, label: t('context_menu.rename'), onClick: () => setEditingIndex(contextMenu.index) },
   ] : [];
 

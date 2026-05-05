@@ -3,7 +3,7 @@ import { appDataDir } from "@tauri-apps/api/path";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import i18n from "../i18n";
-import { ViewMode, ReadingDirection, ThemeMode, StartupFolderType } from "../types";
+import { ViewMode, ReadingDirection, ThemeMode, StartupFolderType, BackgroundSettings } from "../types";
 
 export function useSettings() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -21,6 +21,14 @@ export function useSettings() {
 
   const [language, setLanguage] = useState<string>(i18n.language || "ja");
   const [theme, setTheme] = useState<ThemeMode>("dark");
+
+  // Background settings
+  const [background, setBackground] = useState<BackgroundSettings>({
+    path: null,
+    opacity: 0.3,
+    blur: 5,
+    style: "cover"
+  });
 
   const applyTheme = useCallback(async (targetTheme: ThemeMode) => {
     const appWindow = getCurrentWindow();
@@ -84,6 +92,12 @@ export function useSettings() {
         applyTheme(savedTheme);
       } else {
         applyTheme("dark");
+      }
+
+      // Background
+      const savedBg = localStorage.getItem("background");
+      if (savedBg) {
+        setBackground(JSON.parse(savedBg));
       }
     };
     initSettings();
@@ -167,6 +181,31 @@ export function useSettings() {
     applyTheme(newTheme);
   };
 
+  const updateBackground = (updates: Partial<BackgroundSettings>) => {
+    setBackground(prev => {
+      const next = { ...prev, ...updates };
+      localStorage.setItem("background", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const pickBackgroundImage = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{
+          name: 'Image',
+          extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif']
+        }]
+      });
+      if (selected && typeof selected === 'string') {
+        updateBackground({ path: selected });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return {
     isSettingsOpen,
     setIsSettingsOpen,
@@ -191,6 +230,9 @@ export function useSettings() {
     language,
     updateLanguage,
     theme,
-    updateTheme
+    updateTheme,
+    background,
+    updateBackground,
+    pickBackgroundImage
   };
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useFileSystem } from "./hooks/useFileSystem";
 import { useSettings } from "./hooks/useSettings";
@@ -29,7 +30,8 @@ function App() {
     startupFolderType, updateStartupFolderType, slideInterval, updateSlideInterval,
     slideLoop, toggleSlideLoop, viewMode, updateViewMode, readingDirection,
     updateReadingDirection, firstPageIsCover, toggleFirstPageIsCover,
-    language, updateLanguage, theme, updateTheme
+    language, updateLanguage, theme, updateTheme, 
+    background, updateBackground, pickBackgroundImage
   } = useSettings();
 
   const { history, recordHistory, isLoaded: isHistoryLoaded } = useHistory(dataStoragePath, historyRetentionDays);
@@ -153,9 +155,35 @@ function App() {
     }
   };
 
+  const backgroundStyle = useMemo(() => {
+    if (!background.path) return {};
+    const styles: React.CSSProperties = {
+      backgroundImage: `url("${convertFileSrc(background.path)}")`,
+      opacity: background.opacity,
+      filter: `blur(${background.blur}px)`,
+    };
+    if (background.style === "cover") {
+      styles.backgroundSize = "cover";
+      styles.backgroundPosition = "center";
+      styles.backgroundRepeat = "no-repeat";
+    } else if (background.style === "contain") {
+      styles.backgroundSize = "contain";
+      styles.backgroundPosition = "center";
+      styles.backgroundRepeat = "no-repeat";
+    } else if (background.style === "tile") {
+      styles.backgroundSize = "auto";
+      styles.backgroundRepeat = "repeat";
+    }
+    return styles;
+  }, [background.path, background.opacity, background.blur, background.style]);
+
   return (
-    <div className="app-container">
+    <div className={`app-container ${background.path ? "has-background" : ""}`}>
       <ResizeHandles />
+      
+      {background.path && (
+        <div className="app-background-layer" style={backgroundStyle}></div>
+      )}
 
       <MenuBar 
         history={history}
@@ -198,6 +226,7 @@ function App() {
         onToggleFavorite={toggleFavorite}
         onEntryClick={handleEntryClick} 
         onRefresh={() => loadDirectory(currentPath)}
+        onSetBackground={(path) => updateBackground({ path })}
       />
 
       <ImageViewer 
@@ -219,6 +248,7 @@ function App() {
         startupFolderType={startupFolderType}
         language={language}
         theme={theme}
+        background={background}
         onClose={() => setIsSettingsOpen(false)}
         onTabChange={setActiveSettingsTab}
         onChangeStoragePath={changeStoragePath}
@@ -226,6 +256,8 @@ function App() {
         onUpdateStartupFolderType={updateStartupFolderType}
         onUpdateLanguage={updateLanguage}
         onUpdateTheme={updateTheme}
+        onUpdateBackground={updateBackground}
+        onPickBackgroundImage={pickBackgroundImage}
       />
 
       <FavoritesModal

@@ -31,6 +31,7 @@
     "cancel": "キャンセル",
     "close": "閉じる",
     "delete": "削除",
+    "reset": "リセット",
     "path": "パス",
     "date": "登録日時",
     "operation": "操作",
@@ -45,7 +46,8 @@
     "copy_path": "クリップボードにコピー",
     "fav_add": "お気に入りに追加",
     "fav_remove": "お気に入りから削除",
-    "rename": "名前を変更"
+    "rename": "名前を変更",
+    "set_bg": "背景に設定"
   },
   "favorites": {
     "title": "お気に入り管理",
@@ -67,7 +69,17 @@
     "general_title": "一般設定",
     "startup_folder_label": "起動時にフォルダ",
     "startup_none": "（なし）",
-    "startup_last": "最後に表示したフォルダ"
+    "startup_last": "最後に表示したフォルダ",
+    "theme_label": "テーマ",
+    "language_label": "言語",
+    "bg_title": "背景画像の設定",
+    "bg_label": "背景画像を選択",
+    "bg_opacity": "不透明度",
+    "bg_blur": "ぼかし",
+    "bg_style": "表示スタイル",
+    "bg_style_cover": "カバー (全体)",
+    "bg_style_contain": "フィット",
+    "bg_style_tile": "タイル (繰り返し)"
   },
   "slideshow": {
     "interval_dialog_title": "表示間隔の設定",

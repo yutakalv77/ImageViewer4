@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { StartupFolderType, ThemeMode } from "../types";
+import { StartupFolderType, ThemeMode, BackgroundSettings } from "../types";
 import { GeneralSettings } from "./settings/GeneralSettings";
 import { HistorySettings } from "./settings/HistorySettings";
 import { StorageSettings } from "./settings/StorageSettings";
@@ -12,6 +12,7 @@ interface SettingsModalProps {
   startupFolderType: StartupFolderType;
   language: string;
   theme: ThemeMode;
+  background: BackgroundSettings;
   onClose: () => void;
   onTabChange: (tab: string) => void;
   onChangeStoragePath: () => void;
@@ -19,6 +20,8 @@ interface SettingsModalProps {
   onUpdateStartupFolderType: (type: StartupFolderType) => void;
   onUpdateLanguage: (lang: string) => void;
   onUpdateTheme: (theme: ThemeMode) => void;
+  onUpdateBackground: (updates: Partial<BackgroundSettings>) => void;
+  onPickBackgroundImage: () => void;
 }
 
 export function SettingsModal({
@@ -29,6 +32,7 @@ export function SettingsModal({
   startupFolderType,
   language,
   theme,
+  background,
   onClose,
   onTabChange,
   onChangeStoragePath,
@@ -36,6 +40,8 @@ export function SettingsModal({
   onUpdateStartupFolderType,
   onUpdateLanguage,
   onUpdateTheme,
+  onUpdateBackground,
+  onPickBackgroundImage,
 }: SettingsModalProps) {
   const { t } = useTranslation();
 
@@ -75,9 +81,12 @@ export function SettingsModal({
                 startupFolderType={startupFolderType}
                 language={language}
                 theme={theme}
+                background={background}
                 onUpdateStartupFolderType={onUpdateStartupFolderType}
                 onUpdateLanguage={onUpdateLanguage}
                 onUpdateTheme={onUpdateTheme}
+                onUpdateBackground={onUpdateBackground}
+                onPickBackgroundImage={onPickBackgroundImage}
               />
             )}
             {activeTab === "history" && (

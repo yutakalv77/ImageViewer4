@@ -48,7 +48,10 @@ export function EntryCard({
       onClick={onClick}
       onContextMenu={onContextMenu}
     >
-      <div className="thumbnail-container">
+      <div 
+        className="thumbnail-container" 
+        title={entry.is_dir ? entry.name : undefined}
+      >
         {entry.thumbnail_path ? (
           <img src={convertFileSrc(entry.thumbnail_path)} alt={entry.name} loading="lazy" />
         ) : (

@@ -29,3 +29,11 @@ export type ViewMode = "single" | "spread";
 export type ReadingDirection = "rtl" | "ltr";
 export type ThemeMode = "dark" | "light" | "system";
 export type StartupFolderType = "none" | "last";
+export type BackgroundStyle = "cover" | "contain" | "tile";
+
+export interface BackgroundSettings {
+  path: string | null;
+  opacity: number;
+  blur: number;
+  style: BackgroundStyle;
+}
