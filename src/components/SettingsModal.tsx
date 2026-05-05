@@ -1,20 +1,24 @@
 import { useTranslation } from "react-i18next";
+import { StartupFolderType, ThemeMode } from "../types";
+import { GeneralSettings } from "./settings/GeneralSettings";
+import { HistorySettings } from "./settings/HistorySettings";
+import { StorageSettings } from "./settings/StorageSettings";
 
 interface SettingsModalProps {
   isOpen: boolean;
   activeTab: string;
   dataStoragePath: string;
   historyRetentionDays: number;
-  startupFolderType: string;
+  startupFolderType: StartupFolderType;
   language: string;
-  theme: string;
+  theme: ThemeMode;
   onClose: () => void;
   onTabChange: (tab: string) => void;
   onChangeStoragePath: () => void;
   onUpdateHistoryRetention: (days: number) => void;
-  onUpdateStartupFolderType: (type: string) => void;
+  onUpdateStartupFolderType: (type: StartupFolderType) => void;
   onUpdateLanguage: (lang: string) => void;
-  onUpdateTheme: (theme: string) => void;
+  onUpdateTheme: (theme: ThemeMode) => void;
 }
 
 export function SettingsModal({
@@ -67,86 +71,26 @@ export function SettingsModal({
           </div>
           <div className="settings-content">
             {activeTab === "general" && (
-              <div className="settings-section">
-                <h3>{t('settings.general_title')}</h3>
-                <div className="settings-group">
-                  <label>{t('settings.startup_folder_label')}</label>
-                  <div className="path-input-group">
-                    <select 
-                      className="settings-select"
-                      value={startupFolderType} 
-                      onChange={(e) => onUpdateStartupFolderType(e.target.value)}
-                    >
-                      <option value="none">{t('settings.startup_none')}</option>
-                      <option value="last">{t('settings.startup_last')}</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="settings-group" style={{ marginTop: '20px' }}>
-                  <label>{t('settings.theme_label', 'テーマ / Theme')}</label>
-                  <div className="path-input-group">
-                    <select 
-                      className="settings-select"
-                      value={theme} 
-                      onChange={(e) => onUpdateTheme(e.target.value)}
-                    >
-                      <option value="dark">{t('settings.theme_dark', 'ダーク (Dark)')}</option>
-                      <option value="light">{t('settings.theme_light', 'ライト (Light)')}</option>
-                      <option value="system">{t('settings.theme_system', 'システム設定に準拠 (System)')}</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="settings-group" style={{ marginTop: '20px' }}>
-                  <label>{t('settings.language_label', '言語 / Language')}</label>
-                  <div className="path-input-group">
-                    <select 
-                      className="settings-select"
-                      value={language} 
-                      onChange={(e) => onUpdateLanguage(e.target.value)}
-                    >
-                      <option value="ja">日本語 (Japanese)</option>
-                      <option value="en">English</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
+              <GeneralSettings 
+                startupFolderType={startupFolderType}
+                language={language}
+                theme={theme}
+                onUpdateStartupFolderType={onUpdateStartupFolderType}
+                onUpdateLanguage={onUpdateLanguage}
+                onUpdateTheme={onUpdateTheme}
+              />
             )}
             {activeTab === "history" && (
-              <div className="settings-section">
-                <h3>{t('settings.history_title')}</h3>
-                <div className="settings-group">
-                  <label>{t('settings.history_label')}</label>
-                  <div className="path-input-group">
-                    <input 
-                      type="number" 
-                      min="0" 
-                      max="1000" 
-                      value={historyRetentionDays} 
-                      onChange={(e) => onUpdateHistoryRetention(parseInt(e.target.value, 10) || 0)}
-                    />
-                  </div>
-                  <p style={{fontSize: '0.8em', color: 'var(--text-dim)', marginTop: '10px'}}>
-                    {t('settings.history_hint')}
-                  </p>
-                </div>
-              </div>
+              <HistorySettings 
+                historyRetentionDays={historyRetentionDays}
+                onUpdateHistoryRetention={onUpdateHistoryRetention}
+              />
             )}
             {activeTab === "storage" && (
-              <div className="settings-section">
-                <h3>{t('settings.storage_title')}</h3>
-                <div className="settings-group">
-                  <label>{t('settings.storage_label')}</label>
-                  <div className="path-input-group">
-                    <input type="text" value={dataStoragePath} readOnly />
-                    <button className="settings-button" onClick={onChangeStoragePath}>{t('settings.storage_change')}</button>
-                  </div>
-                  <p style={{fontSize: '0.8em', color: 'var(--text-dim)', marginTop: '10px'}}>
-                    {t('settings.storage_hint')}
-                  </p>
-                </div>
-              </div>
+              <StorageSettings 
+                dataStoragePath={dataStoragePath}
+                onChangeStoragePath={onChangeStoragePath}
+              />
             )}
           </div>
         </div>

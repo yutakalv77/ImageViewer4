@@ -24,3 +24,8 @@ export interface FavoriteEntry {
   path: string;
   addedAt: number; // timestamp
 }
+
+export type ViewMode = "single" | "spread";
+export type ReadingDirection = "rtl" | "ltr";
+export type ThemeMode = "dark" | "light" | "system";
+export type StartupFolderType = "none" | "last";
