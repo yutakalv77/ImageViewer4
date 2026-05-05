@@ -45,6 +45,12 @@ function App() {
     updateSlideInterval,
     slideLoop,
     toggleSlideLoop,
+    viewMode,
+    updateViewMode,
+    readingDirection,
+    updateReadingDirection,
+    firstPageIsCover,
+    toggleFirstPageIsCover
   } = useSettings();
 
   const {
@@ -121,7 +127,15 @@ function App() {
     if (isSlideshowActive && viewerState.isOpen && images.length > 0) {
       timer = window.setInterval(() => {
         setViewerState(prev => {
-          const nextIndex = prev.currentIndex + 1;
+          let nextIndex = prev.currentIndex;
+          if (viewMode === "single") {
+            nextIndex += 1;
+          } else {
+            // Spread mode step
+            const step = (prev.currentIndex === 0 && firstPageIsCover) ? 1 : 2;
+            nextIndex += step;
+          }
+
           if (nextIndex >= images.length) {
             if (slideLoop) {
               return { ...prev, currentIndex: 0 };
@@ -137,28 +151,29 @@ function App() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isSlideshowActive, viewerState.isOpen, images.length, slideInterval, slideLoop]);
+  }, [isSlideshowActive, viewerState.isOpen, images.length, slideInterval, slideLoop, viewMode, firstPageIsCover]);
 
   const startSlideshow = useCallback(async () => {
     if (images.length === 0) return;
     
-    // Start from current selection or index 0
     const startIndex = viewerState.currentIndex >= 0 ? viewerState.currentIndex : 0;
     setViewerState({ isOpen: true, currentIndex: startIndex });
     setIsSlideshowActive(true);
     
-    // Enter fullscreen
     const win = getCurrentWindow();
     await win.setFullscreen(true);
   }, [images.length, viewerState.currentIndex]);
 
   const stopSlideshow = useCallback(async () => {
     setIsSlideshowActive(false);
-    // Exit fullscreen if closing viewer
     const win = getCurrentWindow();
     if (await win.isFullscreen()) {
       await win.setFullscreen(false);
     }
+  }, []);
+
+  const handleNavigate = useCallback((index: number) => {
+    setViewerState(prev => ({ ...prev, currentIndex: index }));
   }, []);
 
   // Keyboard Shortcuts
@@ -175,18 +190,26 @@ function App() {
           setViewerState({ isOpen: false, currentIndex: -1 });
         } else if (e.key === "ArrowDown" || e.key === " ") {
           e.preventDefault();
-          setIsSlideshowActive(false); // Manual navigation stops slideshow
+          setIsSlideshowActive(false);
+          const step = (viewMode === "spread" && !(viewerState.currentIndex === 0 && firstPageIsCover)) ? 2 : 1;
           setViewerState(prev => ({
             ...prev,
-            currentIndex: Math.min(prev.currentIndex + 1, images.length - 1)
+            currentIndex: Math.min(prev.currentIndex + step, images.length - 1)
           }));
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
-          setIsSlideshowActive(false); // Manual navigation stops slideshow
+          setIsSlideshowActive(false);
+          const step = (viewMode === "spread" && !(viewerState.currentIndex <= 2 && firstPageIsCover)) ? 2 : 1;
+          // Simple logic for back is handled in ImageViewer as well, 
+          // but App.tsx handles the global state. 
+          // Actually ImageViewer should probably just use onNavigate and App.tsx handles keys?
+          // For now, I'll keep it consistent.
           setViewerState(prev => ({
             ...prev,
-            currentIndex: Math.max(prev.currentIndex - 1, 0)
+            currentIndex: Math.max(prev.currentIndex - step, 0)
           }));
+        } else if (e.key.toLowerCase() === "m") {
+          updateViewMode(viewMode === "single" ? "spread" : "single");
         }
       } else if (isSettingsOpen || isFavoritesOpen || isIntervalDialogOpen) {
         if (e.key === "Escape") {
@@ -198,7 +221,6 @@ function App() {
         if (e.key === "Escape" || e.key === "Backspace") {
           goUp();
         }
-        // Alt + Arrow keys for navigation
         if (e.altKey && e.key === "ArrowLeft") {
           goBack();
         } else if (e.altKey && e.key === "ArrowRight") {
@@ -209,7 +231,7 @@ function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewerState.isOpen, isSettingsOpen, isFavoritesOpen, isIntervalDialogOpen, images.length, goUp, goBack, goForward, stopSlideshow]);
+  }, [viewerState.isOpen, viewerState.currentIndex, isSettingsOpen, isFavoritesOpen, isIntervalDialogOpen, images.length, goUp, goBack, goForward, stopSlideshow, viewMode, firstPageIsCover, updateViewMode]);
 
   const handleEntryClick = (entry: EntryItem) => {
     if (entry.is_dir) {
@@ -228,6 +250,9 @@ function App() {
         history={history}
         slideInterval={slideInterval}
         slideLoop={slideLoop}
+        viewMode={viewMode}
+        readingDirection={readingDirection}
+        firstPageIsCover={firstPageIsCover}
         onOpenFolder={openFolderDialog} 
         onOpenSettings={() => setIsSettingsOpen(true)} 
         onOpenFavorites={() => setIsFavoritesOpen(true)}
@@ -236,6 +261,9 @@ function App() {
         onToggleLoop={toggleSlideLoop}
         onUpdateInterval={updateSlideInterval}
         onOpenIntervalDialog={() => setIsIntervalDialogOpen(true)}
+        onUpdateViewMode={updateViewMode}
+        onUpdateReadingDirection={updateReadingDirection}
+        onToggleFirstPageIsCover={toggleFirstPageIsCover}
       />
 
       <TopBar 
@@ -263,10 +291,14 @@ function App() {
       <ImageViewer 
         images={images} 
         currentIndex={viewerState.currentIndex} 
+        viewMode={viewMode}
+        readingDirection={readingDirection}
+        firstPageIsCover={firstPageIsCover}
         onClose={() => {
           stopSlideshow();
           setViewerState({ isOpen: false, currentIndex: -1 });
         }} 
+        onNavigate={handleNavigate}
       />
 
       <SettingsModal 

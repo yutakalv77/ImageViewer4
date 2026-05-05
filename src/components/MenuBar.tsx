@@ -6,6 +6,9 @@ interface MenuBarProps {
   history: HistoryEntry[];
   slideInterval: number;
   slideLoop: boolean;
+  viewMode: "single" | "spread";
+  readingDirection: "rtl" | "ltr";
+  firstPageIsCover: boolean;
   onOpenFolder: () => void;
   onOpenSettings: () => void;
   onOpenFavorites: () => void;
@@ -14,12 +17,18 @@ interface MenuBarProps {
   onToggleLoop: () => void;
   onUpdateInterval: (seconds: number) => void;
   onOpenIntervalDialog: () => void;
+  onUpdateViewMode: (mode: "single" | "spread") => void;
+  onUpdateReadingDirection: (direction: "rtl" | "ltr") => void;
+  onToggleFirstPageIsCover: () => void;
 }
 
 export function MenuBar({ 
   history, 
   slideInterval,
   slideLoop,
+  viewMode,
+  readingDirection,
+  firstPageIsCover,
   onOpenFolder, 
   onOpenSettings, 
   onOpenFavorites, 
@@ -27,7 +36,10 @@ export function MenuBar({
   onStartSlideshow,
   onToggleLoop,
   onUpdateInterval,
-  onOpenIntervalDialog
+  onOpenIntervalDialog,
+  onUpdateViewMode,
+  onUpdateReadingDirection,
+  onToggleFirstPageIsCover
 }: MenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const { os, isMaximized, handleDrag, toggleMaximize, minimize, close } = useWindow();
@@ -99,6 +111,45 @@ export function MenuBar({
           >
             お気に入り(B)
           </button>
+        </div>
+
+        <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
+          <button 
+            className={`menu-button ${activeMenu === "view" ? "active" : ""}`}
+            onClick={() => setActiveMenu(activeMenu === "view" ? null : "view")}
+          >
+            表示(V)
+          </button>
+          {activeMenu === "view" && (
+            <ul className="menu-dropdown">
+              <li onClick={(e) => { e.stopPropagation(); onUpdateViewMode("single"); }}>
+                {renderCheck(viewMode === "single")} 単一表示
+              </li>
+              <li onClick={(e) => { e.stopPropagation(); onUpdateViewMode("spread"); }}>
+                {renderCheck(viewMode === "spread")} 見開き表示
+              </li>
+              <li className="separator"></li>
+              <li 
+                className={viewMode === "single" ? "disabled" : ""}
+                onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); onUpdateReadingDirection("rtl"); } }}
+              >
+                {renderCheck(readingDirection === "rtl")} 右から左（日本語）
+              </li>
+              <li 
+                className={viewMode === "single" ? "disabled" : ""}
+                onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); onUpdateReadingDirection("ltr"); } }}
+              >
+                {renderCheck(readingDirection === "ltr")} 左から右（洋書）
+              </li>
+              <li className="separator"></li>
+              <li 
+                className={viewMode === "single" ? "disabled" : ""}
+                onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); onToggleFirstPageIsCover(); } }}
+              >
+                {renderCheck(firstPageIsCover)} 最初の1枚を表紙にする
+              </li>
+            </ul>
+          )}
         </div>
 
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>

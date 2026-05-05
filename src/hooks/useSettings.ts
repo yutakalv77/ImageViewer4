@@ -10,8 +10,13 @@ export function useSettings() {
   const [startupFolderType, setStartupFolderType] = useState<string>("none"); // "none" or "last"
   
   // Slideshow settings
-  const [slideInterval, setSlideInterval] = useState(3.0); // seconds
+  const [slideInterval, setSlideInterval] = useState(3.0);
   const [slideLoop, setSlideLoop] = useState(true);
+
+  // View settings
+  const [viewMode, setViewMode] = useState<"single" | "spread">("single");
+  const [readingDirection, setReadingDirection] = useState<"rtl" | "ltr">("rtl");
+  const [firstPageIsCover, setFirstPageIsCover] = useState(true);
 
   useEffect(() => {
     const initSettings = async () => {
@@ -31,25 +36,25 @@ export function useSettings() {
 
       // History Retention
       const savedDays = localStorage.getItem("historyRetentionDays");
-      if (savedDays !== null) {
-        setHistoryRetentionDays(parseInt(savedDays, 10));
-      }
+      if (savedDays !== null) setHistoryRetentionDays(parseInt(savedDays, 10));
 
       // Startup Folder Type
       const savedStartupType = localStorage.getItem("startupFolderType");
-      if (savedStartupType !== null) {
-        setStartupFolderType(savedStartupType);
-      }
+      if (savedStartupType !== null) setStartupFolderType(savedStartupType);
 
       // Slideshow settings
       const savedSlideInterval = localStorage.getItem("slideInterval");
-      if (savedSlideInterval !== null) {
-        setSlideInterval(parseFloat(savedSlideInterval));
-      }
+      if (savedSlideInterval !== null) setSlideInterval(parseFloat(savedSlideInterval));
       const savedSlideLoop = localStorage.getItem("slideLoop");
-      if (savedSlideLoop !== null) {
-        setSlideLoop(savedSlideLoop === "true");
-      }
+      if (savedSlideLoop !== null) setSlideLoop(savedSlideLoop === "true");
+
+      // View settings
+      const savedViewMode = localStorage.getItem("viewMode") as any;
+      if (savedViewMode) setViewMode(savedViewMode);
+      const savedDirection = localStorage.getItem("readingDirection") as any;
+      if (savedDirection) setReadingDirection(savedDirection);
+      const savedCover = localStorage.getItem("firstPageIsCover");
+      if (savedCover !== null) setFirstPageIsCover(savedCover === "true");
     };
     initSettings();
   }, []);
@@ -93,6 +98,22 @@ export function useSettings() {
     localStorage.setItem("slideLoop", newValue.toString());
   };
 
+  const updateViewMode = (mode: "single" | "spread") => {
+    setViewMode(mode);
+    localStorage.setItem("viewMode", mode);
+  };
+
+  const updateReadingDirection = (direction: "rtl" | "ltr") => {
+    setReadingDirection(direction);
+    localStorage.setItem("readingDirection", direction);
+  };
+
+  const toggleFirstPageIsCover = () => {
+    const newValue = !firstPageIsCover;
+    setFirstPageIsCover(newValue);
+    localStorage.setItem("firstPageIsCover", newValue.toString());
+  };
+
   return {
     isSettingsOpen,
     setIsSettingsOpen,
@@ -108,5 +129,11 @@ export function useSettings() {
     updateSlideInterval,
     slideLoop,
     toggleSlideLoop,
+    viewMode,
+    updateViewMode,
+    readingDirection,
+    updateReadingDirection,
+    firstPageIsCover,
+    toggleFirstPageIsCover
   };
 }
