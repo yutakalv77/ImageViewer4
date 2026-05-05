@@ -20,6 +20,7 @@ interface MenuBarProps {
   onUpdateViewMode: (mode: "single" | "spread") => void;
   onUpdateReadingDirection: (direction: "rtl" | "ltr") => void;
   onToggleFirstPageIsCover: () => void;
+  onRevealCurrentPath: () => void;
 }
 
 export function MenuBar({ 
@@ -39,10 +40,11 @@ export function MenuBar({
   onOpenIntervalDialog,
   onUpdateViewMode,
   onUpdateReadingDirection,
-  onToggleFirstPageIsCover
+  onToggleFirstPageIsCover,
+  onRevealCurrentPath
 }: MenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const { os, isMaximized, handleDrag, toggleMaximize, minimize, close } = useWindow();
+  const { os, toggleMaximize, minimize, close, handleDrag } = useWindow();
 
   useEffect(() => {
     const handleClick = () => setActiveMenu(null);
@@ -76,6 +78,7 @@ export function MenuBar({
           {activeMenu === "file" && (
             <ul className="menu-dropdown">
               <li onClick={() => { onOpenFolder(); setActiveMenu(null); }}>フォルダを開く(O)...</li>
+              <li onClick={() => { onRevealCurrentPath(); setActiveMenu(null); }}>エクスプローラーで表示</li>
               <li className="separator"></li>
               <li onClick={close}>終了(X)</li>
             </ul>
@@ -198,15 +201,9 @@ export function MenuBar({
             <svg width="10" height="1" viewBox="0 0 10 1"><path d="M0 0h10v1H0z" fill="currentColor"/></svg>
           </div>
           <div className="window-control-button maximize" onClick={toggleMaximize}>
-            {isMaximized ? (
-              <svg width="10" height="10" viewBox="0 0 10 10">
-                <path d="M2.1 0v2H0v8h8V7.9h2V0H2.1zm4.9 8.9H1V3.1h6v5.8zm2-2.1h-1V2.1H3.1v-1h5.9v5.8z" fill="currentColor"/>
-              </svg>
-            ) : (
-              <svg width="10" height="10" viewBox="0 0 10 10">
-                <path d="M0 0v10h10V0H0zm9 9H1V1h8v8z" fill="currentColor"/>
-              </svg>
-            )}
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <path d="M0 0v10h10V0H0zm9 9H1V1h8v8z" fill="currentColor"/>
+            </svg>
           </div>
           <div className="window-control-button close" onClick={close}>
             <svg width="10" height="10" viewBox="0 0 10 10">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { useFileSystem } from "./hooks/useFileSystem";
 import { useSettings } from "./hooks/useSettings";
 import { useHistory } from "./hooks/useHistory";
@@ -103,6 +104,17 @@ function App() {
     setViewerState({ isOpen: false, currentIndex: -1 });
   }, [stopTimer]);
 
+  const handleRevealCurrentPath = useCallback(async () => {
+    if (currentPath) {
+      try {
+        // use openPath to open the folder itself, not reveal it in parent
+        await openPath(currentPath);
+      } catch (err) {
+        console.error("Failed to open current path:", err);
+      }
+    }
+  }, [currentPath]);
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -163,6 +175,7 @@ function App() {
         onUpdateViewMode={updateViewMode}
         onUpdateReadingDirection={updateReadingDirection}
         onToggleFirstPageIsCover={toggleFirstPageIsCover}
+        onRevealCurrentPath={handleRevealCurrentPath}
       />
 
       <TopBar 
