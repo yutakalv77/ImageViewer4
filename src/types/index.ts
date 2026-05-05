@@ -19,3 +19,8 @@ export interface HistoryEntry {
   path: string;
   lastVisited: number; // timestamp
 }
+
+export interface FavoriteEntry {
+  path: string;
+  addedAt: number; // timestamp
+}

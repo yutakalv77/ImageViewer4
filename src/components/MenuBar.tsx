@@ -6,10 +6,11 @@ interface MenuBarProps {
   history: HistoryEntry[];
   onOpenFolder: () => void;
   onOpenSettings: () => void;
+  onOpenFavorites: () => void;
   onSelectHistory: (path: string) => void;
 }
 
-export function MenuBar({ history, onOpenFolder, onOpenSettings, onSelectHistory }: MenuBarProps) {
+export function MenuBar({ history, onOpenFolder, onOpenSettings, onOpenFavorites, onSelectHistory }: MenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const { os, isMaximized, handleDrag, toggleMaximize, minimize, close } = useWindow();
 
@@ -65,6 +66,15 @@ export function MenuBar({ history, onOpenFolder, onOpenSettings, onSelectHistory
               )}
             </ul>
           )}
+        </div>
+
+        <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
+          <button 
+            className={`menu-button ${activeMenu === "favorites" ? "active" : ""}`}
+            onClick={() => { onOpenFavorites(); setActiveMenu(null); }}
+          >
+            お気に入り(B)
+          </button>
         </div>
 
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>

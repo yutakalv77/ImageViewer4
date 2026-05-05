@@ -180,6 +180,12 @@ body {
   z-index: 10;
 }
 
+.nav-buttons-group {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
 .nav-button {
   background: transparent;
   border: none;
@@ -361,6 +367,82 @@ body {
   text-align: center;
   border-radius: 2px;
   outline: none;
+}
+
+/* Favorites */
+.favorite-star {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  font-size: 1.2em;
+  background: rgba(0,0,0,0.5);
+  padding: 2px;
+  border-radius: 4px;
+  color: #ffcc00;
+  text-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.favorites-modal {
+  width: 800px !important;
+  height: 600px !important;
+}
+
+.favorites-list-container {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.favorites-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.favorites-table th {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #444;
+  color: #aaa;
+}
+
+.favorites-table td {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.fav-path {
+  cursor: pointer;
+  color: #0066cc;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fav-path:hover {
+  text-decoration: underline;
+  color: #0077ee;
+}
+
+.fav-date {
+  color: #888;
+  font-size: 0.85em;
+}
+
+.fav-remove-btn {
+  background: #441111;
+  border: 1px solid #662222;
+  color: #ffaaaa;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+
+.fav-remove-btn:hover {
+  background: #662222;
+  color: white;
 }
 
 /* Context Menu */

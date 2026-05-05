@@ -6,6 +6,7 @@ interface EntryCardProps {
   entry: EntryItem;
   isSelected?: boolean;
   isEditing?: boolean;
+  isFavorite?: boolean;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onRenameComplete: (newName: string) => void;
@@ -16,6 +17,7 @@ export function EntryCard({
   entry, 
   isSelected, 
   isEditing, 
+  isFavorite,
   onClick, 
   onContextMenu,
   onRenameComplete,
@@ -53,6 +55,7 @@ export function EntryCard({
           <div className="no-thumbnail">Folder</div>
         )}
         {entry.is_dir && <div className="folder-icon">📁</div>}
+        {isFavorite && <div className="favorite-star" title="お気に入り">⭐</div>}
       </div>
       
       <div className="entry-name-container">

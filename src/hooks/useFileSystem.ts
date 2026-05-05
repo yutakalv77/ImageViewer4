@@ -9,20 +9,50 @@ export function useFileSystem() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadDirectory = useCallback(async (path: string) => {
+  const [backStack, setBackStack] = useState<string[]>([]);
+  const [forwardStack, setForwardStack] = useState<string[]>([]);
+
+  const loadDirectory = useCallback(async (path: string, skipHistory = false) => {
     if (!path) return;
     setLoading(true);
     try {
       const result: DirectoryResult = await invoke("get_directory_entries", { path });
+      const normalizedNewPath = result.path;
+
+      if (!skipHistory && currentPath && currentPath !== normalizedNewPath) {
+        setBackStack(prev => [...prev, currentPath]);
+        setForwardStack([]); // Clear forward stack on new navigation
+      }
+
       setEntries(result.entries);
-      setCurrentPath(result.path);
+      setCurrentPath(normalizedNewPath);
       setError(null);
     } catch (e: any) {
       setError(e.toString());
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPath]);
+
+  const goBack = useCallback(() => {
+    if (backStack.length === 0) return;
+    const previous = backStack[backStack.length - 1];
+    setBackStack(prev => prev.slice(0, -1));
+    if (currentPath) {
+      setForwardStack(prev => [...prev, currentPath]);
+    }
+    loadDirectory(previous, true);
+  }, [backStack, currentPath, loadDirectory]);
+
+  const goForward = useCallback(() => {
+    if (forwardStack.length === 0) return;
+    const next = forwardStack[forwardStack.length - 1];
+    setForwardStack(prev => prev.slice(0, -1));
+    if (currentPath) {
+      setBackStack(prev => [...prev, currentPath]);
+    }
+    loadDirectory(next, true);
+  }, [forwardStack, currentPath, loadDirectory]);
 
   const openFolderDialog = useCallback(async () => {
     try {
@@ -59,8 +89,12 @@ export function useFileSystem() {
     entries,
     loading,
     error,
+    canGoBack: backStack.length > 0,
+    canGoForward: forwardStack.length > 0,
     loadDirectory,
     openFolderDialog,
     goUp,
+    goBack,
+    goForward,
   };
 }

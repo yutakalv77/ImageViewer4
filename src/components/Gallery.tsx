@@ -11,11 +11,21 @@ interface GalleryProps {
   entries: EntryItem[];
   loading: boolean;
   currentPath: string;
+  isFavorite: (path: string) => boolean;
+  onToggleFavorite: (path: string) => void;
   onEntryClick: (entry: EntryItem) => void;
   onRefresh: () => void;
 }
 
-export function Gallery({ entries, loading, currentPath, onEntryClick, onRefresh }: GalleryProps) {
+export function Gallery({ 
+  entries, 
+  loading, 
+  currentPath, 
+  isFavorite,
+  onToggleFavorite,
+  onEntryClick, 
+  onRefresh 
+}: GalleryProps) {
   const {
     selectedIndex,
     setSelectedIndex,
@@ -79,6 +89,10 @@ export function Gallery({ entries, loading, currentPath, onEntryClick, onRefresh
   const menuItems = contextMenu ? [
     { label: "エクスプローラーで表示", onClick: () => handleReveal(contextMenu.entry.path) },
     { label: "クリップボードにコピー", onClick: () => copyToClipboard(contextMenu.entry.path) },
+    { 
+      label: isFavorite(contextMenu.entry.path) ? "お気に入りから削除" : "お気に入りに追加", 
+      onClick: () => onToggleFavorite(contextMenu.entry.path) 
+    },
     { separator: true, label: "名前を変更", onClick: () => setEditingIndex(contextMenu.index) },
   ] : [];
 
@@ -98,6 +112,7 @@ export function Gallery({ entries, loading, currentPath, onEntryClick, onRefresh
             entry={entry} 
             isSelected={idx === selectedIndex}
             isEditing={idx === editingIndex}
+            isFavorite={isFavorite(entry.path)}
             onClick={() => {
               setSelectedIndex(idx);
               onEntryClick(entry);
