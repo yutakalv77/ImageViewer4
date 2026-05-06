@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { EntryItem } from "../types";
 import { getNextIndex, getPrevIndex } from "../utils/viewerUtils";
+
+// Navigation Constants
+const WHEEL_COOLDOWN = 400; // ms
+const WHEEL_THRESHOLD = 30;
 
 interface ImageViewerProps {
   images: EntryItem[];
@@ -26,6 +30,7 @@ export function ImageViewer({
   onManualInteraction
 }: ImageViewerProps) {
   const { t } = useTranslation();
+  const lastWheelTime = useRef(0);
 
   const handleNext = useCallback(() => {
     onManualInteraction();
@@ -36,6 +41,19 @@ export function ImageViewer({
     onManualInteraction();
     onNavigate(getPrevIndex(currentIndex, { viewMode, firstPageIsCover, totalImages: images.length }));
   }, [currentIndex, images.length, viewMode, firstPageIsCover, onNavigate, onManualInteraction]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    const now = Date.now();
+    if (now - lastWheelTime.current < WHEEL_COOLDOWN) return;
+    if (Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
+
+    if (e.deltaY > 0) {
+      handleNext();
+    } else {
+      handlePrev();
+    }
+    lastWheelTime.current = now;
+  }, [handleNext, handlePrev]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -83,7 +101,11 @@ export function ImageViewer({
   if (currentIndex < 0) return null;
 
   return (
-    <div className="viewer-overlay" onClick={onClose}>
+    <div 
+      className="viewer-overlay" 
+      onClick={onClose}
+      onWheel={handleWheel}
+    >
       {viewMode === "spread" && (
         <div className="direction-indicator" title="読み方向">
           {readingDirection === "rtl" ? "⇦" : "⇨"}
