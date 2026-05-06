@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWindow } from "../hooks/useWindow";
-import { isVirtualPath, getVirtualPathLabel } from "../utils/virtualPathUtils";
+import { isVirtualPath, getVirtualPathLabel, isSearchPath } from "../utils/virtualPathUtils";
 
 interface TopBarProps {
   currentPath: string;
@@ -11,6 +11,8 @@ interface TopBarProps {
   onGoUp: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
+  onSearch: (query: string) => void;
+  onExitSearch: () => void;
 }
 
 export function TopBar({ 
@@ -20,10 +22,13 @@ export function TopBar({
   onNavigate, 
   onGoUp, 
   onGoBack, 
-  onGoForward 
+  onGoForward,
+  onSearch,
+  onExitSearch
 }: TopBarProps) {
   const { handleDrag, toggleMaximize } = useWindow();
   const { t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const breadcrumbs = useMemo(() => {
     if (!currentPath) return [];
@@ -62,6 +67,15 @@ export function TopBar({
     return crumbs;
   }, [currentPath, t]);
 
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      onSearch(searchQuery.trim());
+      setSearchQuery("");
+    }
+  };
+
+  const isInSearch = isSearchPath(currentPath);
+
   return (
     <header 
       className="top-bar" 
@@ -96,7 +110,7 @@ export function TopBar({
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onGoUp(); }}
           title="1つ上の階層へ"
-          disabled={!currentPath}
+          disabled={!currentPath || isVirtualPath(currentPath)}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 19V5M5 12l7-7 7 7"/>
@@ -109,6 +123,18 @@ export function TopBar({
           <div className="current-path-display">{t('common.drag_hint')}</div>
         ) : (
           <div className="breadcrumbs-list">
+            {isInSearch && (
+              <button 
+                className="exit-search-btn" 
+                onClick={onExitSearch}
+                title="検索を終了して戻る"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m15 18-6-6 6-6"/>
+                </svg>
+                <span>{t('common.back')}</span>
+              </button>
+            )}
             {breadcrumbs.map((crumb, idx) => (
               <span key={`${crumb.path}-${idx}`} className="breadcrumb-item">
                 <span 
@@ -123,6 +149,20 @@ export function TopBar({
             ))}
           </div>
         )}
+      </div>
+
+      <div className="search-container" onMouseDown={(e) => e.stopPropagation()}>
+        <input 
+          type="text" 
+          className="search-input" 
+          placeholder={t('common.search_placeholder') || "検索..."}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
+        />
+        <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
       </div>
     </header>
   );

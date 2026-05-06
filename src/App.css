@@ -277,6 +277,38 @@ body {
   z-index: 10;
 }
 
+.search-container {
+  position: relative;
+  width: 200px;
+  margin-left: auto;
+}
+
+.search-input {
+  width: 100%;
+  height: 24px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  padding: 0 10px 0 28px;
+  font-size: 12px;
+  color: var(--text-main);
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
 .nav-buttons-group {
   display: flex;
   gap: 2px;
@@ -330,6 +362,27 @@ body {
 .breadcrumb-item {
   display: flex;
   align-items: center;
+}
+
+.exit-search-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-main);
+  color: var(--text-main);
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+  margin-right: 8px;
+  transition: all 0.2s;
+}
+
+.exit-search-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
 }
 
 .breadcrumb-name {

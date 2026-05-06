@@ -22,7 +22,7 @@ import "./App.css";
 function App() {
   const { 
     currentPath, entries, loading, error, canGoBack, canGoForward,
-    loadDirectory, openFolderDialog, goUp, goBack, goForward
+    loadDirectory, searchFolders, openFolderDialog, goUp, goBack, goForward
   } = useFileSystem();
 
   const {
@@ -132,6 +132,15 @@ function App() {
     }
   }, [currentPath]);
 
+  const handleSearch = useCallback((query: string) => {
+    if (currentPath && !isVirtualPath(currentPath)) {
+      searchFolders(currentPath, query);
+    } else if (history.length > 0) {
+      // If in virtual view, search from last physical folder
+      searchFolders(history[0].path, query);
+    }
+  }, [currentPath, history, searchFolders]);
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -229,6 +238,8 @@ function App() {
         onGoUp={goUp}
         onGoBack={goBack}
         onGoForward={goForward}
+        onSearch={handleSearch}
+        onExitSearch={goBack}
       />
 
       {error && <div className="error">{error}</div>}
