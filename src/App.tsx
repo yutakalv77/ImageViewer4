@@ -16,6 +16,7 @@ import { FavoritesModal } from "./components/FavoritesModal";
 import { SlideIntervalModal } from "./components/SlideIntervalModal";
 import { ResizeHandles } from "./components/ResizeHandles";
 import { EntryItem, ViewerState } from "./types";
+import { VIRTUAL_PATH_FAVORITES, isVirtualPath, convertFavoriteToEntry } from "./utils/virtualPathUtils";
 import "./App.css";
 
 function App() {
@@ -44,6 +45,18 @@ function App() {
 
   const images = useMemo(() => entries.filter(e => !e.is_dir), [entries]);
 
+  // Virtual Entries Conversion
+  const virtualEntries = useMemo((): Record<string, EntryItem[]> => {
+    return {
+      [VIRTUAL_PATH_FAVORITES]: favorites.map(convertFavoriteToEntry),
+    };
+  }, [favorites]);
+
+  const displayEntries = useMemo(() => {
+    if (virtualEntries[currentPath]) return virtualEntries[currentPath];
+    return entries;
+  }, [currentPath, entries, virtualEntries]);
+
   // Slideshow Logic
   const { start: startTimer, stop: stopTimer } = useSlideshow(
     { viewMode, firstPageIsCover, totalImages: images.length },
@@ -69,7 +82,9 @@ function App() {
 
   // Record history
   useEffect(() => {
-    if (currentPath && isStarted) recordHistory(currentPath);
+    if (currentPath && isStarted && !isVirtualPath(currentPath)) {
+      recordHistory(currentPath);
+    }
   }, [currentPath, recordHistory, isStarted]);
 
   // Drag and Drop
@@ -108,7 +123,7 @@ function App() {
   }, [stopTimer]);
 
   const handleRevealCurrentPath = useCallback(async () => {
-    if (currentPath) {
+    if (currentPath && !isVirtualPath(currentPath)) {
       try {
         await openPath(currentPath);
       } catch (err) {
@@ -219,7 +234,7 @@ function App() {
       {error && <div className="error">{error}</div>}
 
       <Gallery 
-        entries={entries} 
+        entries={displayEntries} 
         loading={loading} 
         currentPath={currentPath} 
         isFavorite={isFavorite}

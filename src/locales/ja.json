@@ -50,7 +50,9 @@
   "favorites": {
     "title": "お気に入り管理",
     "empty": "お気に入りは登録されていません",
-    "reveal_hint": "このフォルダへ移動"
+    "reveal_hint": "このフォルダへ移動",
+    "view_as_gallery": "ギャラリー形式で表示",
+    "show_list": "リストで表示 (サブウィンドウ)"
   },
   "settings": {
     "title": "設定",

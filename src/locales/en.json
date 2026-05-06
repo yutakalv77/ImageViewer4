@@ -52,7 +52,9 @@
   "favorites": {
     "title": "Manage Favorites",
     "empty": "No favorites registered",
-    "reveal_hint": "Navigate to this folder"
+    "reveal_hint": "Navigate to this folder",
+    "view_as_gallery": "View as Gallery",
+    "show_list": "Manage as List (Sub-window)"
   },
   "settings": {
     "title": "Settings",

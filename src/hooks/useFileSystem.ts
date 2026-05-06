@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { EntryItem, DirectoryResult } from "../types";
+import { isVirtualPath } from "../utils/virtualPathUtils";
 
 export function useFileSystem() {
   const [currentPath, setCurrentPath] = useState("");
@@ -14,16 +15,23 @@ export function useFileSystem() {
 
   const loadDirectory = useCallback(async (path: string, skipHistory = false) => {
     if (!path) return;
+
+    if (!skipHistory && currentPath && currentPath !== path) {
+      setBackStack(prev => [...prev, currentPath]);
+      setForwardStack([]); 
+    }
+
+    if (isVirtualPath(path)) {
+      setCurrentPath(path);
+      setEntries([]);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     try {
       const result: DirectoryResult = await invoke("get_directory_entries", { path });
       const normalizedNewPath = result.path;
-
-      if (!skipHistory && currentPath && currentPath !== normalizedNewPath) {
-        setBackStack(prev => [...prev, currentPath]);
-        setForwardStack([]); // Clear forward stack on new navigation
-      }
-
       setEntries(result.entries);
       setCurrentPath(normalizedNewPath);
       setError(null);
@@ -70,7 +78,7 @@ export function useFileSystem() {
   }, [loadDirectory]);
 
   const goUp = useCallback(() => {
-    if (!currentPath) return;
+    if (!currentPath || isVirtualPath(currentPath)) return;
     const separator = currentPath.includes("\\") ? "\\" : "/";
     const parts = currentPath.split(separator).filter(Boolean);
     if (parts.length > 1) {

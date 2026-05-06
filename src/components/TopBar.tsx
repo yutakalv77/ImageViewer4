@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useWindow } from "../hooks/useWindow";
+import { isVirtualPath, getVirtualPathLabel } from "../utils/virtualPathUtils";
 
 interface TopBarProps {
   currentPath: string;
@@ -27,6 +28,10 @@ export function TopBar({
   const breadcrumbs = useMemo(() => {
     if (!currentPath) return [];
     
+    if (isVirtualPath(currentPath)) {
+      return [{ name: getVirtualPathLabel(currentPath, t), path: currentPath }];
+    }
+
     const separator = currentPath.includes("\\") ? "\\" : "/";
     const isWindows = currentPath.includes("\\") || /^[A-Z]:/i.test(currentPath);
     
@@ -55,7 +60,7 @@ export function TopBar({
       }
     }
     return crumbs;
-  }, [currentPath]);
+  }, [currentPath, t]);
 
   return (
     <header 

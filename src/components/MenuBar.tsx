@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { HistoryEntry } from "../types";
 import { useWindow } from "../hooks/useWindow";
+import { VIRTUAL_PATH_FAVORITES } from "../utils/virtualPathUtils";
 
 interface MenuBarProps {
   history: HistoryEntry[];
@@ -33,7 +34,7 @@ export function MenuBar({
   firstPageIsCover,
   onOpenFolder, 
   onOpenSettings, 
-  onOpenFavorites, 
+  onOpenFavorites,
   onSelectHistory,
   onStartSlideshow,
   onToggleLoop,
@@ -160,10 +161,20 @@ export function MenuBar({
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "favorites" ? "active" : ""}`}
-            onClick={() => { onOpenFavorites(); setActiveMenu(null); }}
+            onClick={() => setActiveMenu(activeMenu === "favorites" ? null : "favorites")}
           >
             {t('menu.favorites')}
           </button>
+          {activeMenu === "favorites" && (
+            <ul className="menu-dropdown">
+              <li onClick={() => { onSelectHistory(VIRTUAL_PATH_FAVORITES); setActiveMenu(null); }}>
+                {t('favorites.view_as_gallery')}
+              </li>
+              <li onClick={() => { onOpenFavorites(); setActiveMenu(null); }}>
+                {t('favorites.show_list')}
+              </li>
+            </ul>
+          )}
         </div>
 
         {/* 5. 履歴 */}
