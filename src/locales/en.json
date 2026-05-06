@@ -38,8 +38,11 @@
     "loading": "Loading...",
     "empty_gallery": "No images or folders found.",
     "error_rename": "Failed to rename",
+    "error_copy_info": "Copy Info",
     "no_history": "No history available",
-    "drag_hint": "Open a folder or drag & drop here"
+    "drag_hint": "Open a folder or drag & drop here",
+    "back": "Back",
+    "search_placeholder": "Search..."
   },
   "context_menu": {
     "reveal": "Reveal in Explorer",
@@ -61,6 +64,7 @@
     "tab_storage": "Storage",
     "tab_history": "History",
     "tab_general": "General",
+    "tab_everything": "Everything Search",
     "storage_title": "Storage Settings",
     "storage_label": "Save path for favorites and history",
     "storage_change": "Change...",
@@ -81,7 +85,18 @@
     "bg_style": "Display Style",
     "bg_style_cover": "Cover",
     "bg_style_contain": "Fit",
-    "bg_style_tile": "Tile"
+    "bg_style_tile": "Tile",
+    "everything_title": "Everything Search Settings",
+    "everything_desc": "'Everything' is a fast file search engine for Windows. Enabling this allows you to instantly search folders system-wide (requires Everything running in background).",
+    "everything_enable": "Enable Everything Search",
+    "everything_limit": "Max folder results to display (1 - 1000)",
+    "everything_cli_label": "Everything CLI (es.exe) Path",
+    "everything_cli_hint": "* Specifying es.exe directly allows it to work without environment variables (leave blank to search in system PATH).",
+    "everything_status": "Service Status",
+    "everything_status_running": "Connected",
+    "everything_status_stopped": "Not running (Falls back to regular search)",
+    "everything_error_title": "Everything Search Error",
+    "everything_error_msg": "Could not detect Everything service. Falling back to regular recursive search."
   },
   "slideshow": {
     "interval_dialog_title": "Interval Settings",

@@ -1,8 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { StartupFolderType, ThemeMode, BackgroundSettings } from "../types";
-import { GeneralSettings } from "./settings/GeneralSettings";
-import { HistorySettings } from "./settings/HistorySettings";
 import { StorageSettings } from "./settings/StorageSettings";
+import { HistorySettings } from "./settings/HistorySettings";
+import { GeneralSettings } from "./settings/GeneralSettings";
+import { EverythingSettings } from "./settings/EverythingSettings";
+import { BackgroundSettings, StartupFolderType, ThemeMode } from "../types";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,6 +14,9 @@ interface SettingsModalProps {
   language: string;
   theme: ThemeMode;
   background: BackgroundSettings;
+  everythingEnabled: boolean;
+  everythingMaxResults: number;
+  everythingCliPath: string;
   onClose: () => void;
   onTabChange: (tab: string) => void;
   onChangeStoragePath: () => void;
@@ -22,6 +26,9 @@ interface SettingsModalProps {
   onUpdateTheme: (theme: ThemeMode) => void;
   onUpdateBackground: (updates: Partial<BackgroundSettings>) => void;
   onPickBackgroundImage: () => void;
+  onUpdateEverythingEnabled: (enabled: boolean) => void;
+  onUpdateEverythingMaxResults: (count: number) => void;
+  onUpdateEverythingCliPath: (path: string) => void;
 }
 
 export function SettingsModal({
@@ -33,6 +40,9 @@ export function SettingsModal({
   language,
   theme,
   background,
+  everythingEnabled,
+  everythingMaxResults,
+  everythingCliPath,
   onClose,
   onTabChange,
   onChangeStoragePath,
@@ -42,6 +52,9 @@ export function SettingsModal({
   onUpdateTheme,
   onUpdateBackground,
   onPickBackgroundImage,
+  onUpdateEverythingEnabled,
+  onUpdateEverythingMaxResults,
+  onUpdateEverythingCliPath
 }: SettingsModalProps) {
   const { t } = useTranslation();
 
@@ -54,29 +67,37 @@ export function SettingsModal({
           <h2>{t('settings.title')}</h2>
           <button className="close-button" onClick={onClose}>&times;</button>
         </div>
+        
         <div className="settings-body">
           <div className="settings-sidebar">
             <div 
-              className={`settings-menu-item ${activeTab === "general" ? "active" : ""}`}
-              onClick={() => onTabChange("general")}
+              className={`settings-menu-item ${activeTab === 'general' ? 'active' : ''}`}
+              onClick={() => onTabChange('general')}
             >
               {t('settings.tab_general')}
             </div>
             <div 
-              className={`settings-menu-item ${activeTab === "history" ? "active" : ""}`}
-              onClick={() => onTabChange("history")}
+              className={`settings-menu-item ${activeTab === 'storage' ? 'active' : ''}`}
+              onClick={() => onTabChange('storage')}
+            >
+              {t('settings.tab_storage')}
+            </div>
+            <div 
+              className={`settings-menu-item ${activeTab === 'history' ? 'active' : ''}`}
+              onClick={() => onTabChange('history')}
             >
               {t('settings.tab_history')}
             </div>
             <div 
-              className={`settings-menu-item ${activeTab === "storage" ? "active" : ""}`}
-              onClick={() => onTabChange("storage")}
+              className={`settings-menu-item ${activeTab === 'everything' ? 'active' : ''}`}
+              onClick={() => onTabChange('everything')}
             >
-              {t('settings.tab_storage')}
+              {t('settings.tab_everything')}
             </div>
           </div>
+
           <div className="settings-content">
-            {activeTab === "general" && (
+            {activeTab === 'general' && (
               <GeneralSettings 
                 startupFolderType={startupFolderType}
                 language={language}
@@ -89,20 +110,31 @@ export function SettingsModal({
                 onPickBackgroundImage={onPickBackgroundImage}
               />
             )}
-            {activeTab === "history" && (
-              <HistorySettings 
-                historyRetentionDays={historyRetentionDays}
-                onUpdateHistoryRetention={onUpdateHistoryRetention}
-              />
-            )}
-            {activeTab === "storage" && (
+            {activeTab === 'storage' && (
               <StorageSettings 
                 dataStoragePath={dataStoragePath}
                 onChangeStoragePath={onChangeStoragePath}
               />
             )}
+            {activeTab === 'history' && (
+              <HistorySettings 
+                historyRetentionDays={historyRetentionDays}
+                onUpdateHistoryRetention={onUpdateHistoryRetention}
+              />
+            )}
+            {activeTab === 'everything' && (
+              <EverythingSettings 
+                everythingEnabled={everythingEnabled}
+                everythingMaxResults={everythingMaxResults}
+                everythingCliPath={everythingCliPath}
+                onUpdateEnabled={onUpdateEverythingEnabled}
+                onUpdateMaxResults={onUpdateEverythingMaxResults}
+                onUpdateCliPath={onUpdateEverythingCliPath}
+              />
+            )}
           </div>
         </div>
+
         <div className="settings-footer">
           <button className="settings-button primary" onClick={onClose}>{t('common.close')}</button>
         </div>

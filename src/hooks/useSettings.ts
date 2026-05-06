@@ -1,202 +1,203 @@
 import { useState, useEffect, useCallback } from "react";
 import { appDataDir } from "@tauri-apps/api/path";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
-import i18n from "../i18n";
-import { ViewMode, ReadingDirection, ThemeMode, StartupFolderType, BackgroundSettings } from "../types";
+import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/api/path";
+import { BackgroundSettings, StartupFolderType, ThemeMode } from "../types";
 
 export function useSettings() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState("general");
-  const [dataStoragePath, setDataStoragePath] = useState("");
-  const [historyRetentionDays, setHistoryRetentionDays] = useState(30);
+  const [dataStoragePath, setDataStoragePath] = useState<string>("");
+  const [historyRetentionDays, setHistoryRetentionDays] = useState<number>(30);
   const [startupFolderType, setStartupFolderType] = useState<StartupFolderType>("none");
-  
-  const [slideInterval, setSlideInterval] = useState(3.0);
-  const [slideLoop, setSlideLoop] = useState(true);
-
-  const [viewMode, setViewMode] = useState<ViewMode>("single");
-  const [readingDirection, setReadingDirection] = useState<ReadingDirection>("rtl");
-  const [firstPageIsCover, setFirstPageIsCover] = useState(true);
-
-  const [language, setLanguage] = useState<string>(i18n.language || "ja");
+  const [slideInterval, setSlideInterval] = useState<number>(3);
+  const [slideLoop, setSlideLoop] = useState<boolean>(true);
+  const [viewMode, setViewMode] = useState<"single" | "spread">("single");
+  const [readingDirection, setReadingDirection] = useState<"rtl" | "ltr">("rtl");
+  const [firstPageIsCover, setFirstPageIsCover] = useState<boolean>(true);
+  const [language, setLanguage] = useState<string>("ja");
   const [theme, setTheme] = useState<ThemeMode>("dark");
-
-  // Background settings
   const [background, setBackground] = useState<BackgroundSettings>({
     path: null,
     opacity: 0.3,
     blur: 5,
-    style: "cover"
+    style: "cover",
   });
+  const [everythingEnabled, setEverythingEnabled] = useState<boolean>(false);
+  const [everythingMaxResults, setEverythingMaxResults] = useState<number>(50);
+  const [everythingCliPath, setEverythingCliPath] = useState<string>("");
 
-  const applyTheme = useCallback(async (targetTheme: ThemeMode) => {
-    const appWindow = getCurrentWindow();
-    let effectiveTheme: string = targetTheme;
-    
-    if (targetTheme === "system") {
-      const osTheme = await appWindow.theme();
-      effectiveTheme = osTheme || "dark";
-    }
-    
-    document.documentElement.setAttribute("data-theme", effectiveTheme);
-  }, []);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const initSettings = async () => {
-      // Data Storage Path
-      const savedPath = localStorage.getItem("dataStoragePath");
-      if (savedPath) {
-        setDataStoragePath(savedPath);
-      } else {
-        try {
-          const defaultPath = await appDataDir();
-          setDataStoragePath(defaultPath);
-          localStorage.setItem("dataStoragePath", defaultPath);
-        } catch (e) {
-          console.error("Failed to get default app data dir:", e);
+    const loadSettings = async () => {
+      try {
+        const appDir = await appDataDir();
+        const configPath = await join(appDir, "config.json");
+        
+        if (!(await exists(configPath))) {
+          setDataStoragePath(appDir);
+          setIsLoaded(true);
+          return;
         }
-      }
 
-      // History
-      const savedDays = localStorage.getItem("historyRetentionDays");
-      if (savedDays !== null) setHistoryRetentionDays(parseInt(savedDays, 10));
+        const content = await readTextFile(configPath);
+        const config = JSON.parse(content);
+        
+        if (config.dataStoragePath) setDataStoragePath(config.dataStoragePath);
+        if (config.historyRetentionDays !== undefined) setHistoryRetentionDays(config.historyRetentionDays);
+        if (config.startupFolderType) setStartupFolderType(config.startupFolderType);
+        if (config.slideInterval) setSlideInterval(config.slideInterval);
+        if (config.slideLoop !== undefined) setSlideLoop(config.slideLoop);
+        if (config.viewMode) setViewMode(config.viewMode);
+        if (config.readingDirection) setReadingDirection(config.readingDirection);
+        if (config.firstPageIsCover !== undefined) setFirstPageIsCover(config.firstPageIsCover);
+        if (config.language) setLanguage(config.language);
+        if (config.theme) setTheme(config.theme);
+        if (config.background) setBackground(config.background);
+        if (config.everythingEnabled !== undefined) setEverythingEnabled(config.everythingEnabled);
+        if (config.everythingMaxResults !== undefined) setEverythingMaxResults(config.everythingMaxResults);
+        if (config.everythingCliPath !== undefined) setEverythingCliPath(config.everythingCliPath);
 
-      const savedStartupType = localStorage.getItem("startupFolderType") as StartupFolderType;
-      if (savedStartupType) setStartupFolderType(savedStartupType);
-
-      // Slideshow
-      const savedSlideInterval = localStorage.getItem("slideInterval");
-      if (savedSlideInterval !== null) setSlideInterval(parseFloat(savedSlideInterval));
-      const savedSlideLoop = localStorage.getItem("slideLoop");
-      if (savedSlideLoop !== null) setSlideLoop(savedSlideLoop === "true");
-
-      // View
-      const savedViewMode = localStorage.getItem("viewMode") as ViewMode;
-      if (savedViewMode) setViewMode(savedViewMode);
-      const savedDirection = localStorage.getItem("readingDirection") as ReadingDirection;
-      if (savedDirection) setReadingDirection(savedDirection);
-      const savedCover = localStorage.getItem("firstPageIsCover");
-      if (savedCover !== null) setFirstPageIsCover(savedCover === "true");
-
-      // Language & Theme
-      const savedLang = localStorage.getItem("language");
-      if (savedLang) {
-        setLanguage(savedLang);
-        i18n.changeLanguage(savedLang);
-      }
-
-      const savedTheme = localStorage.getItem("theme") as ThemeMode;
-      if (savedTheme) {
-        setTheme(savedTheme);
-        applyTheme(savedTheme);
-      } else {
-        applyTheme("dark");
-      }
-
-      // Background
-      const savedBg = localStorage.getItem("background");
-      if (savedBg) {
-        setBackground(JSON.parse(savedBg));
+        setIsLoaded(true);
+      } catch (e) {
+        console.error("Failed to load settings:", e);
+        setIsLoaded(true);
       }
     };
-    initSettings();
-  }, [applyTheme]);
+    loadSettings();
+  }, []);
 
-  // Listen for OS theme changes
-  useEffect(() => {
-    if (theme !== "system") return;
-    
-    const unlisten = getCurrentWindow().onThemeChanged(({ payload: newTheme }) => {
-      document.documentElement.setAttribute("data-theme", newTheme);
-    });
-    
-    return () => { unlisten.then(fn => fn()); };
-  }, [theme]);
+  const saveSettings = useCallback(async (updates: any) => {
+    try {
+      const appDir = await appDataDir();
+      if (!(await exists(appDir))) {
+        await mkdir(appDir, { recursive: true });
+      }
+      const configPath = await join(appDir, "config.json");
+      
+      let currentConfig: any = {};
+      if (await exists(configPath)) {
+        const content = await readTextFile(configPath);
+        currentConfig = JSON.parse(content);
+      }
 
-  const changeStoragePath = async () => {
+      const newConfig = {
+        ...currentConfig,
+        dataStoragePath,
+        historyRetentionDays,
+        startupFolderType,
+        slideInterval,
+        slideLoop,
+        viewMode,
+        readingDirection,
+        firstPageIsCover,
+        language,
+        theme,
+        background,
+        everythingEnabled,
+        everythingMaxResults,
+        everythingCliPath,
+        ...updates
+      };
+
+      await writeTextFile(configPath, JSON.stringify(newConfig, null, 2));
+    } catch (e) {
+      console.error("Failed to save settings:", e);
+    }
+  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, language, theme, background, everythingEnabled, everythingMaxResults, everythingCliPath]);
+
+  const updateEverythingCliPath = useCallback(async (path: string) => {
+    setEverythingCliPath(path);
+    await saveSettings({ everythingCliPath: path });
+  }, [saveSettings]);
+
+  const changeStoragePath = useCallback(async () => {
     try {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "保存先フォルダを選択してください"
+        title: "データ保存先フォルダを選択"
       });
       if (selected && typeof selected === 'string') {
         setDataStoragePath(selected);
-        localStorage.setItem("dataStoragePath", selected);
+        await saveSettings({ dataStoragePath: selected });
       }
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [saveSettings]);
 
-  const updateHistoryRetention = (days: number) => {
-    const value = Math.max(0, Math.min(1000, days));
-    setHistoryRetentionDays(value);
-    localStorage.setItem("historyRetentionDays", value.toString());
-  };
+  const updateHistoryRetention = useCallback(async (days: number) => {
+    setHistoryRetentionDays(days);
+    await saveSettings({ historyRetentionDays: days });
+  }, [saveSettings]);
 
-  const updateStartupFolderType = (type: StartupFolderType) => {
+  const updateStartupFolderType = useCallback(async (type: StartupFolderType) => {
     setStartupFolderType(type);
-    localStorage.setItem("startupFolderType", type);
-  };
+    await saveSettings({ startupFolderType: type });
+  }, [saveSettings]);
 
-  const updateSlideInterval = (seconds: number) => {
-    const value = Math.max(0.1, Math.min(99.9, seconds));
-    setSlideInterval(value);
-    localStorage.setItem("slideInterval", value.toString());
-  };
+  const updateSlideInterval = useCallback(async (seconds: number) => {
+    setSlideInterval(seconds);
+    await saveSettings({ slideInterval: seconds });
+  }, [saveSettings]);
 
-  const toggleSlideLoop = () => {
-    const newValue = !slideLoop;
-    setSlideLoop(newValue);
-    localStorage.setItem("slideLoop", newValue.toString());
-  };
+  const toggleSlideLoop = useCallback(async () => {
+    const newVal = !slideLoop;
+    setSlideLoop(newVal);
+    await saveSettings({ slideLoop: newVal });
+  }, [slideLoop, saveSettings]);
 
-  const updateViewMode = (mode: ViewMode) => {
+  const updateViewMode = useCallback(async (mode: "single" | "spread") => {
     setViewMode(mode);
-    localStorage.setItem("viewMode", mode);
-  };
+    await saveSettings({ viewMode: mode });
+  }, [saveSettings]);
 
-  const updateReadingDirection = (direction: ReadingDirection) => {
+  const updateReadingDirection = useCallback(async (direction: "rtl" | "ltr") => {
     setReadingDirection(direction);
-    localStorage.setItem("readingDirection", direction);
-  };
+    await saveSettings({ readingDirection: direction });
+  }, [saveSettings]);
 
-  const toggleFirstPageIsCover = () => {
-    const newValue = !firstPageIsCover;
-    setFirstPageIsCover(newValue);
-    localStorage.setItem("firstPageIsCover", newValue.toString());
-  };
+  const toggleFirstPageIsCover = useCallback(async () => {
+    const newVal = !firstPageIsCover;
+    setFirstPageIsCover(newVal);
+    await saveSettings({ firstPageIsCover: newVal });
+  }, [firstPageIsCover, saveSettings]);
 
-  const updateLanguage = (newLang: string) => {
-    setLanguage(newLang);
-    localStorage.setItem("language", newLang);
-    i18n.changeLanguage(newLang);
-  };
+  const updateLanguage = useCallback(async (lang: string) => {
+    setLanguage(lang);
+    await saveSettings({ language: lang });
+  }, [saveSettings]);
 
-  const updateTheme = (newTheme: ThemeMode) => {
+  const updateTheme = useCallback(async (newTheme: ThemeMode) => {
     setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    applyTheme(newTheme);
-  };
+    await saveSettings({ theme: newTheme });
+  }, [saveSettings]);
 
-  const updateBackground = (updates: Partial<BackgroundSettings>) => {
-    setBackground(prev => {
-      const next = { ...prev, ...updates };
-      localStorage.setItem("background", JSON.stringify(next));
-      return next;
-    });
-  };
+  const updateBackground = useCallback(async (updates: Partial<BackgroundSettings>) => {
+    const newBg = { ...background, ...updates };
+    setBackground(newBg);
+    await saveSettings({ background: newBg });
+  }, [background, saveSettings]);
 
-  const pickBackgroundImage = async () => {
+  const updateEverythingEnabled = useCallback(async (enabled: boolean) => {
+    setEverythingEnabled(enabled);
+    await saveSettings({ everythingEnabled: enabled });
+  }, [saveSettings]);
+
+  const updateEverythingMaxResults = useCallback(async (count: number) => {
+    const val = Math.max(1, Math.min(1000, count));
+    setEverythingMaxResults(val);
+    await saveSettings({ everythingMaxResults: val });
+  }, [saveSettings]);
+
+  const pickBackgroundImage = useCallback(async () => {
     try {
       const selected = await open({
         multiple: false,
-        filters: [{
-          name: 'Image',
-          extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif']
-        }]
+        filters: [{ name: "Images", extensions: ["jpg", "jpeg", "png", "webp"] }]
       });
       if (selected && typeof selected === 'string') {
         updateBackground({ path: selected });
@@ -204,9 +205,10 @@ export function useSettings() {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [updateBackground]);
 
   return {
+    isLoaded,
     isSettingsOpen,
     setIsSettingsOpen,
     activeSettingsTab,
@@ -233,6 +235,12 @@ export function useSettings() {
     updateTheme,
     background,
     updateBackground,
+    everythingEnabled,
+    updateEverythingEnabled,
+    everythingMaxResults,
+    updateEverythingMaxResults,
+    everythingCliPath,
+    updateEverythingCliPath,
     pickBackgroundImage
   };
 }

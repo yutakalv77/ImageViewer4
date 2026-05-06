@@ -2,7 +2,11 @@ import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { EntryItem, DirectoryResult } from "../types";
-import { isVirtualPath, isSearchPath, getSearchQuery, VIRTUAL_PATH_SEARCH_PREFIX } from "../utils/virtualPathUtils";
+import { 
+  isVirtualPath, isSearchPath, getSearchQuery, 
+  VIRTUAL_PATH_SEARCH_PREFIX, VIRTUAL_PATH_EVERYTHING_PREFIX, 
+  isEverythingSearchPath 
+} from "../utils/virtualPathUtils";
 
 export function useFileSystem() {
   const [currentPath, setCurrentPath] = useState("");
@@ -15,12 +19,29 @@ export function useFileSystem() {
 
   const [lastPhysicalPath, setLastPhysicalPath] = useState("");
 
-  const loadDirectory = useCallback(async (path: string, skipHistory = false) => {
+  const loadDirectory = useCallback(async (path: string, skipHistory = false, maxResults = 50, cliPath = "") => {
     if (!path) return;
 
     if (!skipHistory && currentPath && currentPath !== path) {
       setBackStack(prev => [...prev, currentPath]);
       setForwardStack([]); 
+    }
+
+    if (isEverythingSearchPath(path)) {
+      const query = getSearchQuery(path);
+      setLoading(true);
+      try {
+        const results: EntryItem[] = await invoke("search_everything", { query, maxResults, cliPath });
+        setEntries(results);
+        setCurrentPath(path);
+        setError(null);
+      } catch (e: any) {
+        setError(e.toString());
+        throw e;
+      } finally {
+        setLoading(false);
+      }
+      return;
     }
 
     if (isSearchPath(path)) {
@@ -69,10 +90,14 @@ export function useFileSystem() {
 
   const searchFolders = useCallback(async (rootPath: string, query: string) => {
     if (!rootPath || isVirtualPath(rootPath)) return;
-    
     const searchPath = VIRTUAL_PATH_SEARCH_PREFIX + query;
     setLastPhysicalPath(rootPath);
     await loadDirectory(searchPath);
+  }, [loadDirectory]);
+
+  const everythingSearch = useCallback(async (query: string, maxResults: number, cliPath: string) => {
+    const searchPath = VIRTUAL_PATH_EVERYTHING_PREFIX + query;
+    await loadDirectory(searchPath, false, maxResults, cliPath);
   }, [loadDirectory]);
 
   const goBack = useCallback(() => {
@@ -135,9 +160,11 @@ export function useFileSystem() {
     canGoForward: forwardStack.length > 0,
     loadDirectory,
     searchFolders,
+    everythingSearch,
     openFolderDialog,
     goUp,
     goBack,
     goForward,
+    setError,
   };
 }

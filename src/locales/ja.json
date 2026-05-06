@@ -31,14 +31,18 @@
     "cancel": "キャンセル",
     "close": "閉じる",
     "delete": "削除",
+    "reset": "リセット",
     "path": "パス",
     "date": "登録日時",
     "operation": "操作",
     "loading": "読み込み中...",
     "empty_gallery": "画像やフォルダが見つかりません。",
     "error_rename": "名前の変更に失敗しました",
+    "error_copy_info": "情報をコピー",
     "no_history": "履歴はありません",
-    "drag_hint": "フォルダを開くか、ここにドラッグ＆ドロップしてください"
+    "drag_hint": "フォルダを開くか、ここにドラッグ＆ドロップしてください",
+    "back": "戻る",
+    "search_placeholder": "検索..."
   },
   "context_menu": {
     "reveal": "エクスプローラーで表示",
@@ -59,6 +63,7 @@
     "tab_storage": "データ保存",
     "tab_history": "履歴",
     "tab_general": "一般",
+    "tab_everything": "Everything検索",
     "storage_title": "データ保存の設定",
     "storage_label": "お気に入り・履歴データの保存先",
     "storage_change": "変更...",
@@ -69,7 +74,18 @@
     "general_title": "一般設定",
     "startup_folder_label": "起動時にフォルダ",
     "startup_none": "（なし）",
-    "startup_last": "最後に表示したフォルダ"
+    "startup_last": "最後に表示したフォルダ",
+    "everything_title": "Everything検索の設定",
+    "everything_desc": "「Everything」はWindows用の高速ファイル検索ソフトです。有効にすると、システム全体のフォルダを瞬時に検索できます（Everythingがバックグラウンドで起動している必要があります）。",
+    "everything_enable": "Everything検索を有効にする",
+    "everything_limit": "表示する最大フォルダ件数 (1 ～ 1000)",
+    "everything_cli_label": "Everything CLI (es.exe) のパス",
+    "everything_cli_hint": "※ es.exe を直接指定すると、環境変数の設定なしで動作します（空欄の場合はシステムPATHから探します）。",
+    "everything_status": "サービスの状態",
+    "everything_status_running": "接続済み",
+    "everything_status_stopped": "未起動（通常の検索を使用します）",
+    "everything_error_title": "Everything検索エラー",
+    "everything_error_msg": "Everythingの起動が確認できません。通常の再帰検索に切り替えます。"
   },
   "slideshow": {
     "interval_dialog_title": "表示間隔の設定",

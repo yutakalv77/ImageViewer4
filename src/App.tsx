@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
+import { message } from "@tauri-apps/plugin-dialog";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useFileSystem } from "./hooks/useFileSystem";
 import { useSettings } from "./hooks/useSettings";
 import { useHistory } from "./hooks/useHistory";
@@ -17,12 +19,14 @@ import { SlideIntervalModal } from "./components/SlideIntervalModal";
 import { ResizeHandles } from "./components/ResizeHandles";
 import { EntryItem, ViewerState } from "./types";
 import { VIRTUAL_PATH_FAVORITES, isVirtualPath, convertFavoriteToEntry } from "./utils/virtualPathUtils";
+import { useTranslation } from "react-i18next";
 import "./App.css";
 
 function App() {
+  const { t } = useTranslation();
   const { 
     currentPath, entries, loading, error, canGoBack, canGoForward,
-    loadDirectory, searchFolders, openFolderDialog, goUp, goBack, goForward
+    loadDirectory, searchFolders, everythingSearch, openFolderDialog, goUp, goBack, goForward, setError
   } = useFileSystem();
 
   const {
@@ -32,7 +36,9 @@ function App() {
     slideLoop, toggleSlideLoop, viewMode, updateViewMode, readingDirection,
     updateReadingDirection, firstPageIsCover, toggleFirstPageIsCover,
     language, updateLanguage, theme, updateTheme, 
-    background, updateBackground, pickBackgroundImage
+    background, updateBackground, pickBackgroundImage,
+    everythingEnabled, updateEverythingEnabled, everythingMaxResults, updateEverythingMaxResults,
+    everythingCliPath, updateEverythingCliPath
   } = useSettings();
 
   const { history, recordHistory, isLoaded: isHistoryLoaded } = useHistory(dataStoragePath, historyRetentionDays);
@@ -42,6 +48,14 @@ function App() {
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   const [isIntervalDialogOpen, setIsIntervalDialogOpen] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
+
+  const [persistentError, setPersistentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (error) {
+      setPersistentError(error);
+    }
+  }, [error]);
 
   const images = useMemo(() => entries.filter(e => !e.is_dir), [entries]);
 
@@ -71,14 +85,16 @@ function App() {
   );
 
   // Handle Startup Path
+  const { isLoaded: isSettingsLoaded } = useSettings(); 
+
   useEffect(() => {
-    if (isHistoryLoaded && !isStarted) {
+    if (isHistoryLoaded && isSettingsLoaded && !isStarted) {
       if (startupFolderType === "last" && history.length > 0) {
         loadDirectory(history[0].path);
       }
       setIsStarted(true);
     }
-  }, [isHistoryLoaded, isStarted, startupFolderType, history, loadDirectory]);
+  }, [isHistoryLoaded, isSettingsLoaded, isStarted, startupFolderType, history, loadDirectory]);
 
   // Record history
   useEffect(() => {
@@ -132,14 +148,47 @@ function App() {
     }
   }, [currentPath]);
 
-  const handleSearch = useCallback((query: string) => {
+  const handleSearch = useCallback(async (query: string) => {
+    if (everythingEnabled) {
+      try {
+        const isRunning: boolean = await invoke("check_everything_running");
+        if (!isRunning) throw new Error(t('settings.everything_status_stopped'));
+        
+        await everythingSearch(query, everythingMaxResults, everythingCliPath);
+        setPersistentError(null);
+      } catch (err: any) {
+        console.error("Everything search failed:", err);
+        const errMsg = err.message || err.toString();
+        setPersistentError(errMsg);
+        await message(errMsg, { 
+          title: t('settings.everything_error_title'),
+          kind: 'error' 
+        });
+        fallbackSearch(query);
+      }
+    } else {
+      fallbackSearch(query);
+    }
+  }, [everythingEnabled, everythingMaxResults, everythingCliPath, everythingSearch, t]);
+
+  const fallbackSearch = useCallback((query: string) => {
     if (currentPath && !isVirtualPath(currentPath)) {
       searchFolders(currentPath, query);
     } else if (history.length > 0) {
-      // If in virtual view, search from last physical folder
       searchFolders(history[0].path, query);
     }
   }, [currentPath, history, searchFolders]);
+
+  const handleCopyError = useCallback(() => {
+    if (persistentError) {
+      writeText(persistentError);
+    }
+  }, [persistentError]);
+
+  const handleCloseError = useCallback(() => {
+    setPersistentError(null);
+    setError(null);
+  }, [setError]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -242,7 +291,15 @@ function App() {
         onExitSearch={goBack}
       />
 
-      {error && <div className="error">{error}</div>}
+      {persistentError && (
+        <div className="error-banner">
+          <div className="error-message">{persistentError}</div>
+          <div className="error-actions">
+            <button className="error-copy-btn" onClick={handleCopyError}>{t('common.error_copy_info')}</button>
+            <button className="error-close-btn" onClick={handleCloseError}>×</button>
+          </div>
+        </div>
+      )}
 
       <Gallery 
         entries={displayEntries} 
@@ -275,6 +332,9 @@ function App() {
         language={language}
         theme={theme}
         background={background}
+        everythingEnabled={everythingEnabled}
+        everythingMaxResults={everythingMaxResults}
+        everythingCliPath={everythingCliPath}
         onClose={() => setIsSettingsOpen(false)}
         onTabChange={setActiveSettingsTab}
         onChangeStoragePath={changeStoragePath}
@@ -284,6 +344,9 @@ function App() {
         onUpdateTheme={updateTheme}
         onUpdateBackground={updateBackground}
         onPickBackgroundImage={pickBackgroundImage}
+        onUpdateEverythingEnabled={updateEverythingEnabled}
+        onUpdateEverythingMaxResults={updateEverythingMaxResults}
+        onUpdateEverythingCliPath={updateEverythingCliPath}
       />
 
       <FavoritesModal
