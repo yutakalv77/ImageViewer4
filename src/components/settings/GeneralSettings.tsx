@@ -52,9 +52,9 @@ export function GeneralSettings({
             value={theme} 
             onChange={(e) => onUpdateTheme(e.target.value as ThemeMode)}
           >
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-            <option value="system">System</option>
+            <option value="dark">{t('settings.theme_dark')}</option>
+            <option value="light">{t('settings.theme_light')}</option>
+            <option value="system">{t('settings.theme_system')}</option>
           </select>
         </div>
       </div>

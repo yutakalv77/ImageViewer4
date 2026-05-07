@@ -106,7 +106,7 @@ export function ImageViewer({
       onClick={onClose}
       onWheel={handleWheel}
     >
-      <div className="direction-indicator" title="読み方向">
+      <div className="direction-indicator" title={t('common.reading_direction')}>
         {readingDirection === "rtl" ? "⇦" : "⇨"}
       </div>
       <div className={`viewer-container ${viewMode === 'spread' ? 'spread-view' : ''}`}>
@@ -141,7 +141,7 @@ export function ImageViewer({
       
       <div className="viewer-info" onClick={(e) => e.stopPropagation()}>
         {viewMode === "single" ? (
-          `${currentIndex + 1} / ${images.length} - ${images[currentIndex].name}`
+          t('slideshow.viewer_info_single', { page: currentIndex + 1, total: images.length, name: images[currentIndex].name })
         ) : (
           t('slideshow.viewer_info', { page: currentIndex + 1, total: images.length })
         )}

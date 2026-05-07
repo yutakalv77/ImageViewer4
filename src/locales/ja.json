@@ -36,13 +36,19 @@
     "date": "登録日時",
     "operation": "操作",
     "loading": "読み込み中...",
+    "folder": "フォルダ",
     "empty_gallery": "画像やフォルダが見つかりません。",
     "error_rename": "名前の変更に失敗しました",
     "error_copy_info": "情報をコピー",
     "no_history": "履歴はありません",
     "drag_hint": "フォルダを開くか、ここにドラッグ＆ドロップしてください",
     "back": "戻る",
-    "search_placeholder": "検索..."
+    "nav_back": "戻る",
+    "nav_forward": "進む",
+    "nav_up": "1つ上の階層へ",
+    "nav_exit_search": "検索を終了して戻る",
+    "search_placeholder": "検索...",
+    "reading_direction": "読み方向"
   },
   "context_menu": {
     "reveal": "エクスプローラーで表示",
@@ -53,6 +59,7 @@
   },
   "favorites": {
     "title": "お気に入り管理",
+    "label": "お気に入り",
     "empty": "お気に入りは登録されていません",
     "reveal_hint": "このフォルダへ移動",
     "view_as_gallery": "ギャラリー形式で表示",
@@ -75,11 +82,26 @@
     "startup_folder_label": "起動時にフォルダ",
     "startup_none": "（なし）",
     "startup_last": "最後に表示したフォルダ",
+    "theme_label": "テーマ",
+    "theme_dark": "ダーク",
+    "theme_light": "ライト",
+    "theme_system": "システム（OS設定）",
+    "language_label": "言語",
+    "bg_title": "背景画像の設定",
+    "bg_label": "背景画像を選択",
+    "bg_opacity": "不透明度",
+    "bg_blur": "ぼかし",
+    "bg_style": "表示スタイル",
+    "bg_style_cover": "全体（中央切り抜き）",
+    "bg_style_contain": "全体（全体表示）",
+    "bg_style_tile": "並べて表示",
     "everything_title": "Everything検索の設定",
     "everything_desc": "「Everything」はWindows用の高速ファイル検索ソフトです。有効にすると、システム全体のフォルダを瞬時に検索できます（Everythingがバックグラウンドで起動している必要があります）。",
     "everything_enable": "Everything検索を有効にする",
     "everything_limit": "表示する最大フォルダ件数 (1 ～ 1000)",
     "everything_cli_label": "Everything CLI (es.exe) のパス",
+    "everything_cli_placeholder": "es.exe のフルパス",
+    "everything_cli_dialog_title": "es.exe を選択してください",
     "everything_cli_hint": "※ es.exe を直接指定すると、環境変数の設定なしで動作します（空欄の場合はシステムPATHから探します）。",
     "everything_status": "サービスの状態",
     "everything_status_running": "接続済み",
@@ -90,6 +112,7 @@
   "slideshow": {
     "interval_dialog_title": "表示間隔の設定",
     "interval_label": "表示間隔 (0.1 ～ 99.9 秒)",
-    "viewer_info": "見開き表示: {{page}}ページ付近 / {{total}}"
+    "viewer_info": "見開き表示: {{page}}ページ付近 / {{total}}",
+    "viewer_info_single": "{{page}} / {{total}} - {{name}}"
   }
 }

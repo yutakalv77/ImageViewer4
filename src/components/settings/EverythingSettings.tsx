@@ -43,7 +43,7 @@ export function EverythingSettings({
       const selected = await open({
         multiple: false,
         filters: [{ name: "Executable", extensions: ["exe"] }],
-        title: "es.exe を選択してください"
+        title: t('settings.everything_cli_dialog_title')
       });
       if (selected && typeof selected === 'string') {
         onUpdateCliPath(selected);
@@ -103,7 +103,7 @@ export function EverythingSettings({
             type="text" 
             value={everythingCliPath} 
             readOnly 
-            placeholder="es.exe のフルパス" 
+            placeholder={t('settings.everything_cli_placeholder')} 
           />
           <button className="settings-button" onClick={handlePickCli}>{t('settings.storage_change')}</button>
           <button className="settings-button" onClick={() => onUpdateCliPath("")}>{t('common.reset')}</button>

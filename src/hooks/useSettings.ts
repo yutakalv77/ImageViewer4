@@ -31,6 +31,21 @@ export function useSettings() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "system") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
+        root.setAttribute("data-theme", e.matches ? "dark" : "light");
+      };
+      handleChange(mediaQuery);
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    } else {
+      root.setAttribute("data-theme", theme);
+    }
+  }, [theme]);
+
+  useEffect(() => {
     const loadSettings = async () => {
       try {
         const appDir = await appDataDir();

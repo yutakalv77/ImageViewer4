@@ -36,13 +36,19 @@
     "date": "Date Added",
     "operation": "Operation",
     "loading": "Loading...",
+    "folder": "Folder",
     "empty_gallery": "No images or folders found.",
     "error_rename": "Failed to rename",
     "error_copy_info": "Copy Info",
     "no_history": "No history available",
     "drag_hint": "Open a folder or drag & drop here",
     "back": "Back",
-    "search_placeholder": "Search..."
+    "nav_back": "Go back",
+    "nav_forward": "Go forward",
+    "nav_up": "Go up",
+    "nav_exit_search": "Exit search and go back",
+    "search_placeholder": "Search...",
+    "reading_direction": "Reading Direction"
   },
   "context_menu": {
     "reveal": "Reveal in Explorer",
@@ -54,6 +60,7 @@
   },
   "favorites": {
     "title": "Manage Favorites",
+    "label": "Favorites",
     "empty": "No favorites registered",
     "reveal_hint": "Navigate to this folder",
     "view_as_gallery": "View as Gallery",
@@ -77,6 +84,9 @@
     "startup_none": "(None)",
     "startup_last": "Last visited folder",
     "theme_label": "Theme",
+    "theme_dark": "Dark",
+    "theme_light": "Light",
+    "theme_system": "System",
     "language_label": "Language",
     "bg_title": "Background Image Settings",
     "bg_label": "Select background image",
@@ -91,6 +101,8 @@
     "everything_enable": "Enable Everything Search",
     "everything_limit": "Max folder results to display (1 - 1000)",
     "everything_cli_label": "Everything CLI (es.exe) Path",
+    "everything_cli_placeholder": "Full path to es.exe",
+    "everything_cli_dialog_title": "Please select es.exe",
     "everything_cli_hint": "* Specifying es.exe directly allows it to work without environment variables (leave blank to search in system PATH).",
     "everything_status": "Service Status",
     "everything_status_running": "Connected",
@@ -101,6 +113,7 @@
   "slideshow": {
     "interval_dialog_title": "Interval Settings",
     "interval_label": "Display interval (0.1 - 99.9 seconds)",
-    "viewer_info": "Spread: Around page {{page}} / {{total}}"
+    "viewer_info": "Spread: Around page {{page}} / {{total}}",
+    "viewer_info_single": "{{page}} / {{total}} - {{name}}"
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { EntryItem } from "../types";
 
@@ -23,6 +24,7 @@ export function EntryCard({
   onRenameComplete,
   onRenameCancel
 }: EntryCardProps) {
+  const { t } = useTranslation();
   const [tempName, setLocalName] = useState(entry.name);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -55,10 +57,10 @@ export function EntryCard({
         {entry.thumbnail_path ? (
           <img src={convertFileSrc(entry.thumbnail_path)} alt={entry.name} loading="lazy" />
         ) : (
-          <div className="no-thumbnail">Folder</div>
+          <div className="no-thumbnail">{t('common.folder')}</div>
         )}
         {entry.is_dir && <div className="folder-icon">📁</div>}
-        {isFavorite && <div className="favorite-star" title="お気に入り">⭐</div>}
+        {isFavorite && <div className="favorite-star" title={t('favorites.label')}>⭐</div>}
       </div>
       
       <div className="entry-name-container">

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { EntryItem, DirectoryResult } from "../types";
@@ -9,6 +10,7 @@ import {
 } from "../utils/virtualPathUtils";
 
 export function useFileSystem() {
+  const { t } = useTranslation();
   const [currentPath, setCurrentPath] = useState("");
   const [entries, setEntries] = useState<EntryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,54 +29,41 @@ export function useFileSystem() {
       setForwardStack([]); 
     }
 
-    if (isEverythingSearchPath(path)) {
-      const query = getSearchQuery(path);
-      setLoading(true);
-      try {
+    setLoading(true);
+    try {
+      if (isEverythingSearchPath(path)) {
+        const query = getSearchQuery(path);
         const results: EntryItem[] = await invoke("search_everything", { query, maxResults, cliPath });
         setEntries(results);
         setCurrentPath(path);
         setError(null);
-      } catch (e: any) {
-        setError(e.toString());
-        throw e;
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (isSearchPath(path)) {
-      const query = getSearchQuery(path);
-      const root = lastPhysicalPath;
-      if (!root) {
-        setCurrentPath(path);
-        setEntries([]);
         return;
       }
-      setLoading(true);
-      try {
+
+      if (isSearchPath(path)) {
+        const query = getSearchQuery(path);
+        const root = lastPhysicalPath;
+        if (!root) {
+          setCurrentPath(path);
+          setEntries([]);
+          setError(null);
+          return;
+        }
         const results: EntryItem[] = await invoke("search_folders", { rootPath: root, query });
         setEntries(results);
         setCurrentPath(path);
         setError(null);
-      } catch (e: any) {
-        setError(e.toString());
-      } finally {
-        setLoading(false);
+        return;
       }
-      return;
-    }
 
-    if (isVirtualPath(path)) {
-      setCurrentPath(path);
-      setEntries([]);
-      setError(null);
-      return;
-    }
+      if (isVirtualPath(path)) {
+        setCurrentPath(path);
+        setEntries([]);
+        setError(null);
+        return;
+      }
 
-    setLoading(true);
-    try {
+      // Physical path
       const result: DirectoryResult = await invoke("get_directory_entries", { path });
       const normalizedNewPath = result.path;
       setEntries(result.entries);
@@ -82,7 +71,9 @@ export function useFileSystem() {
       setLastPhysicalPath(normalizedNewPath);
       setError(null);
     } catch (e: any) {
-      setError(e.toString());
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+      throw e;
     } finally {
       setLoading(false);
     }
@@ -125,7 +116,7 @@ export function useFileSystem() {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "フォルダを選択してください"
+        title: t('file_menu.open_folder')
       });
       if (selected && typeof selected === 'string') {
         loadDirectory(selected);
@@ -133,7 +124,7 @@ export function useFileSystem() {
     } catch (e: any) {
       console.error(e);
     }
-  }, [loadDirectory]);
+  }, [loadDirectory, t]);
 
   const goUp = useCallback(() => {
     if (!currentPath || isVirtualPath(currentPath)) return;
