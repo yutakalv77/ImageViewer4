@@ -8,15 +8,16 @@ export function useSlideshow(
   onNavigate: (update: number | ((prev: number) => number)) => void
 ) {
   const [isActive, setIsActive] = useState(false);
+  const { viewMode, firstPageIsCover, totalImages, readingDirection } = options;
 
   useEffect(() => {
     let timer: number | undefined;
-    if (isActive && options.totalImages > 0) {
+    if (isActive && totalImages > 0) {
       timer = window.setInterval(() => {
         onNavigate((currentIndex: number) => {
-          const next = getNextIndex(currentIndex, options);
+          const next = getNextIndex(currentIndex, { viewMode, firstPageIsCover, totalImages, readingDirection });
           
-          if (next === currentIndex || next >= options.totalImages - 1) {
+          if (next === currentIndex || next >= totalImages - 1) {
              if (loop) return 0;
              setIsActive(false);
              return currentIndex;
@@ -28,7 +29,7 @@ export function useSlideshow(
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isActive, options, intervalSeconds, loop, onNavigate]);
+  }, [isActive, viewMode, firstPageIsCover, totalImages, readingDirection, intervalSeconds, loop, onNavigate]);
 
   const start = useCallback(() => setIsActive(true), []);
   const stop = useCallback(() => setIsActive(false), []);

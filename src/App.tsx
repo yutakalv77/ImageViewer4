@@ -38,7 +38,7 @@ function App() {
     language, updateLanguage, theme, updateTheme, 
     background, updateBackground, pickBackgroundImage,
     everythingEnabled, updateEverythingEnabled, everythingMaxResults, updateEverythingMaxResults,
-    everythingCliPath, updateEverythingCliPath
+    everythingCliPath, updateEverythingCliPath, isLoaded: isSettingsLoaded
   } = useSettings();
 
   const { history, recordHistory, isLoaded: isHistoryLoaded } = useHistory(dataStoragePath, historyRetentionDays);
@@ -73,7 +73,7 @@ function App() {
 
   // Slideshow Logic
   const { start: startTimer, stop: stopTimer } = useSlideshow(
-    { viewMode, firstPageIsCover, totalImages: images.length },
+    { viewMode, firstPageIsCover, totalImages: images.length, readingDirection },
     slideInterval,
     slideLoop,
     (next) => {
@@ -85,8 +85,6 @@ function App() {
   );
 
   // Handle Startup Path
-  const { isLoaded: isSettingsLoaded } = useSettings(); 
-
   useEffect(() => {
     if (isHistoryLoaded && isSettingsLoaded && !isStarted) {
       if (startupFolderType === "last" && history.length > 0) {

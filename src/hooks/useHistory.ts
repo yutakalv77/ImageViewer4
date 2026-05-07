@@ -51,21 +51,22 @@ export function useHistory(storagePath: string, retentionDays: number) {
     }
   }, [getHistoryFilePath, storagePath]);
 
-  const recordHistory = useCallback(async (path: string) => {
+  const recordHistory = useCallback((path: string) => {
     if (retentionDays === 0) return;
     
     const now = Date.now();
     setHistory(prev => {
       const filtered = prev.filter(e => e.path !== path);
       const updated = [{ path, lastVisited: now }, ...filtered];
-      const limited = updated.slice(0, 100); 
-      
-      // 非同期保存を別途実行
-      saveHistory(limited);
-      
-      return limited;
+      return updated.slice(0, 100);
     });
-  }, [retentionDays, saveHistory]);
+  }, [retentionDays]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      saveHistory(history);
+    }
+  }, [history, isLoaded, saveHistory]);
 
   useEffect(() => {
     if (storagePath) {

@@ -34,34 +34,39 @@ export function useFavorites(dataStoragePath: string) {
     try {
       const filePath = await getFilePath();
       await writeTextFile(filePath, JSON.stringify(newFavorites, null, 2));
-      setFavorites(newFavorites);
     } catch (e) {
       console.error("Failed to save favorites:", e);
     }
   }, [getFilePath]);
 
   useEffect(() => {
+    if (isLoaded) {
+      saveFavorites(favorites);
+    }
+  }, [favorites, isLoaded, saveFavorites]);
+
+  useEffect(() => {
     loadFavorites();
   }, [loadFavorites]);
 
-  const toggleFavorite = useCallback(async (path: string) => {
-    const isFav = favorites.some(f => f.path === path);
-    let nextFavorites;
-    if (isFav) {
-      nextFavorites = favorites.filter(f => f.path !== path);
-    } else {
-      nextFavorites = [...favorites, { path, addedAt: Date.now() }];
-    }
-    await saveFavorites(nextFavorites);
-  }, [favorites, saveFavorites]);
+  const toggleFavorite = useCallback((path: string) => {
+    setFavorites(prev => {
+      const isFav = prev.some(f => f.path === path);
+      if (isFav) {
+        return prev.filter(f => f.path !== path);
+      } else {
+        return [...prev, { path, addedAt: Date.now() }];
+      }
+    });
+  }, []);
 
   const isFavorite = useCallback((path: string) => {
     return favorites.some(f => f.path === path);
   }, [favorites]);
 
-  const updateAllFavorites = useCallback(async (newFavorites: FavoriteEntry[]) => {
-    await saveFavorites(newFavorites);
-  }, [saveFavorites]);
+  const updateAllFavorites = useCallback((newFavorites: FavoriteEntry[]) => {
+    setFavorites(newFavorites);
+  }, []);
 
   return {
     favorites,
