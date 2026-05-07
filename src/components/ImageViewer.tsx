@@ -1,36 +1,45 @@
 import { useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { EntryItem } from "../types";
 import { getNextIndex, getPrevIndex } from "../utils/viewerUtils";
+import { useSettingsContext } from "../context/SettingsContext";
+import { useFileSystemContext } from "../context/FileSystemContext";
+import { useUIContext } from "../context/UIContext";
+import "./ImageViewer.css";
 
 // Navigation Constants
 const WHEEL_COOLDOWN = 400; // ms
 const WHEEL_THRESHOLD = 30;
 
 interface ImageViewerProps {
-  images: EntryItem[];
-  currentIndex: number;
-  viewMode: "single" | "spread";
-  readingDirection: "rtl" | "ltr";
-  firstPageIsCover: boolean;
   onClose: () => void;
-  onNavigate: (index: number) => void;
   onManualInteraction: () => void;
 }
 
 export function ImageViewer({ 
-  images, 
-  currentIndex, 
-  viewMode, 
-  readingDirection, 
-  firstPageIsCover, 
   onClose,
-  onNavigate,
   onManualInteraction
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const lastWheelTime = useRef(0);
+
+  const {
+    viewMode, readingDirection, firstPageIsCover
+  } = useSettingsContext();
+
+  const {
+    images
+  } = useFileSystemContext();
+
+  const {
+    viewerState, setViewerState
+  } = useUIContext();
+
+  const { currentIndex } = viewerState;
+
+  const onNavigate = useCallback((index: number) => {
+    setViewerState(prev => ({ ...prev, currentIndex: index }));
+  }, [setViewerState]);
 
   const handleNext = useCallback(() => {
     onManualInteraction();
@@ -98,7 +107,7 @@ export function ImageViewer({
     return pair;
   }, [images, currentIndex, viewMode, firstPageIsCover, readingDirection]);
 
-  if (currentIndex < 0) return null;
+  if (!viewerState.isOpen || currentIndex < 0) return null;
 
   return (
     <div 
@@ -119,9 +128,6 @@ export function ImageViewer({
               className="viewer-image"
               onClick={(e) => {
                 e.stopPropagation();
-                // 単一表示かつRTLの場合は画像クリックで「戻る」ではなく「進む」挙動にする
-                // ただし現在は画像全体がクリック可能なので、簡易的に「進む」に統一するか、
-                // 左右クリックで分けるなどの工夫が必要ですが、ここではキーボード同様の方向概念を適用します。
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const isRtl = readingDirection === "rtl";

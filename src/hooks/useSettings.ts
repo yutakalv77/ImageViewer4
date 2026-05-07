@@ -7,8 +7,6 @@ import i18n from "../i18n";
 import { BackgroundSettings, StartupFolderType, ThemeMode } from "../types";
 
 export function useSettings() {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [activeSettingsTab, setActiveSettingsTab] = useState("general");
   const [dataStoragePath, setDataStoragePath] = useState<string>("");
   const [historyRetentionDays, setHistoryRetentionDays] = useState<number>(30);
   const [startupFolderType, setStartupFolderType] = useState<StartupFolderType>("none");
@@ -229,10 +227,6 @@ export function useSettings() {
 
   return {
     isLoaded,
-    isSettingsOpen,
-    setIsSettingsOpen,
-    activeSettingsTab,
-    setActiveSettingsTab,
     dataStoragePath,
     changeStoragePath,
     historyRetentionDays,

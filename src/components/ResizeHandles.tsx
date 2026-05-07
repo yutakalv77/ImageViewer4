@@ -1,4 +1,5 @@
 import { useWindow } from "../hooks/useWindow";
+import "./ResizeHandles.css";
 
 export function ResizeHandles() {
   const { startResizing } = useWindow();

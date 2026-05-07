@@ -1,0 +1,59 @@
+.viewer-overlay {
+  position: fixed;
+  top: var(--total-header-height);
+  left: 0;
+  width: 100vw;
+  height: calc(100vh - var(--total-header-height));
+  background: rgba(0,0,0,0.98);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-index-viewer);
+  cursor: pointer;
+}
+
+.direction-indicator {
+  position: absolute;
+  top: 20px;
+  left: 40px;
+  font-size: 2.5em;
+  color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+  z-index: 1001;
+  text-shadow: 0 0 10px rgba(0,0,0,0.5);
+  font-family: serif;
+}
+
+.viewer-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.viewer-container.spread-view {
+  gap: 0;
+}
+
+.viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.2s;
+}
+
+.spread-view .viewer-image {
+  max-width: 50%;
+}
+
+.viewer-info {
+  position: absolute;
+  bottom: 20px;
+  background: rgba(0,0,0,0.6);
+  padding: 5px 15px;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 0.8em;
+}

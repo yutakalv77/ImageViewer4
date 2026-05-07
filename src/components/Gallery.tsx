@@ -5,31 +5,29 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { EntryItem } from "../types";
 import { EntryCard } from "./EntryCard";
+import "./Gallery.css";
 import { ContextMenu } from "./ContextMenu";
 import { useGalleryNavigation } from "../hooks/useGalleryNavigation";
+import { useFileSystemContext } from "../context/FileSystemContext";
+import { useSettingsContext } from "../context/SettingsContext";
 
 interface GalleryProps {
-  entries: EntryItem[];
-  loading: boolean;
-  currentPath: string;
-  isFavorite: (path: string) => boolean;
-  onToggleFavorite: (path: string) => void;
   onEntryClick: (entry: EntryItem) => void;
-  onRefresh: () => void;
-  onSetBackground: (path: string) => void;
 }
 
 export function Gallery({ 
-  entries, 
-  loading, 
-  currentPath, 
-  isFavorite,
-  onToggleFavorite,
-  onEntryClick, 
-  onRefresh,
-  onSetBackground
+  onEntryClick
 }: GalleryProps) {
   const { t } = useTranslation();
+  
+  const {
+    currentPath, displayEntries, loading, isFavorite, toggleFavorite, loadDirectory
+  } = useFileSystemContext();
+
+  const {
+    updateBackground
+  } = useSettingsContext();
+
   const {
     selectedIndex,
     setSelectedIndex,
@@ -37,7 +35,7 @@ export function Gallery({
     setEditingIndex,
     galleryRef,
     reset
-  } = useGalleryNavigation(entries, onEntryClick);
+  } = useGalleryNavigation(displayEntries, onEntryClick);
 
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, entry: EntryItem, index: number } | null>(null);
 
@@ -54,7 +52,7 @@ export function Gallery({
   };
 
   const handleRename = useCallback(async (index: number, newName: string) => {
-    const entry = entries[index];
+    const entry = displayEntries[index];
     setEditingIndex(-1);
     
     if (!newName || newName === entry.name) return;
@@ -67,12 +65,12 @@ export function Gallery({
       const newPath = [...pathParts, newName].join(separator);
 
       await invoke("rename_entry", { oldPath, newPath });
-      onRefresh();
+      loadDirectory(currentPath, true); // Refresh without adding to backStack
     } catch (err) {
       console.error("Failed to rename:", err);
       alert(t('common.error_rename'));
     }
-  }, [entries, onRefresh, setEditingIndex, t]);
+  }, [displayEntries, currentPath, loadDirectory, setEditingIndex, t]);
 
   const copyToClipboard = async (path: string) => {
     try {
@@ -95,10 +93,10 @@ export function Gallery({
     { label: t('context_menu.copy_path'), onClick: () => copyToClipboard(contextMenu.entry.path) },
     { 
       label: isFavorite(contextMenu.entry.path) ? t('context_menu.fav_remove') : t('context_menu.fav_add'), 
-      onClick: () => onToggleFavorite(contextMenu.entry.path) 
+      onClick: () => toggleFavorite(contextMenu.entry.path) 
     },
     ...(!contextMenu.entry.is_dir ? [
-      { label: t('context_menu.set_bg'), onClick: () => onSetBackground(contextMenu.entry.path) }
+      { label: t('context_menu.set_bg'), onClick: () => updateBackground({ path: contextMenu.entry.path }) }
     ] : []),
     { separator: true, label: t('context_menu.rename'), onClick: () => setEditingIndex(contextMenu.index) },
   ] : [];
@@ -113,7 +111,7 @@ export function Gallery({
       )}
 
       <div className="gallery" ref={galleryRef}>
-        {entries.map((entry, idx) => (
+        {displayEntries.map((entry, idx) => (
           <EntryCard 
             key={`${entry.path}-${idx}`} 
             entry={entry} 
@@ -129,7 +127,7 @@ export function Gallery({
             onRenameCancel={() => setEditingIndex(-1)}
           />
         ))}
-        {!loading && entries.length === 0 && currentPath && (
+        {!loading && displayEntries.length === 0 && currentPath && (
           <div className="empty-msg">{t('common.empty_gallery')}</div>
         )}
       </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { EntryItem } from "../types";
+import "./EntryCard.css";
 
 interface EntryCardProps {
   entry: EntryItem;

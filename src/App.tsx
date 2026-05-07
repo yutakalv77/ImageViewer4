@@ -1,14 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { message } from "@tauri-apps/plugin-dialog";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { useFileSystem } from "./hooks/useFileSystem";
-import { useSettings } from "./hooks/useSettings";
-import { useHistory } from "./hooks/useHistory";
-import { useFavorites } from "./hooks/useFavorites";
 import { useSlideshow } from "./hooks/useSlideshow";
+import { useAppEvents } from "./hooks/useAppEvents";
 import { MenuBar } from "./components/MenuBar";
 import { TopBar } from "./components/TopBar";
 import { Gallery } from "./components/Gallery";
@@ -17,59 +14,46 @@ import { SettingsModal } from "./components/SettingsModal";
 import { FavoritesModal } from "./components/FavoritesModal";
 import { SlideIntervalModal } from "./components/SlideIntervalModal";
 import { ResizeHandles } from "./components/ResizeHandles";
-import { EntryItem, ViewerState } from "./types";
-import { VIRTUAL_PATH_FAVORITES, isVirtualPath, convertFavoriteToEntry } from "./utils/virtualPathUtils";
+import { AppBackground } from "./components/AppBackground";
+import { EntryItem } from "./types";
+import { isVirtualPath } from "./utils/virtualPathUtils";
 import { useTranslation } from "react-i18next";
+import { useSettingsContext } from "./context/SettingsContext";
+import { useFileSystemContext } from "./context/FileSystemContext";
+import { useUIContext } from "./context/UIContext";
 import "./App.css";
 
 function App() {
   const { t } = useTranslation();
-  const { 
-    currentPath, entries, loading, error, canGoBack, canGoForward,
-    loadDirectory, searchFolders, everythingSearch, openFolderDialog, goUp, goBack, goForward, setError
-  } = useFileSystem();
+  
+  const {
+    currentPath, images, error, loadDirectory, everythingSearch, searchFolders,
+    history, recordHistory, isHistoryLoaded
+  } = useFileSystemContext();
 
   const {
-    isSettingsOpen, setIsSettingsOpen, activeSettingsTab, setActiveSettingsTab,
-    dataStoragePath, changeStoragePath, historyRetentionDays, updateHistoryRetention,
-    startupFolderType, updateStartupFolderType, slideInterval, updateSlideInterval,
-    slideLoop, toggleSlideLoop, viewMode, updateViewMode, readingDirection,
-    updateReadingDirection, firstPageIsCover, toggleFirstPageIsCover,
-    language, updateLanguage, theme, updateTheme, 
-    background, updateBackground, pickBackgroundImage,
-    everythingEnabled, updateEverythingEnabled, everythingMaxResults, updateEverythingMaxResults,
-    everythingCliPath, updateEverythingCliPath, isLoaded: isSettingsLoaded
-  } = useSettings();
+    isLoaded: isSettingsLoaded, startupFolderType, everythingEnabled,
+    everythingMaxResults, everythingCliPath, background,
+    slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover
+  } = useSettingsContext();
 
-  const { history, recordHistory, isLoaded: isHistoryLoaded } = useHistory(dataStoragePath, historyRetentionDays);
-  const { favorites, isFavorite, toggleFavorite, updateAllFavorites } = useFavorites(dataStoragePath);
+  const {
+    viewerState, setViewerState, persistentError, setPersistentError
+  } = useUIContext();
 
-  const [viewerState, setViewerState] = useState<ViewerState>({ isOpen: false, currentIndex: -1 });
-  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
-  const [isIntervalDialogOpen, setIsIntervalDialogOpen] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
 
-  const [persistentError, setPersistentError] = useState<string | null>(null);
-
+  // Sync external error to UI context
   useEffect(() => {
-    if (error) {
-      setPersistentError(error);
-    }
-  }, [error]);
+    if (error) setPersistentError(error);
+  }, [error, setPersistentError]);
 
-  const images = useMemo(() => entries.filter(e => !e.is_dir), [entries]);
-
-  // Virtual Entries Conversion
-  const virtualEntries = useMemo((): Record<string, EntryItem[]> => {
-    return {
-      [VIRTUAL_PATH_FAVORITES]: favorites.map(convertFavoriteToEntry),
-    };
-  }, [favorites]);
-
-  const displayEntries = useMemo(() => {
-    if (virtualEntries[currentPath]) return virtualEntries[currentPath];
-    return entries;
-  }, [currentPath, entries, virtualEntries]);
+  const closeViewer = useCallback(async () => {
+    stopTimer();
+    const win = getCurrentWindow();
+    if (await win.isFullscreen()) await win.setFullscreen(false);
+    setViewerState({ isOpen: false, currentIndex: -1 });
+  }, [setViewerState]);
 
   // Slideshow Logic
   const { start: startTimer, stop: stopTimer } = useSlideshow(
@@ -83,6 +67,9 @@ function App() {
       }));
     }
   );
+
+  // Initialize App Events
+  useAppEvents(closeViewer);
 
   // Handle Startup Path
   useEffect(() => {
@@ -101,40 +88,13 @@ function App() {
     }
   }, [currentPath, recordHistory, isStarted]);
 
-  // Drag and Drop
-  useEffect(() => {
-    const unlisten = getCurrentWindow().onDragDropEvent((event) => {
-      if (event.payload.type === 'drop' && event.payload.paths.length > 0) {
-        loadDirectory(event.payload.paths[0]);
-      }
-    });
-    return () => { unlisten.then(fn => fn()); };
-  }, [loadDirectory]);
-
-  // Mouse Side Buttons
-  useEffect(() => {
-    const handleMouseUp = (e: MouseEvent) => {
-      if (e.button === 3) goBack();
-      else if (e.button === 4) goForward();
-    };
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => window.removeEventListener("mouseup", handleMouseUp);
-  }, [goBack, goForward]);
-
   const startSlideshow = useCallback(async () => {
     if (images.length === 0) return;
     const startIndex = viewerState.currentIndex >= 0 ? viewerState.currentIndex : 0;
     setViewerState({ isOpen: true, currentIndex: startIndex });
     startTimer();
     await getCurrentWindow().setFullscreen(true);
-  }, [images.length, viewerState.currentIndex, startTimer]);
-
-  const closeViewer = useCallback(async () => {
-    stopTimer();
-    const win = getCurrentWindow();
-    if (await win.isFullscreen()) await win.setFullscreen(false);
-    setViewerState({ isOpen: false, currentIndex: -1 });
-  }, [stopTimer]);
+  }, [images.length, viewerState.currentIndex, startTimer, setViewerState]);
 
   const handleRevealCurrentPath = useCallback(async () => {
     if (currentPath && !isVirtualPath(currentPath)) {
@@ -145,6 +105,14 @@ function App() {
       }
     }
   }, [currentPath]);
+
+  const fallbackSearch = useCallback((query: string) => {
+    if (currentPath && !isVirtualPath(currentPath)) {
+      searchFolders(currentPath, query);
+    } else if (history.length > 0) {
+      searchFolders(history[0].path, query);
+    }
+  }, [currentPath, history, searchFolders]);
 
   const handleSearch = useCallback(async (query: string) => {
     if (everythingEnabled) {
@@ -167,55 +135,7 @@ function App() {
     } else {
       fallbackSearch(query);
     }
-  }, [everythingEnabled, everythingMaxResults, everythingCliPath, everythingSearch, t]);
-
-  const fallbackSearch = useCallback((query: string) => {
-    if (currentPath && !isVirtualPath(currentPath)) {
-      searchFolders(currentPath, query);
-    } else if (history.length > 0) {
-      searchFolders(history[0].path, query);
-    }
-  }, [currentPath, history, searchFolders]);
-
-  const handleCopyError = useCallback(() => {
-    if (persistentError) {
-      writeText(persistentError);
-    }
-  }, [persistentError]);
-
-  const handleCloseError = useCallback(() => {
-    setPersistentError(null);
-    setError(null);
-  }, [setError]);
-
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if (viewerState.isOpen) {
-        if (e.key.toLowerCase() === "f") {
-          const win = getCurrentWindow();
-          const isFull = await win.isFullscreen();
-          await win.setFullscreen(!isFull);
-        } else if (e.key === "Escape" || e.key === "Backspace") {
-          await closeViewer();
-        } else if (e.key.toLowerCase() === "m") {
-          updateViewMode(viewMode === "single" ? "spread" : "single");
-        }
-      } else if (isSettingsOpen || isFavoritesOpen || isIntervalDialogOpen) {
-        if (e.key === "Escape") {
-          setIsSettingsOpen(false);
-          setIsFavoritesOpen(false);
-          setIsIntervalDialogOpen(false);
-        }
-      } else {
-        if (e.key === "Escape" || e.key === "Backspace") goUp();
-        if (e.altKey && e.key === "ArrowLeft") goBack();
-        else if (e.altKey && e.key === "ArrowRight") goForward();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewerState.isOpen, isSettingsOpen, isFavoritesOpen, isIntervalDialogOpen, goUp, goBack, goForward, closeViewer, viewMode, updateViewMode]);
+  }, [everythingEnabled, everythingMaxResults, everythingCliPath, everythingSearch, t, setPersistentError, fallbackSearch]);
 
   const handleEntryClick = (entry: EntryItem) => {
     if (entry.is_dir) {
@@ -226,141 +146,38 @@ function App() {
     }
   };
 
-  const backgroundStyle = useMemo(() => {
-    if (!background.path) return {};
-    const styles: React.CSSProperties = {
-      backgroundImage: `url("${convertFileSrc(background.path)}")`,
-      opacity: background.opacity,
-      filter: `blur(${background.blur}px)`,
-    };
-    if (background.style === "cover") {
-      styles.backgroundSize = "cover";
-      styles.backgroundPosition = "center";
-      styles.backgroundRepeat = "no-repeat";
-    } else if (background.style === "contain") {
-      styles.backgroundSize = "contain";
-      styles.backgroundPosition = "center";
-      styles.backgroundRepeat = "no-repeat";
-    } else if (background.style === "tile") {
-      styles.backgroundSize = "auto";
-      styles.backgroundRepeat = "repeat";
-    }
-    return styles;
-  }, [background.path, background.opacity, background.blur, background.style]);
-
   return (
     <div className={`app-container ${background.path ? "has-background" : ""}`}>
       <ResizeHandles />
-      
-      {background.path && (
-        <div className="app-background-layer" style={backgroundStyle}></div>
-      )}
+      <AppBackground />
 
       <MenuBar 
-        history={history}
-        slideInterval={slideInterval}
-        slideLoop={slideLoop}
-        viewMode={viewMode}
-        readingDirection={readingDirection}
-        firstPageIsCover={firstPageIsCover}
-        onOpenFolder={openFolderDialog} 
-        onOpenSettings={() => setIsSettingsOpen(true)} 
-        onOpenFavorites={() => setIsFavoritesOpen(true)}
-        onSelectHistory={loadDirectory}
         onStartSlideshow={startSlideshow}
-        onToggleLoop={toggleSlideLoop}
-        onUpdateInterval={updateSlideInterval}
-        onOpenIntervalDialog={() => setIsIntervalDialogOpen(true)}
-        onUpdateViewMode={updateViewMode}
-        onUpdateReadingDirection={updateReadingDirection}
-        onToggleFirstPageIsCover={toggleFirstPageIsCover}
         onRevealCurrentPath={handleRevealCurrentPath}
       />
 
-      <TopBar 
-        currentPath={currentPath} 
-        canGoBack={canGoBack}
-        canGoForward={canGoForward}
-        onNavigate={loadDirectory}
-        onGoUp={goUp}
-        onGoBack={goBack}
-        onGoForward={goForward}
-        onSearch={handleSearch}
-        onExitSearch={goBack}
-      />
+      <TopBar onSearch={handleSearch} />
 
       {persistentError && (
         <div className="error-banner">
           <div className="error-message">{persistentError}</div>
           <div className="error-actions">
-            <button className="error-copy-btn" onClick={handleCopyError}>{t('common.error_copy_info')}</button>
-            <button className="error-close-btn" onClick={handleCloseError}>×</button>
+            <button className="error-copy-btn" onClick={() => writeText(persistentError)}>{t('common.error_copy_info')}</button>
+            <button className="error-close-btn" onClick={() => setPersistentError(null)}>×</button>
           </div>
         </div>
       )}
 
-      <Gallery 
-        entries={displayEntries} 
-        loading={loading} 
-        currentPath={currentPath} 
-        isFavorite={isFavorite}
-        onToggleFavorite={toggleFavorite}
-        onEntryClick={handleEntryClick} 
-        onRefresh={() => loadDirectory(currentPath)}
-        onSetBackground={(path) => updateBackground({ path })}
-      />
+      <Gallery onEntryClick={handleEntryClick} />
 
       <ImageViewer 
-        images={images} 
-        currentIndex={viewerState.currentIndex} 
-        viewMode={viewMode}
-        readingDirection={readingDirection}
-        firstPageIsCover={firstPageIsCover}
         onClose={closeViewer} 
-        onNavigate={(idx) => setViewerState(prev => ({ ...prev, currentIndex: idx }))}
         onManualInteraction={stopTimer}
       />
 
-      <SettingsModal 
-        isOpen={isSettingsOpen}
-        activeTab={activeSettingsTab}
-        dataStoragePath={dataStoragePath}
-        historyRetentionDays={historyRetentionDays}
-        startupFolderType={startupFolderType}
-        language={language}
-        theme={theme}
-        background={background}
-        everythingEnabled={everythingEnabled}
-        everythingMaxResults={everythingMaxResults}
-        everythingCliPath={everythingCliPath}
-        onClose={() => setIsSettingsOpen(false)}
-        onTabChange={setActiveSettingsTab}
-        onChangeStoragePath={changeStoragePath}
-        onUpdateHistoryRetention={updateHistoryRetention}
-        onUpdateStartupFolderType={updateStartupFolderType}
-        onUpdateLanguage={updateLanguage}
-        onUpdateTheme={updateTheme}
-        onUpdateBackground={updateBackground}
-        onPickBackgroundImage={pickBackgroundImage}
-        onUpdateEverythingEnabled={updateEverythingEnabled}
-        onUpdateEverythingMaxResults={updateEverythingMaxResults}
-        onUpdateEverythingCliPath={updateEverythingCliPath}
-      />
-
-      <FavoritesModal
-        isOpen={isFavoritesOpen}
-        favorites={favorites}
-        onClose={() => setIsFavoritesOpen(false)}
-        onSave={updateAllFavorites}
-        onNavigate={loadDirectory}
-      />
-
-      <SlideIntervalModal
-        isOpen={isIntervalDialogOpen}
-        currentInterval={slideInterval}
-        onClose={() => setIsIntervalDialogOpen(false)}
-        onSave={updateSlideInterval}
-      />
+      <SettingsModal />
+      <FavoritesModal />
+      <SlideIntervalModal />
     </div>
   );
 }

@@ -2,33 +2,24 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWindow } from "../hooks/useWindow";
 import { isVirtualPath, getVirtualPathLabel, isSearchPath } from "../utils/virtualPathUtils";
+import { useFileSystemContext } from "../context/FileSystemContext";
+import "./TopBar.css";
 
 interface TopBarProps {
-  currentPath: string;
-  canGoBack: boolean;
-  canGoForward: boolean;
-  onNavigate: (path: string) => void;
-  onGoUp: () => void;
-  onGoBack: () => void;
-  onGoForward: () => void;
   onSearch: (query: string) => void;
-  onExitSearch: () => void;
 }
 
 export function TopBar({ 
-  currentPath, 
-  canGoBack, 
-  canGoForward, 
-  onNavigate, 
-  onGoUp, 
-  onGoBack, 
-  onGoForward,
-  onSearch,
-  onExitSearch
+  onSearch
 }: TopBarProps) {
   const { handleDrag, toggleMaximize } = useWindow();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+
+  const {
+    currentPath, canGoBack, canGoForward,
+    loadDirectory, goUp, goBack, goForward
+  } = useFileSystemContext();
 
   const breadcrumbs = useMemo(() => {
     if (!currentPath) return [];
@@ -87,7 +78,7 @@ export function TopBar({
         <button 
           className="nav-button back-button" 
           onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onGoBack(); }}
+          onClick={(e) => { e.stopPropagation(); goBack(); }}
           title={t('common.nav_back')}
           disabled={!canGoBack}
         >
@@ -98,7 +89,7 @@ export function TopBar({
         <button 
           className="nav-button forward-button" 
           onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onGoForward(); }}
+          onClick={(e) => { e.stopPropagation(); goForward(); }}
           title={t('common.nav_forward')}
           disabled={!canGoForward}
         >
@@ -109,7 +100,7 @@ export function TopBar({
         <button 
           className="nav-button up-button" 
           onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onGoUp(); }}
+          onClick={(e) => { e.stopPropagation(); goUp(); }}
           title={t('common.nav_up')}
           disabled={!currentPath || isVirtualPath(currentPath)}
         >
@@ -127,7 +118,7 @@ export function TopBar({
             {isInSearch && (
               <button 
                 className="exit-search-btn" 
-                onClick={onExitSearch}
+                onClick={goBack}
                 title={t('common.nav_exit_search')}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -140,7 +131,7 @@ export function TopBar({
               <span key={`${crumb.path}-${idx}`} className="breadcrumb-item">
                 <span 
                   className="breadcrumb-name" 
-                  onClick={() => onNavigate(crumb.path)}
+                  onClick={() => loadDirectory(crumb.path)}
                   title={crumb.path}
                 >
                   {crumb.name}

@@ -1,0 +1,29 @@
+.context-menu {
+  position: fixed;
+  background: var(--bg-dropdown);
+  border: 1px solid var(--border-main);
+  box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 10000;
+  border-radius: 4px;
+}
+
+.context-menu-item {
+  padding: 6px 20px;
+  color: var(--text-menu);
+  cursor: pointer;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.context-menu-item:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: var(--border-main);
+  margin: 4px 0;
+}

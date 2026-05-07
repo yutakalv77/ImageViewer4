@@ -1,0 +1,61 @@
+.favorites-modal {
+  width: 800px !important;
+  height: 600px !important;
+}
+
+.favorites-list-container {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.favorites-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.favorites-table th {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid var(--border-main);
+  color: var(--text-dim);
+}
+
+.favorites-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.fav-path {
+  cursor: pointer;
+  color: var(--accent);
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fav-path:hover {
+  text-decoration: underline;
+}
+
+.fav-date {
+  color: var(--text-dim);
+  font-size: 0.85em;
+}
+
+.fav-remove-btn {
+  background: #441111;
+  border: 1px solid #662222;
+  color: #ffaaaa;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+
+.fav-remove-btn:hover {
+  background: #662222;
+  color: white;
+}

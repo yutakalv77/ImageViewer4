@@ -4,61 +4,31 @@ import { StorageSettings } from "./settings/StorageSettings";
 import { HistorySettings } from "./settings/HistorySettings";
 import { GeneralSettings } from "./settings/GeneralSettings";
 import { EverythingSettings } from "./settings/EverythingSettings";
-import { BackgroundSettings, StartupFolderType, ThemeMode } from "../types";
+import { useSettingsContext } from "../context/SettingsContext";
+import { useUIContext } from "../context/UIContext";
+import "./SettingsModal.css";
 
-interface SettingsModalProps {
-  isOpen: boolean;
-  activeTab: string;
-  dataStoragePath: string;
-  historyRetentionDays: number;
-  startupFolderType: StartupFolderType;
-  language: string;
-  theme: ThemeMode;
-  background: BackgroundSettings;
-  everythingEnabled: boolean;
-  everythingMaxResults: number;
-  everythingCliPath: string;
-  onClose: () => void;
-  onTabChange: (tab: string) => void;
-  onChangeStoragePath: () => void;
-  onUpdateHistoryRetention: (days: number) => void;
-  onUpdateStartupFolderType: (type: StartupFolderType) => void;
-  onUpdateLanguage: (lang: string) => void;
-  onUpdateTheme: (theme: ThemeMode) => void;
-  onUpdateBackground: (updates: Partial<BackgroundSettings>) => void;
-  onPickBackgroundImage: () => void;
-  onUpdateEverythingEnabled: (enabled: boolean) => void;
-  onUpdateEverythingMaxResults: (count: number) => void;
-  onUpdateEverythingCliPath: (path: string) => void;
-}
-
-export function SettingsModal({
-  isOpen,
-  activeTab,
-  dataStoragePath,
-  historyRetentionDays,
-  startupFolderType,
-  language,
-  theme,
-  background,
-  everythingEnabled,
-  everythingMaxResults,
-  everythingCliPath,
-  onClose,
-  onTabChange,
-  onChangeStoragePath,
-  onUpdateHistoryRetention,
-  onUpdateStartupFolderType,
-  onUpdateLanguage,
-  onUpdateTheme,
-  onUpdateBackground,
-  onPickBackgroundImage,
-  onUpdateEverythingEnabled,
-  onUpdateEverythingMaxResults,
-  onUpdateEverythingCliPath
-}: SettingsModalProps) {
+export function SettingsModal() {
   const { t } = useTranslation();
   
+  const {
+    dataStoragePath, changeStoragePath, historyRetentionDays, updateHistoryRetention,
+    startupFolderType, updateStartupFolderType, slideInterval, updateSlideInterval,
+    slideLoop, toggleSlideLoop, viewMode, updateViewMode, readingDirection,
+    updateReadingDirection, firstPageIsCover, toggleFirstPageIsCover,
+    language, updateLanguage, theme, updateTheme, 
+    background, updateBackground, pickBackgroundImage,
+    everythingEnabled, updateEverythingEnabled, everythingMaxResults, updateEverythingMaxResults,
+    everythingCliPath, updateEverythingCliPath
+  } = useSettingsContext();
+
+  const {
+    isSettingsOpen, setIsSettingsOpen, activeSettingsTab, setActiveSettingsTab
+  } = useUIContext();
+
+  const onClose = () => setIsSettingsOpen(false);
+  const onTabChange = (tab: string) => setActiveSettingsTab(tab);
+
   // Position and Size State
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [size, setSize] = useState({ w: 700, h: 500 });
@@ -72,16 +42,16 @@ export function SettingsModal({
 
   // Reset position to center when opened
   useEffect(() => {
-    if (isOpen && !isInitialized) {
+    if (isSettingsOpen && !isInitialized) {
       const x = (window.innerWidth - size.w) / 2;
       const y = (window.innerHeight - size.h) / 2;
       setPos({ x, y });
       setIsInitialized(true);
     }
-    if (!isOpen) {
+    if (!isSettingsOpen) {
       setIsInitialized(false);
     }
-  }, [isOpen, isInitialized, size.w, size.h]);
+  }, [isSettingsOpen, isInitialized, size.w, size.h]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
@@ -119,7 +89,7 @@ export function SettingsModal({
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isSettingsOpen) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
     }
@@ -127,9 +97,9 @@ export function SettingsModal({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isOpen, handleMouseMove, handleMouseUp]);
+  }, [isSettingsOpen, handleMouseMove, handleMouseUp]);
 
-  if (!isOpen) return null;
+  if (!isSettingsOpen) return null;
 
   return (
     <div className="settings-window-overlay">
@@ -152,25 +122,25 @@ export function SettingsModal({
         <div className="settings-body">
           <div className="settings-sidebar">
             <div 
-              className={`settings-menu-item ${activeTab === 'general' ? 'active' : ''}`}
+              className={`settings-menu-item ${activeSettingsTab === 'general' ? 'active' : ''}`}
               onClick={() => onTabChange('general')}
             >
               {t('settings.tab_general')}
             </div>
             <div 
-              className={`settings-menu-item ${activeTab === 'storage' ? 'active' : ''}`}
+              className={`settings-menu-item ${activeSettingsTab === 'storage' ? 'active' : ''}`}
               onClick={() => onTabChange('storage')}
             >
               {t('settings.tab_storage')}
             </div>
             <div 
-              className={`settings-menu-item ${activeTab === 'history' ? 'active' : ''}`}
+              className={`settings-menu-item ${activeSettingsTab === 'history' ? 'active' : ''}`}
               onClick={() => onTabChange('history')}
             >
               {t('settings.tab_history')}
             </div>
             <div 
-              className={`settings-menu-item ${activeTab === 'everything' ? 'active' : ''}`}
+              className={`settings-menu-item ${activeSettingsTab === 'everything' ? 'active' : ''}`}
               onClick={() => onTabChange('everything')}
             >
               {t('settings.tab_everything')}
@@ -178,39 +148,39 @@ export function SettingsModal({
           </div>
 
           <div className="settings-content">
-            {activeTab === 'general' && (
+            {activeSettingsTab === 'general' && (
               <GeneralSettings 
                 startupFolderType={startupFolderType}
                 language={language}
                 theme={theme}
                 background={background}
-                onUpdateStartupFolderType={onUpdateStartupFolderType}
-                onUpdateLanguage={onUpdateLanguage}
-                onUpdateTheme={onUpdateTheme}
-                onUpdateBackground={onUpdateBackground}
-                onPickBackgroundImage={onPickBackgroundImage}
+                onUpdateStartupFolderType={updateStartupFolderType}
+                onUpdateLanguage={updateLanguage}
+                onUpdateTheme={updateTheme}
+                onUpdateBackground={updateBackground}
+                onPickBackgroundImage={pickBackgroundImage}
               />
             )}
-            {activeTab === 'storage' && (
+            {activeSettingsTab === 'storage' && (
               <StorageSettings 
                 dataStoragePath={dataStoragePath}
-                onChangeStoragePath={onChangeStoragePath}
+                onChangeStoragePath={changeStoragePath}
               />
             )}
-            {activeTab === 'history' && (
+            {activeSettingsTab === 'history' && (
               <HistorySettings 
                 historyRetentionDays={historyRetentionDays}
-                onUpdateHistoryRetention={onUpdateHistoryRetention}
+                onUpdateHistoryRetention={updateHistoryRetention}
               />
             )}
-            {activeTab === 'everything' && (
+            {activeSettingsTab === 'everything' && (
               <EverythingSettings 
                 everythingEnabled={everythingEnabled}
                 everythingMaxResults={everythingMaxResults}
                 everythingCliPath={everythingCliPath}
-                onUpdateEnabled={onUpdateEverythingEnabled}
-                onUpdateMaxResults={onUpdateEverythingMaxResults}
-                onUpdateCliPath={onUpdateEverythingCliPath}
+                onUpdateEnabled={updateEverythingEnabled}
+                onUpdateMaxResults={updateEverythingMaxResults}
+                onUpdateCliPath={updateEverythingCliPath}
               />
             )}
           </div>

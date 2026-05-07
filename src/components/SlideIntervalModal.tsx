@@ -1,31 +1,32 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useSettingsContext } from "../context/SettingsContext";
+import { useUIContext } from "../context/UIContext";
+import "./SlideIntervalModal.css";
 
-interface SlideIntervalModalProps {
-  isOpen: boolean;
-  currentInterval: number;
-  onClose: () => void;
-  onSave: (seconds: number) => void;
-}
-
-export function SlideIntervalModal({ isOpen, currentInterval, onClose, onSave }: SlideIntervalModalProps) {
-  const [value, setValue] = useState(currentInterval.toString());
-  const inputRef = useRef<HTMLInputElement>(null);
+export function SlideIntervalModal() {
   const { t } = useTranslation();
+  const { slideInterval, updateSlideInterval } = useSettingsContext();
+  const { isIntervalDialogOpen, setIsIntervalDialogOpen } = useUIContext();
+
+  const [value, setValue] = useState(slideInterval.toString());
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setValue(currentInterval.toString());
+    if (isIntervalDialogOpen) {
+      setValue(slideInterval.toString());
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [isOpen, currentInterval]);
+  }, [isIntervalDialogOpen, slideInterval]);
 
-  if (!isOpen) return null;
+  if (!isIntervalDialogOpen) return null;
+
+  const onClose = () => setIsIntervalDialogOpen(false);
 
   const handleOk = () => {
     const num = parseFloat(value);
     if (!isNaN(num)) {
-      onSave(num);
+      updateSlideInterval(num);
     }
     onClose();
   };

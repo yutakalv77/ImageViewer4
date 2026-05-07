@@ -1,33 +1,37 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { FavoriteEntry } from "../types";
+import { useFileSystemContext } from "../context/FileSystemContext";
+import { useUIContext } from "../context/UIContext";
+import "./FavoritesModal.css";
 
-interface FavoritesModalProps {
-  isOpen: boolean;
-  favorites: FavoriteEntry[];
-  onClose: () => void;
-  onSave: (newFavorites: FavoriteEntry[]) => void;
-  onNavigate: (path: string) => void;
-}
-
-export function FavoritesModal({ isOpen, favorites, onClose, onSave, onNavigate }: FavoritesModalProps) {
-  const [tempFavorites, setTempFavorites] = useState<FavoriteEntry[]>([]);
+export function FavoritesModal() {
   const { t } = useTranslation();
+  const { 
+    favorites, updateAllFavorites, loadDirectory 
+  } = useFileSystemContext();
+  const { 
+    isFavoritesOpen, setIsFavoritesOpen 
+  } = useUIContext();
+
+  const [tempFavorites, setTempFavorites] = useState<FavoriteEntry[]>([]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isFavoritesOpen) {
       setTempFavorites([...favorites]);
     }
-  }, [isOpen, favorites]);
+  }, [isFavoritesOpen, favorites]);
 
-  if (!isOpen) return null;
+  if (!isFavoritesOpen) return null;
+
+  const onClose = () => setIsFavoritesOpen(false);
 
   const handleRemove = (path: string) => {
     setTempFavorites(prev => prev.filter(f => f.path !== path));
   };
 
   const handleOk = () => {
-    onSave(tempFavorites);
+    updateAllFavorites(tempFavorites);
     onClose();
   };
 
@@ -55,7 +59,7 @@ export function FavoritesModal({ isOpen, favorites, onClose, onSave, onNavigate 
                     <tr key={fav.path}>
                       <td 
                         className="fav-path" 
-                        onClick={() => { onNavigate(fav.path); onClose(); }}
+                        onClick={() => { loadDirectory(fav.path); onClose(); }}
                         title={t('favorites.reveal_hint')}
                       >
                         {fav.path}

@@ -1,53 +1,38 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { HistoryEntry } from "../types";
 import { useWindow } from "../hooks/useWindow";
 import { VIRTUAL_PATH_FAVORITES } from "../utils/virtualPathUtils";
+import { useSettingsContext } from "../context/SettingsContext";
+import { useFileSystemContext } from "../context/FileSystemContext";
+import { useUIContext } from "../context/UIContext";
+import "./MenuBar.css";
 
 interface MenuBarProps {
-  history: HistoryEntry[];
-  slideInterval: number;
-  slideLoop: boolean;
-  viewMode: "single" | "spread";
-  readingDirection: "rtl" | "ltr";
-  firstPageIsCover: boolean;
-  onOpenFolder: () => void;
-  onOpenSettings: () => void;
-  onOpenFavorites: () => void;
-  onSelectHistory: (path: string) => void;
   onStartSlideshow: () => void;
-  onToggleLoop: () => void;
-  onUpdateInterval: (seconds: number) => void;
-  onOpenIntervalDialog: () => void;
-  onUpdateViewMode: (mode: "single" | "spread") => void;
-  onUpdateReadingDirection: (direction: "rtl" | "ltr") => void;
-  onToggleFirstPageIsCover: () => void;
   onRevealCurrentPath: () => void;
 }
 
 export function MenuBar({ 
-  history, 
-  slideInterval,
-  slideLoop,
-  viewMode,
-  readingDirection,
-  firstPageIsCover,
-  onOpenFolder, 
-  onOpenSettings, 
-  onOpenFavorites,
-  onSelectHistory,
   onStartSlideshow,
-  onToggleLoop,
-  onUpdateInterval,
-  onOpenIntervalDialog,
-  onUpdateViewMode,
-  onUpdateReadingDirection,
-  onToggleFirstPageIsCover,
   onRevealCurrentPath
 }: MenuBarProps) {
+  const { t } = useTranslation();
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const { os, toggleMaximize, minimize, close, handleDrag } = useWindow();
-  const { t } = useTranslation();
+  
+  const {
+    slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
+    updateSlideInterval, toggleSlideLoop, updateViewMode, updateReadingDirection,
+    toggleFirstPageIsCover
+  } = useSettingsContext();
+
+  const {
+    history, loadDirectory, openFolderDialog
+  } = useFileSystemContext();
+
+  const {
+    setIsFavoritesOpen, setIsIntervalDialogOpen, setIsSettingsOpen
+  } = useUIContext();
 
   useEffect(() => {
     const handleClick = () => setActiveMenu(null);
@@ -81,7 +66,7 @@ export function MenuBar({
           </button>
           {activeMenu === "file" && (
             <ul className="menu-dropdown">
-              <li onClick={() => { onOpenFolder(); setActiveMenu(null); }}>{t('file_menu.open_folder')}</li>
+              <li onClick={() => { openFolderDialog(); setActiveMenu(null); }}>{t('file_menu.open_folder')}</li>
               <li onClick={() => { onRevealCurrentPath(); setActiveMenu(null); }}>{t('file_menu.reveal_in_explorer')}</li>
               <li className="separator"></li>
               <li onClick={close}>{t('file_menu.exit')}</li>
@@ -99,27 +84,27 @@ export function MenuBar({
           </button>
           {activeMenu === "view" && (
             <ul className="menu-dropdown">
-              <li onClick={(e) => { e.stopPropagation(); onUpdateViewMode("single"); }}>
+              <li onClick={(e) => { e.stopPropagation(); updateViewMode("single"); }}>
                 {renderCheck(viewMode === "single")} {t('view_menu.single')}
               </li>
-              <li onClick={(e) => { e.stopPropagation(); onUpdateViewMode("spread"); }}>
+              <li onClick={(e) => { e.stopPropagation(); updateViewMode("spread"); }}>
                 {renderCheck(viewMode === "spread")} {t('view_menu.spread')}
               </li>
               <li className="separator"></li>
               <li 
-                onClick={(e) => { e.stopPropagation(); onUpdateReadingDirection("rtl"); }}
+                onClick={(e) => { e.stopPropagation(); updateReadingDirection("rtl"); }}
               >
                 {renderCheck(readingDirection === "rtl")} {t('view_menu.rtl')}
               </li>
               <li 
-                onClick={(e) => { e.stopPropagation(); onUpdateReadingDirection("ltr"); }}
+                onClick={(e) => { e.stopPropagation(); updateReadingDirection("ltr"); }}
               >
                 {renderCheck(readingDirection === "ltr")} {t('view_menu.ltr')}
               </li>
               <li className="separator"></li>
               <li 
                 className={viewMode === "single" ? "disabled" : ""}
-                onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); onToggleFirstPageIsCover(); } }}
+                onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); toggleFirstPageIsCover(); } }}
               >
                 {renderCheck(firstPageIsCover)} {t('view_menu.first_page_cover')}
               </li>
@@ -138,17 +123,17 @@ export function MenuBar({
           {activeMenu === "slide" && (
             <ul className="menu-dropdown">
               <li onClick={() => { onStartSlideshow(); setActiveMenu(null); }}>{t('slide_menu.start')}</li>
-              <li onClick={(e) => { e.stopPropagation(); onToggleLoop(); }}>
+              <li onClick={(e) => { e.stopPropagation(); toggleSlideLoop(); }}>
                 {renderCheck(slideLoop)} {t('slide_menu.loop')}
               </li>
               <li className="separator"></li>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(sec => (
-                <li key={sec} onClick={(e) => { e.stopPropagation(); onUpdateInterval(sec); }}>
+                <li key={sec} onClick={(e) => { e.stopPropagation(); updateSlideInterval(sec); }}>
                   {renderCheck(slideInterval === sec)} {sec.toFixed(1)}{t('slide_menu.interval_unit')}
                 </li>
               ))}
               <li className="separator"></li>
-              <li onClick={() => { onOpenIntervalDialog(); setActiveMenu(null); }}>
+              <li onClick={() => { setIsIntervalDialogOpen(true); setActiveMenu(null); }}>
                 {renderCheck(!isStandardInterval)} {t('slide_menu.interval_custom')}（{slideInterval.toFixed(1)}{t('slide_menu.interval_unit')}）
               </li>
             </ul>
@@ -165,10 +150,10 @@ export function MenuBar({
           </button>
           {activeMenu === "favorites" && (
             <ul className="menu-dropdown">
-              <li onClick={() => { onSelectHistory(VIRTUAL_PATH_FAVORITES); setActiveMenu(null); }}>
+              <li onClick={() => { loadDirectory(VIRTUAL_PATH_FAVORITES); setActiveMenu(null); }}>
                 {t('favorites.view_as_gallery')}
               </li>
-              <li onClick={() => { onOpenFavorites(); setActiveMenu(null); }}>
+              <li onClick={() => { setIsFavoritesOpen(true); setActiveMenu(null); }}>
                 {t('favorites.show_list')}
               </li>
             </ul>
@@ -187,7 +172,7 @@ export function MenuBar({
             <ul className="menu-dropdown history-dropdown">
               {latestHistory.length > 0 ? (
                 latestHistory.map((entry, idx) => (
-                  <li key={idx} onClick={() => { onSelectHistory(entry.path); setActiveMenu(null); }}>
+                  <li key={idx} onClick={() => { loadDirectory(entry.path); setActiveMenu(null); }}>
                     {entry.path}
                   </li>
                 ))
@@ -202,7 +187,7 @@ export function MenuBar({
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "settings" ? "active" : ""}`}
-            onClick={() => { onOpenSettings(); setActiveMenu(null); }}
+            onClick={() => { setIsSettingsOpen(true); setActiveMenu(null); }}
           >
             {t('menu.settings')}
           </button>
