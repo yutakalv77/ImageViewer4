@@ -81,6 +81,7 @@ export function TopBar({
       className="top-bar" 
       onMouseDown={handleDrag}
       onDoubleClick={toggleMaximize}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="nav-buttons-group">
         <button 
