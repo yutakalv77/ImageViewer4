@@ -1,7 +1,50 @@
-# Tauri + React + Typescript
+# ImageViewer4
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Tauri + React + TypeScript で構築された、高速で多機能な画像ビューアー・ギャラリーアプリケーションです。
 
-## Recommended IDE Setup
+## 主な機能
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+### 1. 高機能ギャラリービュー
+- フォルダ内の画像やサブフォルダをカード形式で一覧表示。
+- フォルダへのドラッグ＆ドロップによる直感的なブラウジング。
+- Everything検索（オプション）による、システム全体のフォルダに対する瞬時の検索と絞り込み。
+
+### 2. マルチモード画像ビューアー
+- **単一表示**: 画像を1枚ずつ大きく表示。
+- **見開き表示**: 2枚の画像を並べて表示。
+  - 右綴じ（日本語）/左綴じ（洋書）の切り替え。
+  - 「最初の1枚を表紙にする」設定に対応。
+- **フルスクリーン表示**: ウィンドウ全体を使用した没入感のある表示。
+
+### 3. スライドショー機能
+- 設定した間隔（0.1秒〜99.9秒）での自動ページめくり。
+- ループ再生のON/OFF切り替え。
+
+### 4. お気に入り・履歴管理
+- **お気に入り**: よく使うフォルダを登録し、即座にアクセス可能。
+- **閲覧履歴**: 最近開いたフォルダを自動で記録。保存期間のカスタマイズも可能。
+
+### 5. Everything連携 (Windows)
+- 高速ファイル検索ソフト「Everything」と連携し、膨大なフォルダの中から目的の場所を素早く特定。
+- `es.exe` のパス指定により、環境を選ばず動作。
+
+### 6. カスタマイズ可能な設定
+- **データ保存先**: お気に入りや履歴データの保存場所を自由に変更可能。
+- **起動時設定**: 「最後に表示したフォルダを開く」などの挙動を選択可能。
+- **多言語対応**: 日本語および英語に対応。
+
+### 7. UI/UX・操作性
+- **コンテキストメニュー**: 右クリックから「エクスプローラーで表示」「パスのコピー」「名前の変更」などのクイック操作が可能。
+- **リサイズハンドル**: ギャラリーとビューアーの比率をドラッグで調整可能。
+- **クロスプラットフォーム対応**: Tauriによる、Windows/macOS/Linuxそれぞれに最適化された動作。
+
+## 技術スタック
+- **Frontend**: React, TypeScript, Vite
+- **Desktop Framework**: Tauri (Rust)
+- **Styling**: Vanilla CSS
+- **I18n**: i18next
+
+## セットアップ
+1. Node.js および Rust の環境を構築。
+2. `npm install`
+3. `npm run tauri dev`
