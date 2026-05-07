@@ -3,6 +3,7 @@ import { appDataDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
+import i18n from "../i18n";
 import { BackgroundSettings, StartupFolderType, ThemeMode } from "../types";
 
 export function useSettings() {
@@ -29,6 +30,10 @@ export function useSettings() {
   const [everythingCliPath, setEverythingCliPath] = useState<string>("");
 
   const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    i18n.changeLanguage(language);
+  }, [language]);
 
   useEffect(() => {
     const root = document.documentElement;
