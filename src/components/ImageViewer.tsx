@@ -106,11 +106,9 @@ export function ImageViewer({
       onClick={onClose}
       onWheel={handleWheel}
     >
-      {viewMode === "spread" && (
-        <div className="direction-indicator" title="読み方向">
-          {readingDirection === "rtl" ? "⇦" : "⇨"}
-        </div>
-      )}
+      <div className="direction-indicator" title="読み方向">
+        {readingDirection === "rtl" ? "⇦" : "⇨"}
+      </div>
       <div className={`viewer-container ${viewMode === 'spread' ? 'spread-view' : ''}`}>
         {spreadImages.map((img, idx) => (
           img && (
@@ -119,7 +117,23 @@ export function ImageViewer({
               src={convertFileSrc(img.path)} 
               alt={img.name} 
               className="viewer-image"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                // 単一表示かつRTLの場合は画像クリックで「戻る」ではなく「進む」挙動にする
+                // ただし現在は画像全体がクリック可能なので、簡易的に「進む」に統一するか、
+                // 左右クリックで分けるなどの工夫が必要ですが、ここではキーボード同様の方向概念を適用します。
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const isRtl = readingDirection === "rtl";
+                
+                if (x > rect.width / 2) {
+                  // 右側クリック
+                  isRtl ? handlePrev() : handleNext();
+                } else {
+                  // 左側クリック
+                  isRtl ? handleNext() : handlePrev();
+                }
+              }}
             />
           )
         ))}

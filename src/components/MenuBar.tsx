@@ -107,14 +107,12 @@ export function MenuBar({
               </li>
               <li className="separator"></li>
               <li 
-                className={viewMode === "single" ? "disabled" : ""}
-                onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); onUpdateReadingDirection("rtl"); } }}
+                onClick={(e) => { e.stopPropagation(); onUpdateReadingDirection("rtl"); }}
               >
                 {renderCheck(readingDirection === "rtl")} {t('view_menu.rtl')}
               </li>
               <li 
-                className={viewMode === "single" ? "disabled" : ""}
-                onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); onUpdateReadingDirection("ltr"); } }}
+                onClick={(e) => { e.stopPropagation(); onUpdateReadingDirection("ltr"); }}
               >
                 {renderCheck(readingDirection === "ltr")} {t('view_menu.ltr')}
               </li>
