@@ -767,18 +767,62 @@ body {
   font-size: 0.8em;
 }
 
-/* Settings Modal */
-.settings-overlay {
+/* Settings Modal as Window */
+.settings-window-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: rgba(0, 0, 0, 0.4); /* Dim background */
+  pointer-events: auto; /* Block interaction with background */
   z-index: 2000;
+}
+
+.draggable-window {
+  pointer-events: auto; /* Re-enable clicks for the window itself */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  z-index: 2001;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-dropdown);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+}
+
+.window-title-bar {
+  cursor: move;
+  user-select: none;
+  background: var(--bg-topbar);
+}
+
+.win-resize-handle {
+  position: absolute;
+  z-index: 2002;
+}
+
+.win-resize-handle.e {
+  top: 0;
+  right: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: e-resize;
+}
+
+.win-resize-handle.s {
+  bottom: -5px;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  cursor: s-resize;
+}
+
+.win-resize-handle.se {
+  bottom: -5px;
+  right: -5px;
+  width: 15px;
+  height: 15px;
+  cursor: se-resize;
 }
 
 .settings-modal {
