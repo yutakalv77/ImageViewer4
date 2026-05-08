@@ -6,6 +6,7 @@ import { message } from "@tauri-apps/plugin-dialog";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useSlideshow } from "./hooks/useSlideshow";
 import { useAppEvents } from "./hooks/useAppEvents";
+import { useFileOperations } from "./hooks/useFileOperations";
 import { MenuBar } from "./components/MenuBar";
 import { TopBar } from "./components/TopBar";
 import { Gallery } from "./components/Gallery";
@@ -39,15 +40,18 @@ function App() {
     isLoaded: isSettingsLoaded, startupFolderType, everythingEnabled,
     everythingMaxResults, everythingCliPath, background,
     slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
-    thumbnailSize, updateThumbnailSize, updateBackground
+    thumbnailSize, updateThumbnailSize, updateBackground, updateViewMode
   } = useSettingsContext();
 
   const {
     viewerState, setViewerState, persistentError, setPersistentError,
-    selectedInfoPath, setSelectedInfoPath
+    selectedInfoPath, setSelectedInfoPath,
+    isSettingsOpen, setIsSettingsOpen, isFavoritesOpen, setIsFavoritesOpen,
+    isIntervalDialogOpen, setIsIntervalDialogOpen
   } = useUIContext();
 
   const [isStarted, setIsStarted] = useState(false);
+  const { renameEntry } = useFileOperations(loadDirectory);
 
   // Sync external error to UI context
   useEffect(() => {
@@ -60,6 +64,27 @@ function App() {
     if (await win.isFullscreen()) await win.setFullscreen(false);
     setViewerState({ isOpen: false, currentIndex: -1 });
   }, [setViewerState]);
+
+  // Explicit navigation handlers that ensure viewer is closed
+  const handleGoBack = useCallback(() => {
+    if (viewerState.isOpen) closeViewer();
+    goBack();
+  }, [viewerState.isOpen, closeViewer, goBack]);
+
+  const handleGoForward = useCallback(() => {
+    if (viewerState.isOpen) closeViewer();
+    goForward();
+  }, [viewerState.isOpen, closeViewer, goForward]);
+
+  const handleGoUp = useCallback(() => {
+    if (viewerState.isOpen) closeViewer();
+    goUp();
+  }, [viewerState.isOpen, closeViewer, goUp]);
+
+  const handleLoadDirectory = useCallback((path: string) => {
+    if (viewerState.isOpen) closeViewer();
+    loadDirectory(path);
+  }, [viewerState.isOpen, closeViewer, loadDirectory]);
 
   // Slideshow Logic
   const { start: startTimer, stop: stopTimer } = useSlideshow(
@@ -74,8 +99,24 @@ function App() {
     }
   );
 
-  // Initialize App Events
-  useAppEvents(closeViewer);
+  // Initialize App Events (Shortcut keys, Mouse buttons)
+  useAppEvents({
+    closeViewer,
+    onLoadDirectory: handleLoadDirectory,
+    onGoUp: handleGoUp,
+    onGoBack: handleGoBack,
+    onGoForward: handleGoForward,
+    onUpdateViewMode: updateViewMode,
+    onSetIsSettingsOpen: setIsSettingsOpen,
+    onSetIsFavoritesOpen: setIsFavoritesOpen,
+    onSetIsIntervalDialogOpen: setIsIntervalDialogOpen
+  }, {
+    isViewerOpen: viewerState.isOpen,
+    viewMode,
+    isSettingsOpen,
+    isFavoritesOpen,
+    isIntervalDialogOpen
+  });
 
   // Handle Startup Path
   useEffect(() => {
@@ -86,13 +127,6 @@ function App() {
       setIsStarted(true);
     }
   }, [isHistoryLoaded, isSettingsLoaded, isStarted, startupFolderType, history, loadDirectory]);
-
-  // Automatically close viewer when a new directory starts loading (navigation)
-  useEffect(() => {
-    if (loading && viewerState.isOpen) {
-      closeViewer();
-    }
-  }, [loading, viewerState.isOpen, closeViewer]);
 
   // Record history
   useEffect(() => {
@@ -152,29 +186,12 @@ function App() {
 
   const handleEntryClick = (entry: EntryItem) => {
     if (entry.is_dir) {
-      loadDirectory(entry.path);
+      handleLoadDirectory(entry.path);
     } else {
       const idx = images.findIndex(img => img.path === entry.path);
       setViewerState({ isOpen: true, currentIndex: idx });
     }
   };
-
-  const handleRenameEntry = useCallback(async (oldPath: string, newName: string) => {
-    try {
-      const separator = oldPath.includes('\\') ? '\\' : '/';
-      const pathParts = oldPath.split(separator);
-      parts_pop: {
-        pathParts.pop();
-      }
-      const newPath = [...pathParts, newName].join(separator);
-
-      await invoke("rename_entry", { oldPath, newPath });
-      loadDirectory(currentPath, true); // Refresh
-    } catch (err) {
-      console.error("Failed to rename:", err);
-      alert(t('common.error_rename'));
-    }
-  }, [currentPath, loadDirectory, t]);
 
   const onNavigateViewer = useCallback((index: number) => {
     setViewerState(prev => ({ ...prev, currentIndex: index }));
@@ -194,10 +211,10 @@ function App() {
         currentPath={currentPath}
         canGoBack={canGoBack}
         canGoForward={canGoForward}
-        onGoBack={goBack}
-        onGoForward={goForward}
-        onGoUp={goUp}
-        onLoadDirectory={loadDirectory}
+        onGoBack={handleGoBack}
+        onGoForward={handleGoForward}
+        onGoUp={handleGoUp}
+        onLoadDirectory={handleLoadDirectory}
         onSearch={handleSearch}
         onDrag={handleDrag}
         onMaximize={toggleMaximize}
@@ -220,7 +237,7 @@ function App() {
         thumbnailSize={thumbnailSize}
         isFavorite={isFavorite}
         onEntryClick={handleEntryClick}
-        onRenameEntry={handleRenameEntry}
+        onRenameEntry={(oldPath, newName) => renameEntry(oldPath, newName, currentPath)}
         onToggleFavorite={toggleFavorite}
         onUpdateBackground={updateBackground}
         onShowInfo={setSelectedInfoPath}

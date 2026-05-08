@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { useFileSystem } from "../hooks/useFileSystem";
 import { useHistory } from "../hooks/useHistory";
 import { useFavorites } from "../hooks/useFavorites";
+import { useFileOperations } from "../hooks/useFileOperations";
+import { open } from "@tauri-apps/plugin-dialog";
+import { useTranslation } from "react-i18next";
 import { useSettingsContext } from "./SettingsContext";
 import { EntryItem } from "../types";
 import { VIRTUAL_PATH_FAVORITES, convertFavoriteToEntry } from "../utils/virtualPathUtils";
@@ -16,6 +19,8 @@ type FileSystemContextType = ReturnType<typeof useFileSystem> & {
   updateAllFavorites: ReturnType<typeof useFavorites>["updateAllFavorites"];
   displayEntries: EntryItem[];
   images: EntryItem[];
+  renameEntry: (oldPath: string, newName: string, currentPath: string) => Promise<void>;
+  openFolderDialog: () => Promise<void>;
 };
 
 const FileSystemContext = createContext<FileSystemContextType | undefined>(undefined);
@@ -25,6 +30,23 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const fs = useFileSystem();
   const { history, recordHistory, isLoaded: isHistoryLoaded } = useHistory(dataStoragePath, historyRetentionDays);
   const { favorites, isFavorite, toggleFavorite, updateAllFavorites } = useFavorites(dataStoragePath);
+  const { renameEntry } = useFileOperations(fs.loadDirectory);
+
+  const { t } = useTranslation();
+  const openFolderDialog = useCallback(async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: t('file_menu.open_folder')
+      });
+      if (selected && typeof selected === 'string') {
+        fs.loadDirectory(selected);
+      }
+    } catch (e: any) {
+      console.error(e);
+    }
+  }, [fs.loadDirectory, t]);
 
   const images = useMemo(() => fs.entries.filter(e => !e.is_dir), [fs.entries]);
 
@@ -45,7 +67,9 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     toggleFavorite,
     updateAllFavorites,
     displayEntries,
-    images
+    images,
+    renameEntry,
+    openFolderDialog
   };
 
   return (
