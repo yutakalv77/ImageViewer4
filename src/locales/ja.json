@@ -58,7 +58,8 @@
     "copy_path": "クリップボードにコピー",
     "fav_add": "お気に入りに追加",
     "fav_remove": "お気に入りから削除",
-    "rename": "名前を変更"
+    "rename": "名前を変更",
+    "set_bg": "背景に設定する"
   },
   "favorites": {
     "title": "お気に入り管理",
