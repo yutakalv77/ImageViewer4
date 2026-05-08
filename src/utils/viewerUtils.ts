@@ -14,42 +14,50 @@ export function getNextIndex(
   options: ViewerOptions
 ): number {
   const { viewMode, firstPageIsCover, totalImages } = options;
+  if (totalImages <= 0) return 0;
   
   if (viewMode === "single") {
-    return Math.min(currentIndex + 1, totalImages - 1);
+    return (currentIndex + 1) % totalImages;
   }
 
   // Spread mode
-  if (currentIndex === 0 && firstPageIsCover) return Math.min(1, totalImages - 1);
+  if (currentIndex === 0 && firstPageIsCover) return 1 % totalImages;
   
-  // Calculate potential next pair start
   let next = currentIndex;
   if (firstPageIsCover) {
-    // 0(cover), 1-2, 3-4...
-    // If we are at 1 or 2, next is 3.
     const currentPairBase = Math.floor((currentIndex - 1) / 2) * 2 + 1;
     next = currentPairBase + 2;
   } else {
-    // 0-1, 2-3, 4-5...
     const currentPairBase = Math.floor(currentIndex / 2) * 2;
     next = currentPairBase + 2;
   }
   
-  return Math.min(next, totalImages - 1);
+  return next >= totalImages ? 0 : next;
 }
 
 export function getPrevIndex(
   currentIndex: number, 
   options: ViewerOptions
 ): number {
-  const { viewMode, firstPageIsCover } = options;
+  const { viewMode, firstPageIsCover, totalImages } = options;
+  if (totalImages <= 0) return 0;
   
   if (viewMode === "single") {
-    return Math.max(currentIndex - 1, 0);
+    return (currentIndex - 1 + totalImages) % totalImages;
   }
 
   // Spread mode
-  if (currentIndex === 0) return 0;
+  if (currentIndex === 0) {
+    // Go to last pair/page
+    if (firstPageIsCover) {
+      // Find last pair base
+      const lastBase = Math.floor((totalImages - 2) / 2) * 2 + 1;
+      return Math.max(lastBase, 0);
+    } else {
+      const lastBase = Math.floor((totalImages - 1) / 2) * 2;
+      return lastBase;
+    }
+  }
   
   if (firstPageIsCover) {
     if (currentIndex <= 2) return 0;
@@ -57,6 +65,11 @@ export function getPrevIndex(
     return Math.max(currentPairBase - 2, 0);
   } else {
     const currentPairBase = Math.floor(currentIndex / 2) * 2;
+    if (currentPairBase === 0) {
+        // Find last pair base
+        const lastBase = Math.floor((totalImages - 1) / 2) * 2;
+        return lastBase;
+    }
     return Math.max(currentPairBase - 2, 0);
   }
 }
