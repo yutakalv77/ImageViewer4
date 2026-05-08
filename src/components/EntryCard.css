@@ -1,5 +1,5 @@
 .entry-card {
-  width: 160px;
+  width: var(--thumbnail-size, 160px);
   display: flex;
   flex-direction: column;
   background: var(--bg-card);
@@ -18,8 +18,8 @@
 }
 
 .thumbnail-container {
-  width: 160px;
-  height: 226px;
+  width: 100%;
+  height: calc(var(--thumbnail-size, 160px) * 1.41);
   background: #000;
   position: relative;
   display: flex;

@@ -18,7 +18,10 @@
     "spread": "Spread View",
     "rtl": "Right to Left (Japanese)",
     "ltr": "Left to Right (Western)",
-    "first_page_cover": "First Page is Cover"
+    "first_page_cover": "First Page is Cover",
+    "zoom_in_thumb": "Increase Thumbnail Size",
+    "zoom_out_thumb": "Decrease Thumbnail Size",
+    "reset_thumb": "Reset Thumbnail Size"
   },
   "slide_menu": {
     "start": "Start Slideshow",

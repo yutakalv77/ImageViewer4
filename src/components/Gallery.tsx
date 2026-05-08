@@ -10,6 +10,7 @@ import { ContextMenu } from "./ContextMenu";
 import { useGalleryNavigation } from "../hooks/useGalleryNavigation";
 import { useFileSystemContext } from "../context/FileSystemContext";
 import { useSettingsContext } from "../context/SettingsContext";
+import { THUMBNAIL_SIZE_STEP } from "../hooks/useSettings";
 
 interface GalleryProps {
   onEntryClick: (entry: EntryItem) => void;
@@ -25,7 +26,7 @@ export function Gallery({
   } = useFileSystemContext();
 
   const {
-    updateBackground
+    updateBackground, thumbnailSize, updateThumbnailSize
   } = useSettingsContext();
 
   const {
@@ -38,6 +39,27 @@ export function Gallery({
   } = useGalleryNavigation(displayEntries, onEntryClick);
 
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, entry: EntryItem, index: number } | null>(null);
+
+  // Ctrl + Mouse Wheel resizing
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? THUMBNAIL_SIZE_STEP : -THUMBNAIL_SIZE_STEP;
+        updateThumbnailSize(delta);
+      }
+    };
+
+    const galleryEl = galleryRef.current;
+    if (galleryEl) {
+      galleryEl.addEventListener("wheel", handleWheel, { passive: false });
+    }
+    return () => {
+      if (galleryEl) {
+        galleryEl.removeEventListener("wheel", handleWheel);
+      }
+    };
+  }, [galleryRef, updateThumbnailSize]);
 
   // Reset navigation state when path changes
   useEffect(() => {
@@ -110,7 +132,11 @@ export function Gallery({
         </div>
       )}
 
-      <div className="gallery" ref={galleryRef}>
+      <div 
+        className="gallery" 
+        ref={galleryRef}
+        style={{ '--thumbnail-size': `${thumbnailSize}px` } as React.CSSProperties}
+      >
         {displayEntries.map((entry, idx) => (
           <EntryCard 
             key={`${entry.path}-${idx}`} 

@@ -18,7 +18,10 @@
     "spread": "見開き表示",
     "rtl": "右から左（日本語）",
     "ltr": "左から右（洋書）",
-    "first_page_cover": "最初の1枚を表紙にする"
+    "first_page_cover": "最初の1枚を表紙にする",
+    "zoom_in_thumb": "サムネイルを大きくする",
+    "zoom_out_thumb": "サムネイルを小さくする",
+    "reset_thumb": "サムネイルサイズをリセット"
   },
   "slide_menu": {
     "start": "スライドショー開始",

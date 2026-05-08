@@ -1,10 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { appDataDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import i18n from "../i18n";
 import { BackgroundSettings, StartupFolderType, ThemeMode } from "../types";
+
+export const THUMBNAIL_SIZE_DEFAULT = 160;
+export const THUMBNAIL_SIZE_MIN = 80;
+export const THUMBNAIL_SIZE_MAX = 400;
+export const THUMBNAIL_SIZE_STEP = 20;
 
 export function useSettings() {
   const [dataStoragePath, setDataStoragePath] = useState<string>("");
@@ -15,6 +20,7 @@ export function useSettings() {
   const [viewMode, setViewMode] = useState<"single" | "spread">("single");
   const [readingDirection, setReadingDirection] = useState<"rtl" | "ltr">("rtl");
   const [firstPageIsCover, setFirstPageIsCover] = useState<boolean>(true);
+  const [thumbnailSize, setThumbnailSize] = useState<number>(THUMBNAIL_SIZE_DEFAULT);
   const [language, setLanguage] = useState<string>("ja");
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [background, setBackground] = useState<BackgroundSettings>({
@@ -28,6 +34,7 @@ export function useSettings() {
   const [everythingCliPath, setEverythingCliPath] = useState<string>("");
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     i18n.changeLanguage(language);
@@ -71,6 +78,7 @@ export function useSettings() {
         if (config.viewMode) setViewMode(config.viewMode);
         if (config.readingDirection) setReadingDirection(config.readingDirection);
         if (config.firstPageIsCover !== undefined) setFirstPageIsCover(config.firstPageIsCover);
+        if (config.thumbnailSize !== undefined) setThumbnailSize(config.thumbnailSize);
         if (config.language) setLanguage(config.language);
         if (config.theme) setTheme(config.theme);
         if (config.background) setBackground(config.background);
@@ -111,6 +119,7 @@ export function useSettings() {
         viewMode,
         readingDirection,
         firstPageIsCover,
+        thumbnailSize,
         language,
         theme,
         background,
@@ -124,7 +133,19 @@ export function useSettings() {
     } catch (e) {
       console.error("Failed to save settings:", e);
     }
-  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, language, theme, background, everythingEnabled, everythingMaxResults, everythingCliPath]);
+  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, language, theme, background, everythingEnabled, everythingMaxResults, everythingCliPath]);
+
+  // Thumbnail size sync with debounce
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      saveSettings({ thumbnailSize });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [thumbnailSize, saveSettings]);
 
   const updateEverythingCliPath = useCallback(async (path: string) => {
     setEverythingCliPath(path);
@@ -183,6 +204,14 @@ export function useSettings() {
     setFirstPageIsCover(newVal);
     await saveSettings({ firstPageIsCover: newVal });
   }, [firstPageIsCover, saveSettings]);
+
+  const updateThumbnailSize = useCallback((delta: number) => {
+    setThumbnailSize(prev => Math.max(THUMBNAIL_SIZE_MIN, Math.min(THUMBNAIL_SIZE_MAX, prev + delta)));
+  }, []);
+
+  const resetThumbnailSize = useCallback(() => {
+    setThumbnailSize(THUMBNAIL_SIZE_DEFAULT);
+  }, []);
 
   const updateLanguage = useCallback(async (lang: string) => {
     setLanguage(lang);
@@ -243,6 +272,10 @@ export function useSettings() {
     updateReadingDirection,
     firstPageIsCover,
     toggleFirstPageIsCover,
+    thumbnailSize,
+    updateThumbnailSize,
+    resetThumbnailSize,
+    thumbnailSizeDefault: THUMBNAIL_SIZE_DEFAULT,
     language,
     updateLanguage,
     theme,

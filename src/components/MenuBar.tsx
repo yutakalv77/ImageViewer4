@@ -22,6 +22,7 @@ export function MenuBar({
   
   const {
     slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
+    thumbnailSize, updateThumbnailSize, resetThumbnailSize, thumbnailSizeDefault,
     updateSlideInterval, toggleSlideLoop, updateViewMode, updateReadingDirection,
     toggleFirstPageIsCover
   } = useSettingsContext();
@@ -47,6 +48,8 @@ export function MenuBar({
   };
 
   const isStandardInterval = [1, 2, 3, 4, 5, 6, 7, 8, 9].includes(slideInterval);
+
+  const thumbnailPercentage = Math.round((thumbnailSize / thumbnailSizeDefault) * 100);
 
   return (
     <nav 
@@ -107,6 +110,16 @@ export function MenuBar({
                 onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); toggleFirstPageIsCover(); } }}
               >
                 {renderCheck(firstPageIsCover)} {t('view_menu.first_page_cover')}
+              </li>
+              <li className="separator"></li>
+              <li onClick={(e) => { e.stopPropagation(); updateThumbnailSize(20); }}>
+                {t('view_menu.zoom_in_thumb')}
+              </li>
+              <li onClick={(e) => { e.stopPropagation(); updateThumbnailSize(-20); }}>
+                {t('view_menu.zoom_out_thumb')}
+              </li>
+              <li onClick={(e) => { e.stopPropagation(); resetThumbnailSize(); }}>
+                {t('view_menu.reset_thumb')} ({thumbnailPercentage}%)
               </li>
             </ul>
           )}
