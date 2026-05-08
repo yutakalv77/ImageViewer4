@@ -96,6 +96,15 @@ export function ImageInfoModal({ path, onClose }: ImageInfoModalProps) {
 
   const memSize = info.width * info.height * (info.bpp / 8);
 
+  // Derived formatting
+  const resolutionText = t('image_info.resolution_default');
+  const printSizeText = t('image_info.print_size_format', {
+    cmW: (info.width / 72 * 2.54).toFixed(2),
+    cmH: (info.height / 72 * 2.54).toFixed(2),
+    inW: (info.width / 72).toFixed(2),
+    inH: (info.height / 72).toFixed(2)
+  });
+
   return (
     <div className="settings-window-overlay image-info-overlay">
       <div 
@@ -128,12 +137,8 @@ export function ImageInfoModal({ path, onClose }: ImageInfoModalProps) {
             value={`${info.width} x ${info.height} x ${info.bpp} ${t('image_info.unit_bpp')} ( RGB )`} 
           />
           
-          <InfoRow label={t('image_info.resolution')} value="未設定 ( 印刷サイズは 72 DPI )" />
-          
-          <InfoRow 
-            label={t('image_info.print_size')} 
-            value={`${(info.width / 72 * 2.54).toFixed(2)} x ${(info.height / 72 * 2.54).toFixed(2)} cm = ${(info.width / 72).toFixed(2)} x ${(info.height / 72).toFixed(2)} インチ`} 
-          />
+          <InfoRow label={t('image_info.resolution')} value={resolutionText} />
+          <InfoRow label={t('image_info.print_size')} value={printSizeText} />
 
           <InfoRow label={t('image_info.colors')}>
             <div className="color-input-group">

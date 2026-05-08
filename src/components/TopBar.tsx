@@ -78,7 +78,7 @@ export function TopBar({
         <button 
           className="nav-button back-button" 
           onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); goBack(); }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); goBack(); }}
           title={t('common.nav_back')}
           disabled={!canGoBack}
         >
@@ -89,7 +89,7 @@ export function TopBar({
         <button 
           className="nav-button forward-button" 
           onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); goForward(); }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); goForward(); }}
           title={t('common.nav_forward')}
           disabled={!canGoForward}
         >
@@ -100,7 +100,7 @@ export function TopBar({
         <button 
           className="nav-button up-button" 
           onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); goUp(); }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); goUp(); }}
           title={t('common.nav_up')}
           disabled={!currentPath || isVirtualPath(currentPath)}
         >

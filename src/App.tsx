@@ -28,7 +28,7 @@ function App() {
   const { t } = useTranslation();
   
   const {
-    currentPath, images, error, loadDirectory, everythingSearch, searchFolders,
+    currentPath, images, loading, error, loadDirectory, everythingSearch, searchFolders,
     history, recordHistory, isHistoryLoaded
   } = useFileSystemContext();
 
@@ -82,6 +82,13 @@ function App() {
       setIsStarted(true);
     }
   }, [isHistoryLoaded, isSettingsLoaded, isStarted, startupFolderType, history, loadDirectory]);
+
+  // Automatically close viewer when a new directory starts loading (navigation)
+  useEffect(() => {
+    if (loading && viewerState.isOpen) {
+      closeViewer();
+    }
+  }, [loading, viewerState.isOpen, closeViewer]);
 
   // Record history
   useEffect(() => {

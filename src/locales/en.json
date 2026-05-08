@@ -78,6 +78,8 @@
     "order": "Order in Folder",
     "modified": "File Modified",
     "load_time": "Load Time",
+    "resolution_default": "Not set ( Print size is 72 DPI )",
+    "print_size_format": "{{cmW}} x {{cmH}} cm = {{inW}} x {{inH}} inches",
     "unit_bpp": "BPP",
     "unit_colors": "colors",
     "unit_bytes": "bytes",

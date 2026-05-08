@@ -32,12 +32,24 @@ export function useAppEvents(closeViewer: () => void) {
   // Mouse Side Buttons
   useEffect(() => {
     const handleMouseUp = (e: MouseEvent) => {
-      if (e.button === 3) goBack();
-      else if (e.button === 4) goForward();
+      if (e.button === 3) {
+        if (viewerState.isOpen) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeViewer();
+        } else {
+          goBack();
+        }
+      }
+      else if (e.button === 4) {
+        if (!viewerState.isOpen) {
+          goForward();
+        }
+      }
     };
     window.addEventListener("mouseup", handleMouseUp);
     return () => window.removeEventListener("mouseup", handleMouseUp);
-  }, [goBack, goForward]);
+  }, [goBack, goForward, viewerState.isOpen, closeViewer]);
 
   // Keyboard Shortcuts
   useEffect(() => {

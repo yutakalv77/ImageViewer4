@@ -78,6 +78,8 @@
     "order": "フォルダ内の順番",
     "modified": "ファイルの更新日時",
     "load_time": "読み込み時間",
+    "resolution_default": "未設定 ( 印刷サイズは 72 DPI )",
+    "print_size_format": "{{cmW}} x {{cmH}} cm = {{inW}} x {{inH}} インチ",
     "unit_bpp": "BPP",
     "unit_colors": "色",
     "unit_bytes": "バイト",
