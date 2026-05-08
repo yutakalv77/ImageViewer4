@@ -39,6 +39,117 @@ pub struct DirectoryResult {
     pub path: String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ImageInfo {
+    pub name: String,
+    pub location: String,
+    pub full_path: String,
+    pub format: String,
+    pub width: u32,
+    pub height: u32,
+    pub bpp: u32,
+    pub size_bytes: u64,
+    pub colors: Option<usize>,
+    pub modified: String,
+    pub order: String,
+    pub load_time_ms: u64,
+}
+
+fn count_unique_colors(img: &image::DynamicImage) -> usize {
+    use std::collections::HashSet;
+    let mut colors = HashSet::new();
+    let rgb = img.to_rgb8();
+    for pixel in rgb.pixels() {
+        colors.insert(pixel.0);
+    }
+    colors.len()
+}
+
+fn get_image_order_in_folder(path: &Path) -> String {
+    if let (Some(parent), Some(full_path_str)) = (path.parent(), path.to_str()) {
+        if let Ok(entries) = fs::read_dir(parent) {
+            let mut all_images: Vec<String> = entries.flatten()
+                .filter(|e| e.path().is_file() && is_image(&e.path()))
+                .map(|e| e.path().to_string_lossy().to_string())
+                .collect();
+            
+            all_images.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+            
+            if let Some(pos) = all_images.iter().position(|x| x == full_path_str) {
+                return format!("{} / {}", pos + 1, all_images.len());
+            }
+        }
+    }
+    "0 / 0".to_string()
+}
+
+#[tauri::command]
+fn get_image_info(path: String, calculate_colors: bool) -> Result<ImageInfo, String> {
+    let p = Path::new(&path);
+    if !p.is_file() {
+        return Err("Not a file".to_string());
+    }
+
+    let start_time = std::time::Instant::now();
+
+    let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    let location = p.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+    let full_path = path.clone();
+
+    let img_reader = image::io::Reader::open(p)
+        .map_err(|e| e.to_string())?
+        .with_guessed_format()
+        .map_err(|e| e.to_string())?;
+
+    let format_type = img_reader.format();
+    let format = format!("{:?}", format_type.unwrap_or(image::ImageFormat::Jpeg)).to_uppercase();
+    
+    // Decode the image to get reliable properties
+    let img = img_reader.decode().map_err(|e| e.to_string())?;
+    let (width, height) = (img.width(), img.height());
+    
+    let color_type = img.color();
+    let bpp = match color_type {
+        image::ColorType::L8 => 8,
+        image::ColorType::La8 => 16,
+        image::ColorType::Rgb8 => 24,
+        image::ColorType::Rgba8 => 32,
+        _ => 24,
+    };
+
+    let colors = if calculate_colors {
+        Some(count_unique_colors(&img))
+    } else {
+        None
+    };
+
+    let load_time_ms = start_time.elapsed().as_millis() as u64;
+
+    let metadata = fs::metadata(p).map_err(|e| e.to_string())?;
+    let size_bytes = metadata.len();
+    
+    let modified_system_time = metadata.modified().map_err(|e| e.to_string())?;
+    let modified_chrono: chrono::DateTime<chrono::Local> = modified_system_time.into();
+    let modified = modified_chrono.format("%Y/%m/%d - %H:%M:%S").to_string();
+
+    let order = get_image_order_in_folder(p);
+
+    Ok(ImageInfo {
+        name,
+        location,
+        full_path,
+        format,
+        width,
+        height,
+        bpp,
+        size_bytes,
+        colors,
+        modified,
+        order,
+        load_time_ms,
+    })
+}
+
 #[tauri::command]
 fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
     let p = Path::new(&path);
@@ -293,6 +404,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
             get_directory_entries, 
+            get_image_info,
             search_folders, 
             rename_entry,
             search_everything,

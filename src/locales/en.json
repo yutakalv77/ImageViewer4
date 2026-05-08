@@ -59,7 +59,29 @@
     "fav_add": "Add to Favorites",
     "fav_remove": "Remove from Favorites",
     "rename": "Rename",
-    "set_bg": "Set as Background"
+    "set_bg": "Set as Background",
+    "show_info": "Show Info..."
+  },
+  "image_info": {
+    "title": "Image Information",
+    "file_name": "File Name",
+    "location": "Location",
+    "full_path": "Full Path",
+    "format": "Format",
+    "size_orig": "Original Size",
+    "size_curr": "Current Size",
+    "resolution": "Resolution",
+    "print_size": "Print Size",
+    "colors": "Colors Used",
+    "size_on_disk": "Size on Disk",
+    "size_in_mem": "Size in Memory",
+    "order": "Order in Folder",
+    "modified": "File Modified",
+    "load_time": "Load Time",
+    "unit_bpp": "BPP",
+    "unit_colors": "colors",
+    "unit_bytes": "bytes",
+    "unit_ms": "ms"
   },
   "favorites": {
     "title": "Manage Favorites",

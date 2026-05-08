@@ -59,7 +59,7 @@ export function ContextMenu({ x, y, onClose, items }: ContextMenuProps) {
       {items.map((item, idx) => (
         <div key={idx}>
           {item.separator && <div className="context-menu-separator"></div>}
-          <div className="context-menu-item" onClick={() => { item.onClick(); onClose(); }}>
+          <div className="context-menu-item" onClick={(e) => { e.stopPropagation(); item.onClick(); onClose(); }}>
             {item.label}
           </div>
         </div>

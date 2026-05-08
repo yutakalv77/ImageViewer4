@@ -14,6 +14,8 @@ interface UIContextType {
   setActiveSettingsTab: (tab: string) => void;
   persistentError: string | null;
   setPersistentError: (error: string | null) => void;
+  selectedInfoPath: string | null;
+  setSelectedInfoPath: (path: string | null) => void;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
@@ -25,6 +27,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState("general");
   const [persistentError, setPersistentError] = useState<string | null>(null);
+  const [selectedInfoPath, setSelectedInfoPath] = useState<string | null>(null);
 
   return (
     <UIContext.Provider value={{
@@ -39,7 +42,9 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       activeSettingsTab,
       setActiveSettingsTab,
       persistentError,
-      setPersistentError
+      setPersistentError,
+      selectedInfoPath,
+      setSelectedInfoPath
     }}>
       {children}
     </UIContext.Provider>

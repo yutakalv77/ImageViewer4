@@ -10,6 +10,7 @@ import { MenuBar } from "./components/MenuBar";
 import { TopBar } from "./components/TopBar";
 import { Gallery } from "./components/Gallery";
 import { ImageViewer } from "./components/ImageViewer";
+import { ImageInfoModal } from "./components/ImageInfoModal";
 import { SettingsModal } from "./components/SettingsModal";
 import { FavoritesModal } from "./components/FavoritesModal";
 import { SlideIntervalModal } from "./components/SlideIntervalModal";
@@ -38,7 +39,8 @@ function App() {
   } = useSettingsContext();
 
   const {
-    viewerState, setViewerState, persistentError, setPersistentError
+    viewerState, setViewerState, persistentError, setPersistentError,
+    selectedInfoPath, setSelectedInfoPath
   } = useUIContext();
 
   const [isStarted, setIsStarted] = useState(false);
@@ -178,6 +180,10 @@ function App() {
       <SettingsModal />
       <FavoritesModal />
       <SlideIntervalModal />
+
+      {selectedInfoPath && (
+        <ImageInfoModal path={selectedInfoPath} onClose={() => setSelectedInfoPath(null)} />
+      )}
     </div>
   );
 }

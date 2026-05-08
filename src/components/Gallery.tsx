@@ -10,6 +10,7 @@ import { ContextMenu } from "./ContextMenu";
 import { useGalleryNavigation } from "../hooks/useGalleryNavigation";
 import { useFileSystemContext } from "../context/FileSystemContext";
 import { useSettingsContext } from "../context/SettingsContext";
+import { useUIContext } from "../context/UIContext";
 import { THUMBNAIL_SIZE_STEP } from "../hooks/useSettings";
 
 interface GalleryProps {
@@ -37,6 +38,8 @@ export function Gallery({
     galleryRef,
     reset
   } = useGalleryNavigation(displayEntries, onEntryClick);
+
+  const { setSelectedInfoPath } = useUIContext();
 
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, entry: EntryItem, index: number } | null>(null);
 
@@ -118,7 +121,8 @@ export function Gallery({
       onClick: () => toggleFavorite(contextMenu.entry.path) 
     },
     ...(!contextMenu.entry.is_dir ? [
-      { label: t('context_menu.set_bg'), onClick: () => updateBackground({ path: contextMenu.entry.path }) }
+      { label: t('context_menu.set_bg'), onClick: () => updateBackground({ path: contextMenu.entry.path }) },
+      { label: t('context_menu.show_info'), onClick: () => setSelectedInfoPath(contextMenu.entry.path) }
     ] : []),
     { separator: true, label: t('context_menu.rename'), onClick: () => setEditingIndex(contextMenu.index) },
   ] : [];

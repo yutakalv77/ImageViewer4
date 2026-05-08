@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useCallback, useRef } from "react";
+import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getNextIndex, getPrevIndex } from "../utils/viewerUtils";
 import { useSettingsContext } from "../context/SettingsContext";
 import { useFileSystemContext } from "../context/FileSystemContext";
 import { useUIContext } from "../context/UIContext";
+import { ContextMenu } from "./ContextMenu";
 import "./ImageViewer.css";
 
 // Navigation Constants
@@ -22,6 +23,7 @@ export function ImageViewer({
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const lastWheelTime = useRef(0);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
 
   const {
     viewMode, readingDirection, firstPageIsCover
@@ -32,7 +34,7 @@ export function ImageViewer({
   } = useFileSystemContext();
 
   const {
-    viewerState, setViewerState
+    viewerState, setViewerState, setSelectedInfoPath
   } = useUIContext();
 
   const { currentIndex } = viewerState;
@@ -109,11 +111,22 @@ export function ImageViewer({
 
   if (!viewerState.isOpen || currentIndex < 0) return null;
 
+  const menuItems = [
+    { label: t('context_menu.show_info'), onClick: () => setSelectedInfoPath(images[currentIndex].path) },
+    { separator: true },
+    { label: t('common.close'), onClick: onClose },
+  ];
+
   return (
     <div 
       className="viewer-overlay" 
       onClick={onClose}
       onWheel={handleWheel}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({ x: e.clientX, y: e.clientY });
+      }}
     >
       <div className="direction-indicator" title={t('common.reading_direction')}>
         {readingDirection === "rtl" ? "⇦" : "⇨"}
@@ -152,6 +165,15 @@ export function ImageViewer({
           t('slideshow.viewer_info', { page: currentIndex + 1, total: images.length })
         )}
       </div>
+
+      {contextMenu && (
+        <ContextMenu 
+          x={contextMenu.x} 
+          y={contextMenu.y} 
+          items={menuItems} 
+          onClose={() => setContextMenu(null)} 
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,92 @@
+.image-info-overlay {
+  pointer-events: auto !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+.image-info-modal {
+  width: 550px !important;
+  height: auto !important;
+  max-height: 85vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+.image-info-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto; /* Grow and shrink */
+  min-height: 0;   /* Crucial for flex scrolling */
+  overflow-y: auto !important;
+}
+
+.image-info-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.image-info-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.image-info-body::-webkit-scrollbar-thumb {
+  background: var(--border-main);
+  border-radius: 4px;
+}
+
+.image-info-body::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-row label {
+  width: 140px;
+  text-align: right;
+  font-size: 0.8em;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.info-row input {
+  flex-grow: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-main);
+  color: var(--text-main);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  height: 24px;
+}
+
+.info-row input:read-only {
+  cursor: default;
+}
+
+.color-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-grow: 1;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8em;
+    color: var(--text-main) !important;
+    width: auto !important;
+    white-space: nowrap;
+}
+
+.checkbox-label input {
+    width: auto !important;
+    height: auto !important;
+}

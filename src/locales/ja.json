@@ -59,7 +59,29 @@
     "fav_add": "お気に入りに追加",
     "fav_remove": "お気に入りから削除",
     "rename": "名前を変更",
-    "set_bg": "背景に設定する"
+    "set_bg": "背景に設定する",
+    "show_info": "情報の表示..."
+  },
+  "image_info": {
+    "title": "画像の情報",
+    "file_name": "ファイル名",
+    "location": "ファイルの場所",
+    "full_path": "フルパス",
+    "format": "ファイル形式",
+    "size_orig": "元のサイズ",
+    "size_curr": "現在のサイズ",
+    "resolution": "解像度",
+    "print_size": "印刷サイズ",
+    "colors": "使われている色数",
+    "size_on_disk": "ディスク上のサイズ",
+    "size_in_mem": "メモリ上のサイズ",
+    "order": "フォルダ内の順番",
+    "modified": "ファイルの更新日時",
+    "load_time": "読み込み時間",
+    "unit_bpp": "BPP",
+    "unit_colors": "色",
+    "unit_bytes": "バイト",
+    "unit_ms": "ミリ秒"
   },
   "favorites": {
     "title": "お気に入り管理",

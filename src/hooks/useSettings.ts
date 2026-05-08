@@ -21,6 +21,7 @@ export function useSettings() {
   const [readingDirection, setReadingDirection] = useState<"rtl" | "ltr">("rtl");
   const [firstPageIsCover, setFirstPageIsCover] = useState<boolean>(true);
   const [thumbnailSize, setThumbnailSize] = useState<number>(THUMBNAIL_SIZE_DEFAULT);
+  const [autoCalculateColors, setAutoCalculateColors] = useState<boolean>(true);
   const [language, setLanguage] = useState<string>("ja");
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [background, setBackground] = useState<BackgroundSettings>({
@@ -79,6 +80,7 @@ export function useSettings() {
         if (config.readingDirection) setReadingDirection(config.readingDirection);
         if (config.firstPageIsCover !== undefined) setFirstPageIsCover(config.firstPageIsCover);
         if (config.thumbnailSize !== undefined) setThumbnailSize(config.thumbnailSize);
+        if (config.autoCalculateColors !== undefined) setAutoCalculateColors(config.autoCalculateColors);
         if (config.language) setLanguage(config.language);
         if (config.theme) setTheme(config.theme);
         if (config.background) setBackground(config.background);
@@ -120,6 +122,7 @@ export function useSettings() {
         readingDirection,
         firstPageIsCover,
         thumbnailSize,
+        autoCalculateColors,
         language,
         theme,
         background,
@@ -133,7 +136,7 @@ export function useSettings() {
     } catch (e) {
       console.error("Failed to save settings:", e);
     }
-  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, language, theme, background, everythingEnabled, everythingMaxResults, everythingCliPath]);
+  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, autoCalculateColors, language, theme, background, everythingEnabled, everythingMaxResults, everythingCliPath]);
 
   // Thumbnail size sync with debounce
   useEffect(() => {
@@ -213,6 +216,11 @@ export function useSettings() {
     setThumbnailSize(THUMBNAIL_SIZE_DEFAULT);
   }, []);
 
+  const updateAutoCalculateColors = useCallback(async (val: boolean) => {
+    setAutoCalculateColors(val);
+    await saveSettings({ autoCalculateColors: val });
+  }, [saveSettings]);
+
   const updateLanguage = useCallback(async (lang: string) => {
     setLanguage(lang);
     await saveSettings({ language: lang });
@@ -276,6 +284,8 @@ export function useSettings() {
     updateThumbnailSize,
     resetThumbnailSize,
     thumbnailSizeDefault: THUMBNAIL_SIZE_DEFAULT,
+    autoCalculateColors,
+    updateAutoCalculateColors,
     language,
     updateLanguage,
     theme,

@@ -37,3 +37,18 @@ export interface BackgroundSettings {
   blur: number;
   style: BackgroundStyle;
 }
+
+export interface ImageInfo {
+  name: string;
+  location: string;
+  full_path: string;
+  format: string;
+  width: number;
+  height: number;
+  bpp: number;
+  size_bytes: number;
+  colors: number | null;
+  modified: string;
+  order: string;
+  load_time_ms: number;
+}
