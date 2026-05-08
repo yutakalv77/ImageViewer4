@@ -2,9 +2,7 @@ import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getNextIndex, getPrevIndex } from "../utils/viewerUtils";
-import { useSettingsContext } from "../context/SettingsContext";
-import { useFileSystemContext } from "../context/FileSystemContext";
-import { useUIContext } from "../context/UIContext";
+import { EntryItem } from "../types";
 import { ContextMenu } from "./ContextMenu";
 import "./ImageViewer.css";
 
@@ -13,35 +11,33 @@ const WHEEL_COOLDOWN = 400; // ms
 const WHEEL_THRESHOLD = 30;
 
 interface ImageViewerProps {
+  isOpen: boolean;
+  currentIndex: number;
+  images: EntryItem[];
+  viewMode: "single" | "spread";
+  readingDirection: "rtl" | "ltr";
+  firstPageIsCover: boolean;
   onClose: () => void;
+  onNavigate: (index: number) => void;
+  onShowInfo: (path: string) => void;
   onManualInteraction: () => void;
 }
 
 export function ImageViewer({ 
+  isOpen,
+  currentIndex,
+  images,
+  viewMode,
+  readingDirection,
+  firstPageIsCover,
   onClose,
+  onNavigate,
+  onShowInfo,
   onManualInteraction
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const lastWheelTime = useRef(0);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
-
-  const {
-    viewMode, readingDirection, firstPageIsCover
-  } = useSettingsContext();
-
-  const {
-    images
-  } = useFileSystemContext();
-
-  const {
-    viewerState, setViewerState, setSelectedInfoPath
-  } = useUIContext();
-
-  const { currentIndex } = viewerState;
-
-  const onNavigate = useCallback((index: number) => {
-    setViewerState(prev => ({ ...prev, currentIndex: index }));
-  }, [setViewerState]);
 
   const handleNext = useCallback(() => {
     onManualInteraction();
@@ -109,10 +105,10 @@ export function ImageViewer({
     return pair;
   }, [images, currentIndex, viewMode, firstPageIsCover, readingDirection]);
 
-  if (!viewerState.isOpen || currentIndex < 0) return null;
+  if (!isOpen || currentIndex < 0) return null;
 
   const menuItems = [
-    { label: t('context_menu.show_info'), onClick: () => setSelectedInfoPath(images[currentIndex].path) },
+    { label: t('context_menu.show_info'), onClick: () => onShowInfo(images[currentIndex].path) },
     { separator: true },
     { label: t('common.close'), onClick: onClose },
   ];

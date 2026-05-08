@@ -22,20 +22,24 @@ import { useTranslation } from "react-i18next";
 import { useSettingsContext } from "./context/SettingsContext";
 import { useFileSystemContext } from "./context/FileSystemContext";
 import { useUIContext } from "./context/UIContext";
+import { useWindow } from "./hooks/useWindow";
 import "./App.css";
 
 function App() {
   const { t } = useTranslation();
+  const { handleDrag, toggleMaximize } = useWindow();
   
   const {
     currentPath, images, loading, error, loadDirectory, everythingSearch, searchFolders,
-    history, recordHistory, isHistoryLoaded
+    history, recordHistory, isHistoryLoaded, displayEntries, isFavorite, toggleFavorite,
+    canGoBack, canGoForward, goBack, goForward, goUp
   } = useFileSystemContext();
 
   const {
     isLoaded: isSettingsLoaded, startupFolderType, everythingEnabled,
     everythingMaxResults, everythingCliPath, background,
-    slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover
+    slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
+    thumbnailSize, updateThumbnailSize, updateBackground
   } = useSettingsContext();
 
   const {
@@ -155,6 +159,27 @@ function App() {
     }
   };
 
+  const handleRenameEntry = useCallback(async (oldPath: string, newName: string) => {
+    try {
+      const separator = oldPath.includes('\\') ? '\\' : '/';
+      const pathParts = oldPath.split(separator);
+      parts_pop: {
+        pathParts.pop();
+      }
+      const newPath = [...pathParts, newName].join(separator);
+
+      await invoke("rename_entry", { oldPath, newPath });
+      loadDirectory(currentPath, true); // Refresh
+    } catch (err) {
+      console.error("Failed to rename:", err);
+      alert(t('common.error_rename'));
+    }
+  }, [currentPath, loadDirectory, t]);
+
+  const onNavigateViewer = useCallback((index: number) => {
+    setViewerState(prev => ({ ...prev, currentIndex: index }));
+  }, [setViewerState]);
+
   return (
     <div className={`app-container ${background.path ? "has-background" : ""}`}>
       <ResizeHandles />
@@ -165,7 +190,18 @@ function App() {
         onRevealCurrentPath={handleRevealCurrentPath}
       />
 
-      <TopBar onSearch={handleSearch} />
+      <TopBar 
+        currentPath={currentPath}
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
+        onGoBack={goBack}
+        onGoForward={goForward}
+        onGoUp={goUp}
+        onLoadDirectory={loadDirectory}
+        onSearch={handleSearch}
+        onDrag={handleDrag}
+        onMaximize={toggleMaximize}
+      />
 
       {persistentError && (
         <div className="error-banner">
@@ -177,10 +213,30 @@ function App() {
         </div>
       )}
 
-      <Gallery onEntryClick={handleEntryClick} />
+      <Gallery 
+        currentPath={currentPath}
+        displayEntries={displayEntries}
+        loading={loading}
+        thumbnailSize={thumbnailSize}
+        isFavorite={isFavorite}
+        onEntryClick={handleEntryClick}
+        onRenameEntry={handleRenameEntry}
+        onToggleFavorite={toggleFavorite}
+        onUpdateBackground={updateBackground}
+        onShowInfo={setSelectedInfoPath}
+        onUpdateThumbnailSize={updateThumbnailSize}
+      />
 
       <ImageViewer 
-        onClose={closeViewer} 
+        isOpen={viewerState.isOpen}
+        currentIndex={viewerState.currentIndex}
+        images={images}
+        viewMode={viewMode}
+        readingDirection={readingDirection}
+        firstPageIsCover={firstPageIsCover}
+        onClose={closeViewer}
+        onNavigate={onNavigateViewer}
+        onShowInfo={setSelectedInfoPath}
         onManualInteraction={stopTimer}
       />
 

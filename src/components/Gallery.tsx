@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -8,28 +7,37 @@ import { EntryCard } from "./EntryCard";
 import "./Gallery.css";
 import { ContextMenu } from "./ContextMenu";
 import { useGalleryNavigation } from "../hooks/useGalleryNavigation";
-import { useFileSystemContext } from "../context/FileSystemContext";
-import { useSettingsContext } from "../context/SettingsContext";
-import { useUIContext } from "../context/UIContext";
 import { THUMBNAIL_SIZE_STEP } from "../hooks/useSettings";
 
 interface GalleryProps {
+  currentPath: string;
+  displayEntries: EntryItem[];
+  loading: boolean;
+  thumbnailSize: number;
+  isFavorite: (path: string) => boolean;
   onEntryClick: (entry: EntryItem) => void;
+  onRenameEntry: (oldPath: string, newName: string) => Promise<void>;
+  onToggleFavorite: (path: string) => void;
+  onUpdateBackground: (updates: { path: string }) => void;
+  onShowInfo: (path: string) => void;
+  onUpdateThumbnailSize: (delta: number) => void;
 }
 
 export function Gallery({ 
-  onEntryClick
+  currentPath,
+  displayEntries,
+  loading,
+  thumbnailSize,
+  isFavorite,
+  onEntryClick,
+  onRenameEntry,
+  onToggleFavorite,
+  onUpdateBackground,
+  onShowInfo,
+  onUpdateThumbnailSize
 }: GalleryProps) {
   const { t } = useTranslation();
   
-  const {
-    currentPath, displayEntries, loading, isFavorite, toggleFavorite, loadDirectory
-  } = useFileSystemContext();
-
-  const {
-    updateBackground, thumbnailSize, updateThumbnailSize
-  } = useSettingsContext();
-
   const {
     selectedIndex,
     setSelectedIndex,
@@ -39,8 +47,6 @@ export function Gallery({
     reset
   } = useGalleryNavigation(displayEntries, onEntryClick);
 
-  const { setSelectedInfoPath } = useUIContext();
-
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, entry: EntryItem, index: number } | null>(null);
 
   // Ctrl + Mouse Wheel resizing
@@ -49,7 +55,7 @@ export function Gallery({
       if (e.ctrlKey) {
         e.preventDefault();
         const delta = e.deltaY < 0 ? THUMBNAIL_SIZE_STEP : -THUMBNAIL_SIZE_STEP;
-        updateThumbnailSize(delta);
+        onUpdateThumbnailSize(delta);
       }
     };
 
@@ -62,7 +68,7 @@ export function Gallery({
         galleryEl.removeEventListener("wheel", handleWheel);
       }
     };
-  }, [galleryRef, updateThumbnailSize]);
+  }, [galleryRef, onUpdateThumbnailSize]);
 
   // Reset navigation state when path changes
   useEffect(() => {
@@ -81,21 +87,8 @@ export function Gallery({
     setEditingIndex(-1);
     
     if (!newName || newName === entry.name) return;
-
-    try {
-      const oldPath = entry.path;
-      const separator = oldPath.includes('\\') ? '\\' : '/';
-      const pathParts = oldPath.split(separator);
-      pathParts.pop();
-      const newPath = [...pathParts, newName].join(separator);
-
-      await invoke("rename_entry", { oldPath, newPath });
-      loadDirectory(currentPath, true); // Refresh without adding to backStack
-    } catch (err) {
-      console.error("Failed to rename:", err);
-      alert(t('common.error_rename'));
-    }
-  }, [displayEntries, currentPath, loadDirectory, setEditingIndex, t]);
+    await onRenameEntry(entry.path, newName);
+  }, [displayEntries, onRenameEntry, setEditingIndex]);
 
   const copyToClipboard = async (path: string) => {
     try {
@@ -118,11 +111,11 @@ export function Gallery({
     { label: t('context_menu.copy_path'), onClick: () => copyToClipboard(contextMenu.entry.path) },
     { 
       label: isFavorite(contextMenu.entry.path) ? t('context_menu.fav_remove') : t('context_menu.fav_add'), 
-      onClick: () => toggleFavorite(contextMenu.entry.path) 
+      onClick: () => onToggleFavorite(contextMenu.entry.path) 
     },
     ...(!contextMenu.entry.is_dir ? [
-      { label: t('context_menu.set_bg'), onClick: () => updateBackground({ path: contextMenu.entry.path }) },
-      { label: t('context_menu.show_info'), onClick: () => setSelectedInfoPath(contextMenu.entry.path) }
+      { label: t('context_menu.set_bg'), onClick: () => onUpdateBackground({ path: contextMenu.entry.path }) },
+      { label: t('context_menu.show_info'), onClick: () => onShowInfo(contextMenu.entry.path) }
     ] : []),
     { separator: true, label: t('context_menu.rename'), onClick: () => setEditingIndex(contextMenu.index) },
   ] : [];
