@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import React, { createContext, useContext, useMemo, useCallback } from "react";
 import { useFileSystem } from "../hooks/useFileSystem";
 import { useHistory } from "../hooks/useHistory";
 import { useFavorites } from "../hooks/useFavorites";
@@ -7,7 +7,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import { useSettingsContext } from "./SettingsContext";
 import { EntryItem } from "../types";
-import { VIRTUAL_PATH_FAVORITES, convertFavoriteToEntry } from "../utils/virtualPathUtils";
+import { VIRTUAL_PATH_FAVORITES, convertFavoriteToEntry } from "../utils/pathUtils";
 
 type FileSystemContextType = ReturnType<typeof useFileSystem> & {
   history: ReturnType<typeof useHistory>["history"];

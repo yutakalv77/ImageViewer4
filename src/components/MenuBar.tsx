@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useWindow } from "../hooks/useWindow";
-import { VIRTUAL_PATH_FAVORITES } from "../utils/virtualPathUtils";
+import { VIRTUAL_PATH_FAVORITES } from "../utils/pathUtils";
 import { useSettingsContext } from "../context/SettingsContext";
 import { useFileSystemContext } from "../context/FileSystemContext";
 import { useUIContext } from "../context/UIContext";

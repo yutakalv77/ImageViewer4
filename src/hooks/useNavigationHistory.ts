@@ -5,7 +5,10 @@ export function useNavigationHistory() {
   const [forwardStack, setForwardStack] = useState<string[]>([]);
 
   const pushToHistory = useCallback((path: string) => {
-    setBackStack(prev => [...prev, path]);
+    setBackStack(prev => {
+      if (prev.length > 0 && prev[prev.length - 1] === path) return prev;
+      return [...prev, path];
+    });
     setForwardStack([]);
   }, []);
 

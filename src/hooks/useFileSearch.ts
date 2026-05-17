@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { 
   VIRTUAL_PATH_SEARCH_PREFIX, 
   VIRTUAL_PATH_EVERYTHING_PREFIX 
-} from "../utils/virtualPathUtils";
+} from "../utils/pathUtils";
 
 export function useFileSearch(
   loadDirectory: (path: string, skipHistory?: boolean, maxResults?: number, cliPath?: string) => Promise<void>

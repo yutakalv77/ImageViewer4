@@ -13,9 +13,7 @@ export function SettingsModal() {
   
   const {
     dataStoragePath, changeStoragePath, historyRetentionDays, updateHistoryRetention,
-    startupFolderType, updateStartupFolderType, slideInterval, updateSlideInterval,
-    slideLoop, toggleSlideLoop, viewMode, updateViewMode, readingDirection,
-    updateReadingDirection, firstPageIsCover, toggleFirstPageIsCover,
+    startupFolderType, updateStartupFolderType,
     language, updateLanguage, theme, updateTheme, 
     background, updateBackground, pickBackgroundImage,
     everythingEnabled, updateEverythingEnabled, everythingMaxResults, updateEverythingMaxResults,

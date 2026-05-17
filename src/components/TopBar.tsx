@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { isVirtualPath, getVirtualPathLabel, isSearchPath } from "../utils/virtualPathUtils";
+import { isVirtualPath, getVirtualPathLabel, isSearchPath } from "../utils/pathUtils";
 import "./TopBar.css";
 
 interface TopBarProps {

@@ -18,7 +18,7 @@ import { SlideIntervalModal } from "./components/SlideIntervalModal";
 import { ResizeHandles } from "./components/ResizeHandles";
 import { AppBackground } from "./components/AppBackground";
 import { EntryItem } from "./types";
-import { isVirtualPath } from "./utils/virtualPathUtils";
+import { isVirtualPath } from "./utils/pathUtils";
 import { useTranslation } from "react-i18next";
 import { useSettingsContext } from "./context/SettingsContext";
 import { useFileSystemContext } from "./context/FileSystemContext";

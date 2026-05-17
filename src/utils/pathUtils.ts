@@ -1,7 +1,7 @@
 import { FavoriteEntry, EntryItem } from "../types";
 
 /**
- * Utility for handling virtual paths
+ * Utility for handling paths (both physical and virtual)
  */
 
 export const VIRTUAL_PATH_PREFIX = "virtual:";
@@ -52,3 +52,44 @@ export function convertFavoriteToEntry(fav: FavoriteEntry): EntryItem {
   };
 }
 
+/**
+ * Physical path utilities
+ */
+
+export function normalizeSeparators(path: string): string {
+  return path.replace(/\\/g, '/');
+}
+
+export function getParentPath(path: string): string | null {
+  if (!path || isVirtualPath(path)) return null;
+  
+  // Remove trailing slash
+  const p = path.replace(/[\\/]$/, "");
+  const lastSlash = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+  
+  if (lastSlash === -1) {
+    if (p.endsWith(":")) {
+      const root = p + (path.includes("/") ? "/" : "\\");
+      return root !== path ? root : null;
+    }
+    return null;
+  }
+
+  let parent = p.substring(0, lastSlash);
+  
+  if (parent === "") {
+    if (lastSlash === 0) {
+      return path.startsWith("/") ? "/" : path.startsWith("\\") ? "\\" : null;
+    }
+  } else if (parent.endsWith(":")) {
+    parent += path.includes("/") ? "/" : "\\";
+  }
+
+  return parent !== path ? parent : null;
+}
+
+export function getPathParts(path: string): string[] {
+  if (isVirtualPath(path)) return [path];
+  const separator = path.includes("\\") ? "\\" : "/";
+  return path.split(separator).filter(p => p !== "");
+}
