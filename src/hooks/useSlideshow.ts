@@ -10,22 +10,37 @@ export function useSlideshow(
   const [isActive, setIsActive] = useState(false);
   const { viewMode, firstPageIsCover, totalImages, readingDirection } = options;
 
+  // Auto-stop slideshow if totalImages becomes 0
+  useEffect(() => {
+    if (isActive && totalImages <= 0) {
+      setIsActive(false);
+    }
+  }, [isActive, totalImages]);
+
   useEffect(() => {
     let timer: number | undefined;
+    const safeInterval = Math.max(0.1, Number(intervalSeconds) || 3);
+
     if (isActive && totalImages > 0) {
       timer = window.setInterval(() => {
         onNavigate((currentIndex: number) => {
-          const next = getNextIndex(currentIndex, { viewMode, firstPageIsCover, totalImages, readingDirection });
+          const safeIndex = Math.max(0, Math.min(currentIndex, totalImages - 1));
+          const next = getNextIndex(safeIndex, { viewMode, firstPageIsCover, totalImages, readingDirection });
           
-          if (next === currentIndex || next >= totalImages - 1) {
-             if (loop) return 0;
-             setIsActive(false);
-             return currentIndex;
+          // If next is same as current (1 image only) or has wrapped around to beginning
+          if (next === safeIndex || next < safeIndex) {
+            if (loop) {
+              return next;
+            } else {
+              setIsActive(false);
+              return safeIndex;
+            }
           }
           return next;
         });
-      }, intervalSeconds * 1000);
+      }, safeInterval * 1000);
     }
+
     return () => {
       if (timer) clearInterval(timer);
     };

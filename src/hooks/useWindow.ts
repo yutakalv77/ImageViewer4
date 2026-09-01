@@ -16,7 +16,7 @@ export function useWindow() {
     });
 
     return () => {
-      unlisten.then(fn => fn());
+      unlisten.then(fn => fn()).catch(() => {});
     };
   }, [appWindow]);
 

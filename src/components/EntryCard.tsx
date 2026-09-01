@@ -19,15 +19,21 @@ export function EntryCard({
   entry, 
   isSelected, 
   isEditing, 
-  isFavorite,
+  isFavorite, 
   onClick, 
-  onContextMenu,
-  onRenameComplete,
-  onRenameCancel
+  onContextMenu, 
+  onRenameComplete, 
+  onRenameCancel 
 }: EntryCardProps) {
   const { t } = useTranslation();
   const [tempName, setLocalName] = useState(entry.name);
+  const [imgError, setImgError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setLocalName(entry.name);
+    setImgError(false);
+  }, [entry.name, entry.thumbnail_path]);
 
   useEffect(() => {
     if (isEditing) {
@@ -55,10 +61,17 @@ export function EntryCard({
         className="thumbnail-container" 
         title={entry.is_dir ? entry.name : undefined}
       >
-        {entry.thumbnail_path ? (
-          <img src={convertFileSrc(entry.thumbnail_path)} alt={entry.name} loading="lazy" />
+        {entry.thumbnail_path && !imgError ? (
+          <img 
+            src={convertFileSrc(entry.thumbnail_path)} 
+            alt={entry.name} 
+            loading="lazy" 
+            onError={() => setImgError(true)}
+          />
         ) : (
-          <div className="no-thumbnail">{t('common.folder')}</div>
+          <div className="no-thumbnail">
+            {entry.is_dir ? t('common.folder') : "🖼️"}
+          </div>
         )}
         {entry.is_dir && <div className="folder-icon">📁</div>}
         {isFavorite && <div className="favorite-star" title={t('favorites.label')}>⭐</div>}

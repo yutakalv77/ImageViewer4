@@ -83,7 +83,14 @@ export function useSettings() {
         if (config.autoCalculateColors !== undefined) setAutoCalculateColors(config.autoCalculateColors);
         if (config.language) setLanguage(config.language);
         if (config.theme) setTheme(config.theme);
-        if (config.background) setBackground(config.background);
+        if (config.background && typeof config.background === 'object') {
+          setBackground({
+            path: config.background.path ?? null,
+            opacity: typeof config.background.opacity === 'number' ? config.background.opacity : 0.3,
+            blur: typeof config.background.blur === 'number' ? config.background.blur : 5,
+            style: config.background.style || "cover"
+          });
+        }
         if (config.everythingEnabled !== undefined) setEverythingEnabled(config.everythingEnabled);
         if (config.everythingMaxResults !== undefined) setEverythingMaxResults(config.everythingMaxResults);
         if (config.everythingCliPath !== undefined) setEverythingCliPath(config.everythingCliPath);

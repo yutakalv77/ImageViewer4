@@ -4,12 +4,13 @@
   left: 0;
   width: 100vw;
   height: calc(100vh - var(--total-header-height));
-  background: rgba(0,0,0,0.98);
+  background: rgba(0, 0, 0, 0.98);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: var(--z-index-viewer);
   cursor: pointer;
+  user-select: none;
 }
 
 .direction-indicator {
@@ -20,7 +21,7 @@
   color: rgba(255, 255, 255, 0.3);
   pointer-events: none;
   z-index: 1001;
-  text-shadow: 0 0 10px rgba(0,0,0,0.5);
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
   font-family: serif;
 }
 
@@ -37,6 +38,22 @@
   gap: 0;
 }
 
+.viewer-image-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.spread-view .viewer-image-wrapper {
+  width: 50%;
+  max-width: 50%;
+}
+
 .viewer-image {
   max-width: 100%;
   max-height: 100%;
@@ -44,16 +61,63 @@
   transition: transform 0.2s;
 }
 
-.spread-view .viewer-image {
-  max-width: 50%;
+.viewer-image-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 30, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 80%;
+  max-height: 80%;
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.viewer-image-error .error-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.viewer-image-error .error-filename {
+  font-weight: bold;
+  word-break: break-all;
+  margin-bottom: 8px;
+  color: #ff8787;
+  font-size: 0.95rem;
+}
+
+.viewer-image-error .error-text {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-bottom: 12px;
+}
+
+.viewer-image-error .error-retry-btn {
+  padding: 6px 14px;
+  background: var(--accent, #0066cc);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.viewer-image-error .error-retry-btn:hover {
+  background: #0052a3;
 }
 
 .viewer-info {
   position: absolute;
   bottom: 20px;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   padding: 5px 15px;
   border-radius: 20px;
   color: #fff;
   font-size: 0.8em;
+  pointer-events: auto;
 }

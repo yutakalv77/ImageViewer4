@@ -10,11 +10,15 @@ import "./MenuBar.css";
 interface MenuBarProps {
   onStartSlideshow: () => void;
   onRevealCurrentPath: () => void;
+  onLoadDirectory?: (path: string) => void;
+  onOpenFolderDialog?: () => void;
 }
 
 export function MenuBar({ 
   onStartSlideshow,
-  onRevealCurrentPath
+  onRevealCurrentPath,
+  onLoadDirectory,
+  onOpenFolderDialog
 }: MenuBarProps) {
   const { t } = useTranslation();
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -28,8 +32,11 @@ export function MenuBar({
   } = useSettingsContext();
 
   const {
-    history, loadDirectory, openFolderDialog
+    history, loadDirectory: fsLoadDirectory, openFolderDialog: fsOpenFolderDialog
   } = useFileSystemContext();
+
+  const loadFolder = onLoadDirectory || fsLoadDirectory;
+  const openFolder = onOpenFolderDialog || fsOpenFolderDialog;
 
   const {
     setIsFavoritesOpen, setIsIntervalDialogOpen, setIsSettingsOpen
@@ -69,7 +76,7 @@ export function MenuBar({
           </button>
           {activeMenu === "file" && (
             <ul className="menu-dropdown">
-              <li onClick={() => { openFolderDialog(); setActiveMenu(null); }}>{t('file_menu.open_folder')}</li>
+              <li onClick={() => { openFolder(); setActiveMenu(null); }}>{t('file_menu.open_folder')}</li>
               <li onClick={() => { onRevealCurrentPath(); setActiveMenu(null); }}>{t('file_menu.reveal_in_explorer')}</li>
               <li className="separator"></li>
               <li onClick={close}>{t('file_menu.exit')}</li>
@@ -163,7 +170,7 @@ export function MenuBar({
           </button>
           {activeMenu === "favorites" && (
             <ul className="menu-dropdown">
-              <li onClick={() => { loadDirectory(VIRTUAL_PATH_FAVORITES); setActiveMenu(null); }}>
+              <li onClick={() => { loadFolder(VIRTUAL_PATH_FAVORITES); setActiveMenu(null); }}>
                 {t('favorites.view_as_gallery')}
               </li>
               <li onClick={() => { setIsFavoritesOpen(true); setActiveMenu(null); }}>
@@ -185,7 +192,7 @@ export function MenuBar({
             <ul className="menu-dropdown history-dropdown">
               {latestHistory.length > 0 ? (
                 latestHistory.map((entry, idx) => (
-                  <li key={idx} onClick={() => { loadDirectory(entry.path); setActiveMenu(null); }}>
+                  <li key={idx} onClick={() => { loadFolder(entry.path); setActiveMenu(null); }}>
                     {entry.path}
                   </li>
                 ))

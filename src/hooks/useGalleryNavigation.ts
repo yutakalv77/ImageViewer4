@@ -11,18 +11,26 @@ export function useGalleryNavigation(entries: EntryItem[], onEntryClick: (entry:
     setEditingIndex(-1);
   }, []);
 
+  // Ensure selectedIndex is within bounds if entries change
+  useEffect(() => {
+    if (selectedIndex >= entries.length) {
+      setSelectedIndex(entries.length > 0 ? entries.length - 1 : -1);
+    }
+  }, [entries.length, selectedIndex]);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (editingIndex !== -1) return;
-    if (document.querySelector('.viewer-overlay') || document.querySelector('.settings-overlay')) return;
-    if (entries.length === 0) return;
+    if (document.querySelector('.viewer-overlay') || document.querySelector('.settings-overlay') || document.querySelector('.image-info-overlay')) return;
+    if (!entries || entries.length === 0) return;
 
     let nextIndex = selectedIndex;
 
     const getColumnCount = () => {
-      if (!galleryRef.current) return 0;
+      if (!galleryRef.current) return 1;
       const style = window.getComputedStyle(galleryRef.current);
       const gridTemplateColumns = style.getPropertyValue('grid-template-columns');
-      return gridTemplateColumns.split(/\s+/).filter(c => c !== '').length;
+      const cols = gridTemplateColumns.split(/\s+/).filter(c => c !== '').length;
+      return Math.max(1, cols);
     };
 
     if (e.key === "ArrowRight") {
@@ -36,10 +44,14 @@ export function useGalleryNavigation(entries: EntryItem[], onEntryClick: (entry:
       const cols = getColumnCount();
       nextIndex = selectedIndex === -1 ? 0 : Math.max(selectedIndex - cols, 0);
     } else if (e.key === "Enter") {
-      if (selectedIndex >= 0) onEntryClick(entries[selectedIndex]);
+      if (selectedIndex >= 0 && selectedIndex < entries.length && entries[selectedIndex]) {
+        onEntryClick(entries[selectedIndex]);
+      }
       return;
     } else if (e.key === "F2") {
-      if (selectedIndex >= 0) setEditingIndex(selectedIndex);
+      if (selectedIndex >= 0 && selectedIndex < entries.length) {
+        setEditingIndex(selectedIndex);
+      }
       return;
     } else {
       return;
@@ -57,9 +69,11 @@ export function useGalleryNavigation(entries: EntryItem[], onEntryClick: (entry:
   }, [handleKeyDown]);
 
   useEffect(() => {
-    if (selectedIndex >= 0 && galleryRef.current) {
+    if (selectedIndex >= 0 && galleryRef.current && galleryRef.current.children[selectedIndex]) {
       const selectedEl = galleryRef.current.children[selectedIndex] as HTMLElement;
-      if (selectedEl) selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (selectedEl && typeof selectedEl.scrollIntoView === 'function') {
+        selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
     }
   }, [selectedIndex]);
 

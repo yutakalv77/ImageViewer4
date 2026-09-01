@@ -58,4 +58,21 @@ describe('viewerUtils', () => {
       expect(getPrevIndex(3, spreadOptionsNoCover)).toBe(0);
     });
   });
+
+  describe('safety and edge cases', () => {
+    it('should safely handle 0 totalImages', () => {
+      expect(getNextIndex(0, { ...options, totalImages: 0 })).toBe(0);
+      expect(getPrevIndex(0, { ...options, totalImages: 0 })).toBe(0);
+    });
+
+    it('should safely handle negative currentIndex', () => {
+      expect(getNextIndex(-1, { ...options, totalImages: 5 })).toBe(1);
+      expect(getPrevIndex(-1, { ...options, totalImages: 5 })).toBe(4);
+    });
+
+    it('should safely handle out-of-bounds currentIndex', () => {
+      expect(getNextIndex(100, { ...options, totalImages: 5 })).toBe(0);
+      expect(getPrevIndex(100, { ...options, totalImages: 5 })).toBe(3);
+    });
+  });
 });

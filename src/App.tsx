@@ -17,6 +17,7 @@ import { FavoritesModal } from "./components/FavoritesModal";
 import { SlideIntervalModal } from "./components/SlideIntervalModal";
 import { ResizeHandles } from "./components/ResizeHandles";
 import { AppBackground } from "./components/AppBackground";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { EntryItem } from "./types";
 import { isVirtualPath } from "./utils/pathUtils";
 import { useTranslation } from "react-i18next";
@@ -33,7 +34,7 @@ function App() {
   const {
     currentPath, images, loading, error, loadDirectory, everythingSearch, searchFolders,
     history, recordHistory, isHistoryLoaded, displayEntries, isFavorite, toggleFavorite,
-    canGoBack, canGoForward, goBack, goForward, goUp
+    canGoBack, canGoForward, goBack, goForward, goUp, openFolderDialog
   } = useFileSystemContext();
 
   const {
@@ -60,8 +61,12 @@ function App() {
 
   const closeViewer = useCallback(async () => {
     stopTimer();
-    const win = getCurrentWindow();
-    if (await win.isFullscreen()) await win.setFullscreen(false);
+    try {
+      const win = getCurrentWindow();
+      if (await win.isFullscreen()) await win.setFullscreen(false);
+    } catch (e) {
+      console.error("Failed to reset fullscreen on close:", e);
+    }
     setViewerState({ isOpen: false, currentIndex: -1 });
   }, [setViewerState]);
 
@@ -86,6 +91,11 @@ function App() {
     loadDirectory(path);
   }, [viewerState.isOpen, closeViewer, loadDirectory]);
 
+  const handleOpenFolderDialog = useCallback(async () => {
+    if (viewerState.isOpen) closeViewer();
+    await openFolderDialog();
+  }, [viewerState.isOpen, closeViewer, openFolderDialog]);
+
   // Slideshow Logic
   const { start: startTimer, stop: stopTimer } = useSlideshow(
     { viewMode, firstPageIsCover, totalImages: images.length, readingDirection },
@@ -98,6 +108,17 @@ function App() {
       }));
     }
   );
+
+  // Auto-sync viewer state when images list changes
+  useEffect(() => {
+    if (viewerState.isOpen) {
+      if (!images || images.length === 0) {
+        closeViewer();
+      } else if (viewerState.currentIndex >= images.length) {
+        setViewerState(prev => ({ ...prev, currentIndex: images.length - 1 }));
+      }
+    }
+  }, [images, viewerState.isOpen, viewerState.currentIndex, closeViewer, setViewerState]);
 
   // Initialize App Events (Shortcut keys, Mouse buttons)
   useAppEvents({
@@ -137,10 +158,16 @@ function App() {
 
   const startSlideshow = useCallback(async () => {
     if (images.length === 0) return;
-    const startIndex = viewerState.currentIndex >= 0 ? viewerState.currentIndex : 0;
+    const startIndex = viewerState.currentIndex >= 0 && viewerState.currentIndex < images.length 
+      ? viewerState.currentIndex 
+      : 0;
     setViewerState({ isOpen: true, currentIndex: startIndex });
     startTimer();
-    await getCurrentWindow().setFullscreen(true);
+    try {
+      await getCurrentWindow().setFullscreen(true);
+    } catch (e) {
+      console.error("Failed to set fullscreen:", e);
+    }
   }, [images.length, viewerState.currentIndex, startTimer, setViewerState]);
 
   const handleRevealCurrentPath = useCallback(async () => {
@@ -162,6 +189,8 @@ function App() {
   }, [currentPath, history, searchFolders]);
 
   const handleSearch = useCallback(async (query: string) => {
+    if (viewerState.isOpen) closeViewer();
+
     if (everythingEnabled) {
       try {
         const isRunning: boolean = await invoke("check_everything_running");
@@ -182,29 +211,38 @@ function App() {
     } else {
       fallbackSearch(query);
     }
-  }, [everythingEnabled, everythingMaxResults, everythingCliPath, everythingSearch, t, setPersistentError, fallbackSearch]);
+  }, [viewerState.isOpen, closeViewer, everythingEnabled, everythingMaxResults, everythingCliPath, everythingSearch, t, setPersistentError, fallbackSearch]);
 
-  const handleEntryClick = (entry: EntryItem) => {
+  const handleEntryClick = useCallback((entry: EntryItem) => {
+    if (!entry) return;
     if (entry.is_dir) {
       handleLoadDirectory(entry.path);
     } else {
       const idx = images.findIndex(img => img.path === entry.path);
-      setViewerState({ isOpen: true, currentIndex: idx });
+      if (idx !== -1) {
+        setViewerState({ isOpen: true, currentIndex: idx });
+      }
     }
-  };
+  }, [handleLoadDirectory, images, setViewerState]);
 
   const onNavigateViewer = useCallback((index: number) => {
-    setViewerState(prev => ({ ...prev, currentIndex: index }));
-  }, [setViewerState]);
+    if (images.length === 0) return;
+    const safeIndex = Math.max(0, Math.min(index, images.length - 1));
+    setViewerState(prev => ({ ...prev, currentIndex: safeIndex }));
+  }, [images.length, setViewerState]);
 
   return (
-    <div className={`app-container ${background.path ? "has-background" : ""}`}>
+    <div className={`app-container ${background?.path ? "has-background" : ""}`}>
       <ResizeHandles />
-      <AppBackground />
+      <ErrorBoundary>
+        <AppBackground />
+      </ErrorBoundary>
 
       <MenuBar 
         onStartSlideshow={startSlideshow}
         onRevealCurrentPath={handleRevealCurrentPath}
+        onLoadDirectory={handleLoadDirectory}
+        onOpenFolderDialog={handleOpenFolderDialog}
       />
 
       <TopBar 
@@ -230,39 +268,51 @@ function App() {
         </div>
       )}
 
-      <Gallery 
-        currentPath={currentPath}
-        displayEntries={displayEntries}
-        loading={loading}
-        thumbnailSize={thumbnailSize}
-        isFavorite={isFavorite}
-        onEntryClick={handleEntryClick}
-        onRenameEntry={(oldPath, newName) => renameEntry(oldPath, newName, currentPath)}
-        onToggleFavorite={toggleFavorite}
-        onUpdateBackground={updateBackground}
-        onShowInfo={setSelectedInfoPath}
-        onUpdateThumbnailSize={updateThumbnailSize}
-      />
+      <ErrorBoundary>
+        <Gallery 
+          currentPath={currentPath}
+          displayEntries={displayEntries}
+          loading={loading}
+          thumbnailSize={thumbnailSize}
+          isFavorite={isFavorite}
+          onEntryClick={handleEntryClick}
+          onRenameEntry={(oldPath, newName) => renameEntry(oldPath, newName, currentPath)}
+          onToggleFavorite={toggleFavorite}
+          onUpdateBackground={updateBackground}
+          onShowInfo={setSelectedInfoPath}
+          onUpdateThumbnailSize={updateThumbnailSize}
+        />
+      </ErrorBoundary>
 
-      <ImageViewer 
-        isOpen={viewerState.isOpen}
-        currentIndex={viewerState.currentIndex}
-        images={images}
-        viewMode={viewMode}
-        readingDirection={readingDirection}
-        firstPageIsCover={firstPageIsCover}
-        onClose={closeViewer}
-        onNavigate={onNavigateViewer}
-        onShowInfo={setSelectedInfoPath}
-        onManualInteraction={stopTimer}
-      />
+      <ErrorBoundary>
+        <ImageViewer 
+          isOpen={viewerState.isOpen}
+          currentIndex={viewerState.currentIndex}
+          images={images}
+          viewMode={viewMode}
+          readingDirection={readingDirection}
+          firstPageIsCover={firstPageIsCover}
+          onClose={closeViewer}
+          onNavigate={onNavigateViewer}
+          onShowInfo={setSelectedInfoPath}
+          onManualInteraction={stopTimer}
+        />
+      </ErrorBoundary>
 
-      <SettingsModal />
-      <FavoritesModal />
-      <SlideIntervalModal />
+      <ErrorBoundary>
+        <SettingsModal />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <FavoritesModal />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <SlideIntervalModal />
+      </ErrorBoundary>
 
       {selectedInfoPath && (
-        <ImageInfoModal path={selectedInfoPath} onClose={() => setSelectedInfoPath(null)} />
+        <ErrorBoundary>
+          <ImageInfoModal path={selectedInfoPath} onClose={() => setSelectedInfoPath(null)} />
+        </ErrorBoundary>
       )}
     </div>
   );

@@ -6,28 +6,32 @@ export function AppBackground() {
   const { background } = useSettingsContext();
 
   const backgroundStyle = useMemo(() => {
-    if (!background.path) return {};
+    if (!background?.path) return {};
+    const opacity = typeof background.opacity === 'number' ? background.opacity : 0.3;
+    const blur = typeof background.blur === 'number' ? background.blur : 5;
+    const style = background.style || "cover";
+
     const styles: React.CSSProperties = {
       backgroundImage: `url("${convertFileSrc(background.path)}")`,
-      opacity: background.opacity,
-      filter: `blur(${background.blur}px)`,
+      opacity,
+      filter: `blur(${blur}px)`,
     };
-    if (background.style === "cover") {
+    if (style === "cover") {
       styles.backgroundSize = "cover";
       styles.backgroundPosition = "center";
       styles.backgroundRepeat = "no-repeat";
-    } else if (background.style === "contain") {
+    } else if (style === "contain") {
       styles.backgroundSize = "contain";
       styles.backgroundPosition = "center";
       styles.backgroundRepeat = "no-repeat";
-    } else if (background.style === "tile") {
+    } else if (style === "tile") {
       styles.backgroundSize = "auto";
       styles.backgroundRepeat = "repeat";
     }
     return styles;
-  }, [background.path, background.opacity, background.blur, background.style]);
+  }, [background?.path, background?.opacity, background?.blur, background?.style]);
 
-  if (!background.path) return null;
+  if (!background?.path) return null;
 
   return <div className="app-background-layer" style={backgroundStyle}></div>;
 }

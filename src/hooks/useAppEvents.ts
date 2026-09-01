@@ -29,7 +29,7 @@ export function useAppEvents(handlers: AppEventHandlers, state: AppState) {
         handlers.onLoadDirectory(event.payload.paths[0]);
       }
     });
-    return () => { unlisten.then(fn => fn()); };
+    return () => { unlisten.then(fn => fn()).catch(() => {}); };
   }, [handlers]);
 
   // Mouse Side Buttons

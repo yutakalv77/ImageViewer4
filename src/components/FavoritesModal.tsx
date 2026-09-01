@@ -11,7 +11,7 @@ export function FavoritesModal() {
     favorites, updateAllFavorites, loadDirectory 
   } = useFileSystemContext();
   const { 
-    isFavoritesOpen, setIsFavoritesOpen 
+    isFavoritesOpen, setIsFavoritesOpen, setViewerState 
   } = useUIContext();
 
   const [tempFavorites, setTempFavorites] = useState<FavoriteEntry[]>([]);
@@ -28,6 +28,12 @@ export function FavoritesModal() {
 
   const handleRemove = (path: string) => {
     setTempFavorites(prev => prev.filter(f => f.path !== path));
+  };
+
+  const handleNavigate = (path: string) => {
+    setViewerState({ isOpen: false, currentIndex: -1 });
+    loadDirectory(path);
+    onClose();
   };
 
   const handleOk = () => {
@@ -59,7 +65,7 @@ export function FavoritesModal() {
                     <tr key={fav.path}>
                       <td 
                         className="fav-path" 
-                        onClick={() => { loadDirectory(fav.path); onClose(); }}
+                        onClick={() => handleNavigate(fav.path)}
                         title={t('favorites.reveal_hint')}
                       >
                         {fav.path}

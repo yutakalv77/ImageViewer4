@@ -12,7 +12,7 @@ pub struct EntryItem {
 }
 
 fn is_image(path: &Path) -> bool {
-    let extensions = ["jpg", "jpeg", "png", "gif", "webp", "bmp"];
+    let extensions = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "jfif", "avif", "tiff", "tif", "ico", "svg"];
     if let Some(ext) = path.extension() {
         if let Some(ext_str) = ext.to_str() {
             return extensions.contains(&ext_str.to_lowercase().as_str());
@@ -75,7 +75,7 @@ fn get_image_order_in_folder(path: &Path) -> String {
             
             all_images.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
             
-            if let Some(pos) = all_images.iter().position(|x| x == full_path_str) {
+            if let Some(pos) = all_images.iter().position(|x| x.eq_ignore_ascii_case(full_path_str) || x == full_path_str) {
                 return format!("{} / {}", pos + 1, all_images.len());
             }
         }
@@ -104,23 +104,31 @@ fn get_image_info(path: String, calculate_colors: bool) -> Result<ImageInfo, Str
     let format_type = img_reader.format();
     let format = format!("{:?}", format_type.unwrap_or(image::ImageFormat::Jpeg)).to_uppercase();
     
-    // Decode the image to get reliable properties
-    let img = img_reader.decode().map_err(|e| e.to_string())?;
-    let (width, height) = (img.width(), img.height());
-    
-    let color_type = img.color();
-    let bpp = match color_type {
-        image::ColorType::L8 => 8,
-        image::ColorType::La8 => 16,
-        image::ColorType::Rgb8 => 24,
-        image::ColorType::Rgba8 => 32,
-        _ => 24,
-    };
-
-    let colors = if calculate_colors {
-        Some(count_unique_colors(&img))
+    let (width, height, bpp, colors) = if calculate_colors {
+        let img = img_reader.decode().map_err(|e| e.to_string())?;
+        let (w, h) = (img.width(), img.height());
+        let color_type = img.color();
+        let bits = match color_type {
+            image::ColorType::L8 => 8,
+            image::ColorType::La8 => 16,
+            image::ColorType::Rgb8 => 24,
+            image::ColorType::Rgba8 => 32,
+            _ => 24,
+        };
+        (w, h, bits, Some(count_unique_colors(&img)))
     } else {
-        None
+        match img_reader.into_dimensions() {
+            Ok((w, h)) => (w, h, 24, None),
+            Err(_) => {
+                let fallback_reader = image::io::Reader::open(p)
+                    .map_err(|e| e.to_string())?
+                    .with_guessed_format()
+                    .map_err(|e| e.to_string())?;
+                let img = fallback_reader.decode().map_err(|e| e.to_string())?;
+                let (w, h) = (img.width(), img.height());
+                (w, h, 24, None)
+            }
+        }
     };
 
     let load_time_ms = start_time.elapsed().as_millis() as u64;

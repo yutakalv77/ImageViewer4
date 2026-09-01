@@ -1,0 +1,102 @@
+.error-boundary-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-app, #1a1a1a);
+  color: var(--text-main, #ffffff);
+  padding: 30px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.error-boundary-card {
+  background: var(--bg-card, #222222);
+  border: 1px solid var(--border-main, #333333);
+  border-radius: 8px;
+  padding: 30px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.error-boundary-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+}
+
+.error-boundary-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #ff6b6b;
+}
+
+.error-boundary-desc {
+  font-size: 0.95rem;
+  color: var(--text-dim, #888888);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.error-boundary-details {
+  text-align: left;
+  margin-bottom: 20px;
+  background: var(--bg-input, #111111);
+  border: 1px solid var(--border-dim, #333333);
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 0.8rem;
+  color: #e0e0e0;
+}
+
+.error-boundary-details summary {
+  cursor: pointer;
+  color: var(--text-dim, #888888);
+  font-weight: 500;
+  outline: none;
+}
+
+.error-boundary-details pre {
+  margin: 10px 0 0 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 160px;
+  overflow-y: auto;
+  font-family: monospace;
+  color: #ff8787;
+}
+
+.error-boundary-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.error-boundary-button {
+  padding: 8px 18px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid var(--border-main, #444444);
+  background: var(--bg-hover, #333333);
+  color: var(--text-main, #ffffff);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.error-boundary-button:hover {
+  background: var(--accent, #0066cc);
+  border-color: var(--accent, #0066cc);
+}
+
+.error-boundary-button.primary {
+  background: var(--accent, #0066cc);
+  border-color: var(--accent, #0066cc);
+}
+
+.error-boundary-button.primary:hover {
+  background: #0052a3;
+  border-color: #0052a3;
+}
