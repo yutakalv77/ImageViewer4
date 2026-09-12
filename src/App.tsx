@@ -34,7 +34,8 @@ function App() {
   const {
     currentPath, images, loading, error, loadDirectory, everythingSearch, searchFolders,
     history, recordHistory, isHistoryLoaded, displayEntries, isFavorite, toggleFavorite,
-    canGoBack, canGoForward, goBack, goForward, goUp, openFolderDialog
+    canGoBack, canGoForward, goBack, goForward, goUp, openFolderDialog,
+    scrollTarget, saveScrollPosition
   } = useFileSystemContext();
 
   const {
@@ -275,6 +276,8 @@ function App() {
           loading={loading}
           thumbnailSize={thumbnailSize}
           isFavorite={isFavorite}
+          scrollTarget={scrollTarget}
+          onSaveScrollPosition={saveScrollPosition}
           onEntryClick={handleEntryClick}
           onRenameEntry={(oldPath, newName) => renameEntry(oldPath, newName, currentPath)}
           onToggleFavorite={toggleFavorite}

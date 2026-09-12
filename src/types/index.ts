@@ -30,6 +30,7 @@ export type ReadingDirection = "rtl" | "ltr";
 export type ThemeMode = "dark" | "light" | "system";
 export type StartupFolderType = "none" | "last";
 export type BackgroundStyle = "cover" | "contain" | "tile";
+export type NavigationType = "open" | "back" | "forward" | "up";
 
 export interface BackgroundSettings {
   path: string | null;

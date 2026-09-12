@@ -1,12 +1,13 @@
 import { useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { EntryItem, DirectoryResult } from "../types";
+import { EntryItem, DirectoryResult, NavigationType } from "../types";
 import { 
   isVirtualPath, isSearchPath, getSearchQuery, 
   isEverythingSearchPath, VIRTUAL_PATH_SEARCH_PREFIX, VIRTUAL_PATH_EVERYTHING_PREFIX,
   getParentPath
 } from "../utils/pathUtils";
 import { useNavigationHistory } from "./useNavigationHistory";
+import { useScrollManager } from "./useScrollManager";
 
 export function useFileSystem() {
   const [currentPath, setCurrentPath] = useState("");
@@ -15,6 +16,12 @@ export function useFileSystem() {
   const [error, setError] = useState<string | null>(null);
 
   const history = useNavigationHistory();
+  const { 
+    scrollTarget, 
+    saveScrollPosition, 
+    getSavedScrollPosition, 
+    prepareScrollForNavigation 
+  } = useScrollManager();
   const lastPhysicalPathRef = useRef("");
   const lastLoadIdRef = useRef(0);
 
@@ -35,7 +42,7 @@ export function useFileSystem() {
     setLoading(false);
   }, []);
 
-  const loadDirectory = useCallback(async (path: string, skipHistory = false, maxResults = 50, cliPath = "") => {
+  const loadDirectory = useCallback(async (path: string, skipHistory = false, maxResults = 50, cliPath = "", navType: NavigationType = "open") => {
     if (!path) return;
 
     const loadId = ++lastLoadIdRef.current;
@@ -43,6 +50,8 @@ export function useFileSystem() {
     if (!skipHistory && currentPath && currentPath !== path) {
       history.pushToHistory(currentPath);
     }
+
+    prepareScrollForNavigation(path, currentPath, navType);
 
     setLoading(true);
     try {
@@ -79,7 +88,7 @@ export function useFileSystem() {
     } catch (e: any) {
       updateStateIfLatest(loadId, { error: e instanceof Error ? e.message : String(e) });
     }
-  }, [currentPath, history, updateStateIfLatest]);
+  }, [currentPath, history, prepareScrollForNavigation, updateStateIfLatest]);
 
   const searchFolders = useCallback(async (rootPath: string, query: string) => {
     if (!rootPath) return;
@@ -96,21 +105,21 @@ export function useFileSystem() {
   const goBack = useCallback(() => {
     const previous = history.popBack(currentPath);
     if (previous) {
-      loadDirectory(previous, true);
+      loadDirectory(previous, true, 50, "", "back");
     }
   }, [currentPath, history, loadDirectory]);
 
   const goForward = useCallback(() => {
     const next = history.popForward(currentPath);
     if (next) {
-      loadDirectory(next, true);
+      loadDirectory(next, true, 50, "", "forward");
     }
   }, [currentPath, history, loadDirectory]);
 
   const goUp = useCallback(() => {
     const parent = getParentPath(currentPath);
     if (parent) {
-      loadDirectory(parent);
+      loadDirectory(parent, false, 50, "", "up");
     }
   }, [currentPath, loadDirectory]);
 
@@ -129,5 +138,8 @@ export function useFileSystem() {
     goBack,
     goForward,
     setError,
+    scrollTarget,
+    saveScrollPosition,
+    getSavedScrollPosition,
   };
 }

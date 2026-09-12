@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { EntryItem } from "../types";
+import { ScrollTarget } from "../hooks/useScrollManager";
 import { EntryCard } from "./EntryCard";
 import "./Gallery.css";
 import { ContextMenu } from "./ContextMenu";
@@ -15,6 +16,8 @@ interface GalleryProps {
   loading: boolean;
   thumbnailSize: number;
   isFavorite: (path: string) => boolean;
+  scrollTarget?: ScrollTarget;
+  onSaveScrollPosition?: (path: string, scrollTop: number) => void;
   onEntryClick: (entry: EntryItem) => void;
   onRenameEntry: (oldPath: string, newName: string) => Promise<void>;
   onToggleFavorite: (path: string) => void;
@@ -29,6 +32,8 @@ export function Gallery({
   loading,
   thumbnailSize,
   isFavorite,
+  scrollTarget,
+  onSaveScrollPosition,
   onEntryClick,
   onRenameEntry,
   onToggleFavorite,
@@ -37,6 +42,9 @@ export function Gallery({
   onUpdateThumbnailSize
 }: GalleryProps) {
   const { t } = useTranslation();
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const isRestoringRef = useRef(false);
+  const lastRestoredNavIdRef = useRef<number>(-1);
   
   const {
     selectedIndex,
@@ -48,6 +56,89 @@ export function Gallery({
   } = useGalleryNavigation(displayEntries, onEntryClick);
 
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, entry: EntryItem, index: number } | null>(null);
+
+  // Save scroll position on user scroll
+  const handleScroll = useCallback(() => {
+    if (isRestoringRef.current) return;
+    if (!mainContentRef.current || !currentPath || !onSaveScrollPosition) return;
+    onSaveScrollPosition(currentPath, mainContentRef.current.scrollTop);
+  }, [currentPath, onSaveScrollPosition]);
+
+  // Save scroll position when currentPath changes or unmounts
+  useEffect(() => {
+    return () => {
+      if (mainContentRef.current && currentPath && !isRestoringRef.current && onSaveScrollPosition) {
+        onSaveScrollPosition(currentPath, mainContentRef.current.scrollTop);
+      }
+    };
+  }, [currentPath, onSaveScrollPosition]);
+
+  // Restore scroll position after loading completes for each navigation
+  useEffect(() => {
+    const container = mainContentRef.current;
+    if (!container) return;
+
+    const navId = scrollTarget?.id ?? 0;
+    const targetScrollTop = scrollTarget?.scrollTop ?? 0;
+
+    if (loading) {
+      isRestoringRef.current = true;
+      if (targetScrollTop === 0) {
+        container.scrollTop = 0;
+      }
+      return;
+    }
+
+    // If this navigation has already been restored, do not re-apply on subsequent render updates
+    if (lastRestoredNavIdRef.current === navId && navId > 0) {
+      return;
+    }
+
+    isRestoringRef.current = true;
+    let rafId: number;
+    let attempts = 0;
+    const maxAttempts = 15;
+
+    const finalizeScroll = () => {
+      lastRestoredNavIdRef.current = navId;
+      // Double RAF ensures that DOM layout and synthetic scroll events have fully settled
+      rafId = requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => {
+          isRestoringRef.current = false;
+        });
+      });
+    };
+
+    const applyScroll = () => {
+      if (!mainContentRef.current) {
+        isRestoringRef.current = false;
+        return;
+      }
+      const el = mainContentRef.current;
+
+      if (targetScrollTop <= 0) {
+        el.scrollTop = 0;
+        finalizeScroll();
+        return;
+      }
+
+      const canScroll = el.scrollHeight - el.clientHeight >= targetScrollTop;
+      if (canScroll || attempts >= maxAttempts) {
+        el.scrollTop = targetScrollTop;
+        finalizeScroll();
+      } else {
+        attempts++;
+        rafId = requestAnimationFrame(applyScroll);
+      }
+    };
+
+    rafId = requestAnimationFrame(applyScroll);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      isRestoringRef.current = false;
+    };
+  }, [currentPath, loading, displayEntries, scrollTarget?.id, scrollTarget?.scrollTop]);
 
   // Ctrl + Mouse Wheel resizing
   useEffect(() => {
@@ -121,7 +212,12 @@ export function Gallery({
   ] : [];
 
   return (
-    <div className="main-content" onContextMenu={(e) => e.preventDefault()}>
+    <div 
+      className="main-content" 
+      ref={mainContentRef} 
+      onScroll={handleScroll} 
+      onContextMenu={(e) => e.preventDefault()}
+    >
       {loading && (
         <div className="loading-overlay">
           <div className="spinner"></div>

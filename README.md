@@ -48,3 +48,34 @@ Tauri + React + TypeScript で構築された、高速で多機能な画像ビ�
 1. Node.js および Rust の環境を構築。
 2. `npm install`
 3. `npm run tauri dev`
+
+## ビルド（exeファイルの出力）
+
+### 単体 exe ファイルの出力（ポータブル版）
+インストーラーを介さず、単体でそのまま実行できる `.exe` ファイルを出力する場合：
+
+```bash
+npm run build:exe
+# または
+npx tauri build --no-bundle
+```
+
+**出力先**:
+- `src-tauri/target/release/image-viewer.exe`
+
+※ 出力された `image-viewer.exe` は、フロントエンドリソース（HTML/CSS/JS）がバイナリ内に静的にバンドルされているため、単体で任意の場所に配置してダブルクリックで起動できます。
+
+### インストーラーを含むビルド
+インストーラー（セットアップ exe や msi）を含めてパッケージングする場合：
+
+```bash
+npm run build:app
+# または
+npm run tauri build
+```
+
+**出力先**:
+- 単体 exe: `src-tauri/target/release/image-viewer.exe`
+- NSIS セットアップ: `src-tauri/target/release/bundle/nsis/image-viewer_0.1.0_x64-setup.exe`
+- MSI パッケージ: `src-tauri/target/release/bundle/msi/image-viewer_0.1.0_x64_en-US.msi`
+
