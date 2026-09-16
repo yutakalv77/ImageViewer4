@@ -78,4 +78,17 @@ describe('AppHeader', () => {
     });
     expect(header).toHaveClass('visible');
   });
+
+  it('ヘッダー右クリック時に onContextMenu が呼び出されること', () => {
+    const handleContextMenu = vi.fn();
+    render(
+      <AppHeader isPinned={true} onContextMenu={handleContextMenu}>
+        <div>Header Content</div>
+      </AppHeader>
+    );
+
+    const header = screen.getByTestId('app-header');
+    fireEvent.contextMenu(header);
+    expect(handleContextMenu).toHaveBeenCalledTimes(1);
+  });
 });

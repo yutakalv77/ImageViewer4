@@ -14,8 +14,10 @@ const mockWindowInstance = {
   isMaximized: vi.fn(() => Promise.resolve(false)),
   toggleMaximize: vi.fn(() => Promise.resolve()),
   minimize: vi.fn(() => Promise.resolve()),
+  maximize: vi.fn(() => Promise.resolve()),
   close: vi.fn(() => Promise.resolve()),
   startDragging: vi.fn(() => Promise.resolve()),
+  startResizeDragging: vi.fn(() => Promise.resolve()),
   unmaximize: vi.fn(() => Promise.resolve()),
   onResized: vi.fn(() => Promise.resolve(() => {})),
 };

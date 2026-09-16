@@ -166,5 +166,13 @@
     "interval_label": "表示間隔 (0.1 ～ 99.9 秒)",
     "viewer_info": "見開き表示: {{page}}ページ付近 / {{total}}",
     "viewer_info_single": "{{page}} / {{total}} - {{name}}"
+  },
+  "window_menu": {
+    "restore": "元のサイズに戻す(R)",
+    "move": "移動(M)",
+    "size": "サイズ変更(S)",
+    "minimize": "最小化(N)",
+    "maximize": "最大化(X)",
+    "close": "閉じる(C)"
   }
 }

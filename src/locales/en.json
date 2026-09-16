@@ -166,5 +166,13 @@
     "interval_label": "Display interval (0.1 - 99.9 seconds)",
     "viewer_info": "Spread: Around page {{page}} / {{total}}",
     "viewer_info_single": "{{page}} / {{total}} - {{name}}"
+  },
+  "window_menu": {
+    "restore": "Restore",
+    "move": "Move",
+    "size": "Size",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "close": "Close"
   }
 }

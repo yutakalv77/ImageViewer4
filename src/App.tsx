@@ -26,11 +26,19 @@ import { useSettingsContext } from "./context/SettingsContext";
 import { useFileSystemContext } from "./context/FileSystemContext";
 import { useUIContext } from "./context/UIContext";
 import { useWindow } from "./hooks/useWindow";
+import { useWindowSystemMenu } from "./hooks/useWindowSystemMenu";
+import { ContextMenu } from "./components/ContextMenu";
 import "./App.css";
 
 function App() {
   const { t } = useTranslation();
   const { handleDrag, toggleMaximize, isFullscreen } = useWindow();
+  const {
+    menuPosition: windowMenuPos,
+    menuItems: windowMenuItems,
+    handleHeaderContextMenu,
+    closeMenu: closeWindowMenu,
+  } = useWindowSystemMenu();
   
   const {
     currentPath, images, loading, error, loadDirectory, everythingSearch, searchFolders,
@@ -62,6 +70,21 @@ function App() {
   useEffect(() => {
     if (error) setPersistentError(error);
   }, [error, setPersistentError]);
+
+  // Prevent default HTML browser context menu across the entire app
+  useEffect(() => {
+    const handleGlobalContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+        return;
+      }
+      e.preventDefault();
+    };
+    window.addEventListener("contextmenu", handleGlobalContextMenu);
+    return () => {
+      window.removeEventListener("contextmenu", handleGlobalContextMenu);
+    };
+  }, []);
 
   const closeViewer = useCallback(async () => {
     stopTimer();
@@ -243,7 +266,11 @@ function App() {
       </ErrorBoundary>
 
       {!isFullscreen && (
-        <AppHeader isPinned={isMenuBarPinned} isLocked={isMenuOpen}>
+        <AppHeader 
+          isPinned={isMenuBarPinned} 
+          isLocked={isMenuOpen}
+          onContextMenu={handleHeaderContextMenu}
+        >
           <MenuBar 
             onStartSlideshow={startSlideshow}
             onRevealCurrentPath={handleRevealCurrentPath}
@@ -324,6 +351,15 @@ function App() {
         <ErrorBoundary>
           <ImageInfoModal path={selectedInfoPath} onClose={() => setSelectedInfoPath(null)} />
         </ErrorBoundary>
+      )}
+
+      {windowMenuPos && (
+        <ContextMenu 
+          x={windowMenuPos.x} 
+          y={windowMenuPos.y} 
+          items={windowMenuItems} 
+          onClose={closeWindowMenu} 
+        />
       )}
     </div>
   );
