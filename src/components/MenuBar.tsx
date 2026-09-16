@@ -43,10 +43,44 @@ export function MenuBar({
   } = useUIContext();
 
   useEffect(() => {
-    const handleClick = () => setActiveMenu(null);
-    window.addEventListener("click", handleClick);
-    return () => window.removeEventListener("click", handleClick);
-  }, []);
+    if (!activeMenu) return;
+
+    const handlePointerDown = (e: Event) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+
+      if (target instanceof Element) {
+        // ドロップダウンメニュー内、またはメニューボタン内のクリックはそれぞれのハンドラに任せる
+        if (target.closest(".menu-dropdown") || target.closest(".menu-button")) {
+          return;
+        }
+      }
+
+      // 別の箇所をクリックした場合はメニューを閉じる
+      setActiveMenu(null);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveMenu(null);
+      }
+    };
+
+    const handleWindowBlur = () => {
+      setActiveMenu(null);
+    };
+
+    const eventType = window.PointerEvent ? "pointerdown" : "mousedown";
+    window.addEventListener(eventType, handlePointerDown, true);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      window.removeEventListener(eventType, handlePointerDown, true);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, [activeMenu]);
 
   const latestHistory = history.slice(0, 10);
 
