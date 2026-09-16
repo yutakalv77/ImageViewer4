@@ -3,7 +3,13 @@ export interface EntryItem {
   path: string;
   is_dir: boolean;
   thumbnail_path: string | null;
+  size?: number;
+  modified?: number; // timestamp (ms)
+  created?: number;  // timestamp (ms)
 }
+
+export type SortBy = "name" | "created" | "modified" | "size" | "type";
+export type SortOrder = "asc" | "desc";
 
 export interface ViewerState {
   isOpen: boolean;

@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useSettingsContext } from "./SettingsContext";
 import { EntryItem } from "../types";
 import { VIRTUAL_PATH_FAVORITES, convertFavoriteToEntry } from "../utils/pathUtils";
+import { sortEntries } from "../utils/sortUtils";
 
 type FileSystemContextType = ReturnType<typeof useFileSystem> & {
   history: ReturnType<typeof useHistory>["history"];
@@ -26,7 +27,7 @@ type FileSystemContextType = ReturnType<typeof useFileSystem> & {
 const FileSystemContext = createContext<FileSystemContextType | undefined>(undefined);
 
 export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { dataStoragePath, historyRetentionDays } = useSettingsContext();
+  const { dataStoragePath, historyRetentionDays, sortBy, sortOrder } = useSettingsContext();
   const fs = useFileSystem();
   const { history, recordHistory, isLoaded: isHistoryLoaded } = useHistory(dataStoragePath, historyRetentionDays);
   const { favorites, isFavorite, toggleFavorite, updateAllFavorites } = useFavorites(dataStoragePath);
@@ -48,14 +49,14 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [fs.loadDirectory, t]);
 
-  const images = useMemo(() => fs.entries.filter(e => !e.is_dir), [fs.entries]);
-
   const displayEntries = useMemo(() => {
-    if (fs.currentPath === VIRTUAL_PATH_FAVORITES) {
-      return favorites.map(convertFavoriteToEntry);
-    }
-    return fs.entries;
-  }, [fs.currentPath, fs.entries, favorites]);
+    const rawEntries = fs.currentPath === VIRTUAL_PATH_FAVORITES
+      ? favorites.map(convertFavoriteToEntry)
+      : fs.entries;
+    return sortEntries(rawEntries, sortBy, sortOrder);
+  }, [fs.currentPath, fs.entries, favorites, sortBy, sortOrder]);
+
+  const images = useMemo(() => displayEntries.filter(e => !e.is_dir), [displayEntries]);
 
   const value = {
     ...fs,

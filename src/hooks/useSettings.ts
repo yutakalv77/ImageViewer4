@@ -4,7 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import i18n from "../i18n";
-import { BackgroundSettings, StartupFolderType, ThemeMode } from "../types";
+import { BackgroundSettings, StartupFolderType, ThemeMode, SortBy, SortOrder } from "../types";
 
 export const THUMBNAIL_SIZE_DEFAULT = 160;
 export const THUMBNAIL_SIZE_MIN = 80;
@@ -24,6 +24,8 @@ export function useSettings() {
   const [autoCalculateColors, setAutoCalculateColors] = useState<boolean>(true);
   const [language, setLanguage] = useState<string>("ja");
   const [theme, setTheme] = useState<ThemeMode>("dark");
+  const [sortBy, setSortBy] = useState<SortBy>("name");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [background, setBackground] = useState<BackgroundSettings>({
     path: null,
     opacity: 0.3,
@@ -94,6 +96,8 @@ export function useSettings() {
         if (config.everythingEnabled !== undefined) setEverythingEnabled(config.everythingEnabled);
         if (config.everythingMaxResults !== undefined) setEverythingMaxResults(config.everythingMaxResults);
         if (config.everythingCliPath !== undefined) setEverythingCliPath(config.everythingCliPath);
+        if (config.sortBy) setSortBy(config.sortBy);
+        if (config.sortOrder) setSortOrder(config.sortOrder);
 
         setIsLoaded(true);
       } catch (e) {
@@ -132,6 +136,8 @@ export function useSettings() {
         autoCalculateColors,
         language,
         theme,
+        sortBy,
+        sortOrder,
         background,
         everythingEnabled,
         everythingMaxResults,
@@ -143,7 +149,7 @@ export function useSettings() {
     } catch (e) {
       console.error("Failed to save settings:", e);
     }
-  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, autoCalculateColors, language, theme, background, everythingEnabled, everythingMaxResults, everythingCliPath]);
+  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, autoCalculateColors, language, theme, sortBy, sortOrder, background, everythingEnabled, everythingMaxResults, everythingCliPath]);
 
   // Thumbnail size sync with debounce
   useEffect(() => {
@@ -244,6 +250,16 @@ export function useSettings() {
     await saveSettings({ background: newBg });
   }, [background, saveSettings]);
 
+  const updateSortBy = useCallback(async (by: SortBy) => {
+    setSortBy(by);
+    await saveSettings({ sortBy: by });
+  }, [saveSettings]);
+
+  const updateSortOrder = useCallback(async (order: SortOrder) => {
+    setSortOrder(order);
+    await saveSettings({ sortOrder: order });
+  }, [saveSettings]);
+
   const updateEverythingEnabled = useCallback(async (enabled: boolean) => {
     setEverythingEnabled(enabled);
     await saveSettings({ everythingEnabled: enabled });
@@ -297,6 +313,10 @@ export function useSettings() {
     updateLanguage,
     theme,
     updateTheme,
+    sortBy,
+    updateSortBy,
+    sortOrder,
+    updateSortOrder,
     background,
     updateBackground,
     everythingEnabled,

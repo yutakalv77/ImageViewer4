@@ -44,6 +44,8 @@ vi.mock('../context/SettingsContext', () => ({
     firstPageIsCover: false,
     thumbnailSize: 150,
     thumbnailSizeDefault: 150,
+    sortBy: 'name',
+    sortOrder: 'asc',
     updateThumbnailSize: vi.fn(),
     updateBackground: vi.fn(),
     updateViewMode: vi.fn(),
@@ -52,6 +54,8 @@ vi.mock('../context/SettingsContext', () => ({
     toggleSlideLoop: vi.fn(),
     updateReadingDirection: vi.fn(),
     toggleFirstPageIsCover: vi.fn(),
+    updateSortBy: vi.fn(),
+    updateSortOrder: vi.fn(),
   }),
 }));
 

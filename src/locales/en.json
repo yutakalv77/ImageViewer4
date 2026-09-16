@@ -21,7 +21,15 @@
     "first_page_cover": "First Page is Cover",
     "zoom_in_thumb": "Increase Thumbnail Size",
     "zoom_out_thumb": "Decrease Thumbnail Size",
-    "reset_thumb": "Reset Thumbnail Size"
+    "reset_thumb": "Reset Thumbnail Size",
+    "sort_by": "Sort By",
+    "sort_name": "Name",
+    "sort_created": "Date Created",
+    "sort_modified": "Date Modified",
+    "sort_size": "Size",
+    "sort_type": "Type",
+    "sort_asc": "Ascending",
+    "sort_desc": "Descending"
   },
   "slide_menu": {
     "start": "Start Slideshow",

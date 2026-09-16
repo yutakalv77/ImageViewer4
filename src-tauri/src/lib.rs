@@ -3,12 +3,48 @@ use std::fs;
 use std::path::Path;
 use encoding_rs::SHIFT_JIS;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EntryItem {
     pub name: String,
     pub path: String,
     pub is_dir: bool,
     pub thumbnail_path: Option<String>,
+    #[serde(default)]
+    pub size: Option<u64>,
+    #[serde(default)]
+    pub modified: Option<u64>,
+    #[serde(default)]
+    pub created: Option<u64>,
+}
+
+fn get_entry_metadata(entry: &fs::DirEntry) -> (Option<u64>, Option<u64>, Option<u64>) {
+    if let Ok(meta) = entry.metadata() {
+        let size = Some(meta.len());
+        let modified = meta.modified().ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64);
+        let created = meta.created().ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64);
+        (size, modified, created)
+    } else {
+        (None, None, None)
+    }
+}
+
+fn get_path_metadata(path: &Path) -> (Option<u64>, Option<u64>, Option<u64>) {
+    if let Ok(meta) = fs::metadata(path) {
+        let size = Some(meta.len());
+        let modified = meta.modified().ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64);
+        let created = meta.created().ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64);
+        (size, modified, created)
+    } else {
+        (None, None, None)
+    }
 }
 
 fn is_image(path: &Path) -> bool {
@@ -181,6 +217,8 @@ fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_default();
 
+            let (size, modified, created) = get_entry_metadata(&entry);
+
             if is_dir {
                 let thumbnail_path = find_first_image_in_dir(&entry_path);
                 result.push(EntryItem {
@@ -188,6 +226,9 @@ fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
                     path: entry_path.to_string_lossy().to_string(),
                     is_dir: true,
                     thumbnail_path,
+                    size,
+                    modified,
+                    created,
                 });
             } else if is_image(&entry_path) {
                 result.push(EntryItem {
@@ -195,6 +236,9 @@ fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
                     path: entry_path.to_string_lossy().to_string(),
                     is_dir: false,
                     thumbnail_path: Some(entry_path.to_string_lossy().to_string()),
+                    size,
+                    modified,
+                    created,
                 });
             }
         }
@@ -244,11 +288,15 @@ fn search_recursive(dir: &Path, query: &String, depth: u32, max_depth: u32, resu
 
                 if name.to_lowercase().contains(query) {
                     let thumbnail_path = find_first_image_in_dir(&path);
+                    let (size, modified, created) = get_entry_metadata(&entry);
                     results.push(EntryItem {
                         name: name.clone(),
                         path: path.to_string_lossy().to_string(),
                         is_dir: true,
                         thumbnail_path,
+                        size,
+                        modified,
+                        created,
                     });
                 }
                 
@@ -360,11 +408,15 @@ async fn search_everything(query: String, max_results: u32, cli_path: String) ->
                                 .map(|n| n.to_string_lossy().to_string())
                                 .unwrap_or_else(|| path_str.to_string());
                             let thumbnail_path = find_first_image_in_dir(path);
+                            let (size, modified, created) = get_path_metadata(path);
                             results.push(EntryItem {
                                 name,
                                 path: path_str.to_string(),
                                 is_dir: true,
                                 thumbnail_path,
+                                size,
+                                modified,
+                                created,
                             });
                         }
                     }

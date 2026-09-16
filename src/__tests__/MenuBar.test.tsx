@@ -18,6 +18,14 @@ vi.mock('react-i18next', () => ({
         'file_menu.exit': '終了',
         'view_menu.single': '単ページ表示',
         'view_menu.spread': '見開き表示',
+        'view_menu.sort_by': '表示順',
+        'view_menu.sort_name': '名前順',
+        'view_menu.sort_created': '作成日付順',
+        'view_menu.sort_modified': '更新日付順',
+        'view_menu.sort_size': 'サイズ順',
+        'view_menu.sort_type': '種類順',
+        'view_menu.sort_asc': '昇順',
+        'view_menu.sort_desc': '降順',
       };
       return translations[key] || key;
     },
@@ -35,6 +43,9 @@ vi.mock('../hooks/useWindow', () => ({
 }));
 
 const mockUpdateViewMode = vi.fn();
+const mockUpdateSortBy = vi.fn();
+const mockUpdateSortOrder = vi.fn();
+
 vi.mock('../context/SettingsContext', () => ({
   useSettingsContext: () => ({
     slideInterval: 3,
@@ -44,6 +55,8 @@ vi.mock('../context/SettingsContext', () => ({
     firstPageIsCover: false,
     thumbnailSize: 150,
     thumbnailSizeDefault: 150,
+    sortBy: 'name',
+    sortOrder: 'asc',
     updateThumbnailSize: vi.fn(),
     resetThumbnailSize: vi.fn(),
     updateSlideInterval: vi.fn(),
@@ -51,6 +64,8 @@ vi.mock('../context/SettingsContext', () => ({
     updateViewMode: mockUpdateViewMode,
     updateReadingDirection: vi.fn(),
     toggleFirstPageIsCover: vi.fn(),
+    updateSortBy: mockUpdateSortBy,
+    updateSortOrder: mockUpdateSortOrder,
   }),
 }));
 
@@ -179,5 +194,37 @@ describe('MenuBar', () => {
     expect(mockUpdateViewMode).toHaveBeenCalledWith('single');
     // メニューは開いたまま
     expect(screen.getByText('単ページ表示')).toBeInTheDocument();
+  });
+
+  it('表示順サブメニューを展開し、ソート順や昇順・降順を切り替えられること', () => {
+    render(
+      <div>
+        <MenuBar {...defaultProps} />
+      </div>
+    );
+
+    // 「表示」メニューを開く
+    fireEvent.click(screen.getByText('表示'));
+    expect(screen.getByText('表示順')).toBeInTheDocument();
+
+    // 「表示順」をクリックしてサブメニューを展開
+    fireEvent.click(screen.getByText('表示順'));
+
+    // サブメニュー内の各項目が表示されていること
+    expect(screen.getByText('名前順')).toBeInTheDocument();
+    expect(screen.getByText('作成日付順')).toBeInTheDocument();
+    expect(screen.getByText('更新日付順')).toBeInTheDocument();
+    expect(screen.getByText('サイズ順')).toBeInTheDocument();
+    expect(screen.getByText('種類順')).toBeInTheDocument();
+    expect(screen.getByText('昇順')).toBeInTheDocument();
+    expect(screen.getByText('降順')).toBeInTheDocument();
+
+    // 「作成日付順」をクリック
+    fireEvent.click(screen.getByText('作成日付順'));
+    expect(mockUpdateSortBy).toHaveBeenCalledWith('created');
+
+    // 「降順」をクリック
+    fireEvent.click(screen.getByText('降順'));
+    expect(mockUpdateSortOrder).toHaveBeenCalledWith('desc');
   });
 });

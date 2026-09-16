@@ -21,7 +21,15 @@
     "first_page_cover": "最初の1枚を表紙にする",
     "zoom_in_thumb": "サムネイルを大きくする",
     "zoom_out_thumb": "サムネイルを小さくする",
-    "reset_thumb": "サムネイルサイズをリセット"
+    "reset_thumb": "サムネイルサイズをリセット",
+    "sort_by": "表示順",
+    "sort_name": "名前順",
+    "sort_created": "作成日付順",
+    "sort_modified": "更新日付順",
+    "sort_size": "サイズ順",
+    "sort_type": "種類順",
+    "sort_asc": "昇順",
+    "sort_desc": "降順"
   },
   "slide_menu": {
     "start": "スライドショー開始",

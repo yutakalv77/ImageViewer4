@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useWindow } from "../hooks/useWindow";
 import { VIRTUAL_PATH_FAVORITES } from "../utils/pathUtils";
@@ -24,13 +24,14 @@ export function MenuBar({
 }: MenuBarProps) {
   const { t } = useTranslation();
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [isSortSubmenuOpen, setIsSortSubmenuOpen] = useState(false);
   const { os, toggleMaximize, minimize, close, handleDrag } = useWindow();
   
   const {
     slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
     thumbnailSize, updateThumbnailSize, resetThumbnailSize, thumbnailSizeDefault,
     updateSlideInterval, toggleSlideLoop, updateViewMode, updateReadingDirection,
-    toggleFirstPageIsCover
+    toggleFirstPageIsCover, sortBy, sortOrder, updateSortBy, updateSortOrder
   } = useSettingsContext();
 
   const {
@@ -48,6 +49,12 @@ export function MenuBar({
   useDismiss(activeMenu !== null, () => setActiveMenu(null), {
     ignoreSelectors: [".menu-dropdown", ".menu-button"],
   });
+
+  useEffect(() => {
+    if (activeMenu !== "view") {
+      setIsSortSubmenuOpen(false);
+    }
+  }, [activeMenu]);
 
   const latestHistory = history.slice(0, 10);
 
@@ -95,6 +102,43 @@ export function MenuBar({
           </button>
           {activeMenu === "view" && (
             <ul className="menu-dropdown">
+              <li 
+                className={`has-submenu ${isSortSubmenuOpen ? "open" : ""}`}
+                onMouseEnter={() => setIsSortSubmenuOpen(true)}
+                onMouseLeave={() => setIsSortSubmenuOpen(false)}
+                onClick={(e) => { e.stopPropagation(); setIsSortSubmenuOpen(true); }}
+              >
+                <span className="submenu-label">
+                  <span className="menu-check-placeholder"></span>
+                  {t('view_menu.sort_by')}
+                </span>
+                <span className="submenu-arrow">▶</span>
+                <ul className="menu-dropdown submenu" onClick={(e) => e.stopPropagation()}>
+                  <li onClick={(e) => { e.stopPropagation(); updateSortBy("name"); }}>
+                    {renderCheck(sortBy === "name")} {t('view_menu.sort_name')}
+                  </li>
+                  <li onClick={(e) => { e.stopPropagation(); updateSortBy("created"); }}>
+                    {renderCheck(sortBy === "created")} {t('view_menu.sort_created')}
+                  </li>
+                  <li onClick={(e) => { e.stopPropagation(); updateSortBy("modified"); }}>
+                    {renderCheck(sortBy === "modified")} {t('view_menu.sort_modified')}
+                  </li>
+                  <li onClick={(e) => { e.stopPropagation(); updateSortBy("size"); }}>
+                    {renderCheck(sortBy === "size")} {t('view_menu.sort_size')}
+                  </li>
+                  <li onClick={(e) => { e.stopPropagation(); updateSortBy("type"); }}>
+                    {renderCheck(sortBy === "type")} {t('view_menu.sort_type')}
+                  </li>
+                  <li className="separator"></li>
+                  <li onClick={(e) => { e.stopPropagation(); updateSortOrder("asc"); }}>
+                    {renderCheck(sortOrder === "asc")} {t('view_menu.sort_asc')}
+                  </li>
+                  <li onClick={(e) => { e.stopPropagation(); updateSortOrder("desc"); }}>
+                    {renderCheck(sortOrder === "desc")} {t('view_menu.sort_desc')}
+                  </li>
+                </ul>
+              </li>
+              <li className="separator"></li>
               <li onClick={(e) => { e.stopPropagation(); updateViewMode("single"); }}>
                 {renderCheck(viewMode === "single")} {t('view_menu.single')}
               </li>
