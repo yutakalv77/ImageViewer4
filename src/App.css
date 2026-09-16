@@ -83,6 +83,18 @@ body {
   background-color: var(--bg-app);
 }
 
+.app-container.is-fullscreen {
+  --menubar-height: 0px;
+  --topbar-height: 0px;
+  --total-header-height: 0px;
+}
+
+.app-container.is-fullscreen .menu-bar,
+.app-container.is-fullscreen .top-bar,
+.app-container.is-fullscreen .resize-handles {
+  display: none !important;
+}
+
 .app-background-layer {
   position: absolute;
   top: 0;

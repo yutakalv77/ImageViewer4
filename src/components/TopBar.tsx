@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { isVirtualPath, getVirtualPathLabel, isSearchPath } from "../utils/pathUtils";
+import { isSearchPath, getBreadcrumbs, isVirtualPath } from "../utils/pathUtils";
 import "./TopBar.css";
 
 interface TopBarProps {
@@ -31,42 +31,7 @@ export function TopBar({
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const breadcrumbs = useMemo(() => {
-    if (!currentPath) return [];
-    
-    if (isVirtualPath(currentPath)) {
-      return [{ name: getVirtualPathLabel(currentPath, t), path: currentPath }];
-    }
-
-    const separator = currentPath.includes("\\") ? "\\" : "/";
-    const isWindows = currentPath.includes("\\") || /^[A-Z]:/i.test(currentPath);
-    
-    const parts = currentPath.split(separator).filter(p => p !== "");
-    const crumbs = [];
-    
-    if (isWindows) {
-      let accumulatedPath = "";
-      for (let i = 0; i < parts.length; i++) {
-        accumulatedPath += (i === 0 ? "" : separator) + parts[i];
-        crumbs.push({
-          name: parts[i],
-          path: accumulatedPath + (i === 0 ? separator : "")
-        });
-      }
-    } else {
-      // macOS / Linux
-      let accumulatedPath = "";
-      crumbs.push({ name: "/", path: "/" });
-      for (let i = 0; i < parts.length; i++) {
-        accumulatedPath += (accumulatedPath === "/" ? "" : "/") + parts[i];
-        crumbs.push({
-          name: parts[i],
-          path: accumulatedPath
-        });
-      }
-    }
-    return crumbs;
-  }, [currentPath, t]);
+  const breadcrumbs = useMemo(() => getBreadcrumbs(currentPath, t), [currentPath, t]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && searchQuery.trim()) {

@@ -7,12 +7,25 @@ vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: vi.fn((path) => `asset://${path}`),
 }));
 
+const mockWindowInstance = {
+  onDragDropEvent: vi.fn(() => Promise.resolve(() => {})),
+  isFullscreen: vi.fn(() => Promise.resolve(false)),
+  setFullscreen: vi.fn(() => Promise.resolve()),
+  isMaximized: vi.fn(() => Promise.resolve(false)),
+  toggleMaximize: vi.fn(() => Promise.resolve()),
+  minimize: vi.fn(() => Promise.resolve()),
+  close: vi.fn(() => Promise.resolve()),
+  startDragging: vi.fn(() => Promise.resolve()),
+  unmaximize: vi.fn(() => Promise.resolve()),
+  onResized: vi.fn(() => Promise.resolve(() => {})),
+};
+
 vi.mock("@tauri-apps/api/window", () => ({
-  getCurrentWindow: vi.fn(() => ({
-    onDragDropEvent: vi.fn(() => Promise.resolve(() => {})),
-    isFullscreen: vi.fn(() => Promise.resolve(false)),
-    setFullscreen: vi.fn(() => Promise.resolve()),
-  })),
+  getCurrentWindow: vi.fn(() => mockWindowInstance),
+}));
+
+vi.mock("@tauri-apps/plugin-os", () => ({
+  type: vi.fn(() => "windows"),
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({

@@ -57,6 +57,20 @@ export function useAppEvents(handlers: AppEventHandlers, state: AppState) {
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      if (e.key === "F11") {
+        e.preventDefault();
+        try {
+          const win = getCurrentWindow();
+          if (win.isFullscreen && win.setFullscreen) {
+            const isFull = await win.isFullscreen();
+            await win.setFullscreen(!isFull);
+          }
+        } catch (err) {
+          console.error("Failed to toggle fullscreen on F11:", err);
+        }
+        return;
+      }
+
       if (state.isViewerOpen) {
         if (e.key.toLowerCase() === "f") {
           const win = getCurrentWindow();
@@ -74,6 +88,17 @@ export function useAppEvents(handlers: AppEventHandlers, state: AppState) {
           handlers.onSetIsIntervalDialogOpen(false);
         }
       } else {
+        try {
+          const win = getCurrentWindow();
+          if (win.isFullscreen && win.setFullscreen) {
+            const isFull = await win.isFullscreen();
+            if (isFull && e.key === "Escape") {
+              await win.setFullscreen(false);
+              return;
+            }
+          }
+        } catch {}
+
         if (e.key === "Escape" || e.key === "Backspace") handlers.onGoUp();
         if (e.altKey && e.key === "ArrowLeft") handlers.onGoBack();
         else if (e.altKey && e.key === "ArrowRight") handlers.onGoForward();

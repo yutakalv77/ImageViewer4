@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWindow } from "../hooks/useWindow";
 import { VIRTUAL_PATH_FAVORITES } from "../utils/pathUtils";
 import { useSettingsContext } from "../context/SettingsContext";
 import { useFileSystemContext } from "../context/FileSystemContext";
 import { useUIContext } from "../context/UIContext";
+import { WindowControls } from "./WindowControls";
+import { useDismiss } from "../hooks/useDismiss";
 import "./MenuBar.css";
 
 interface MenuBarProps {
@@ -42,45 +44,10 @@ export function MenuBar({
     setIsFavoritesOpen, setIsIntervalDialogOpen, setIsSettingsOpen
   } = useUIContext();
 
-  useEffect(() => {
-    if (!activeMenu) return;
-
-    const handlePointerDown = (e: Event) => {
-      const target = e.target as Node | null;
-      if (!target) return;
-
-      if (target instanceof Element) {
-        // ドロップダウンメニュー内、またはメニューボタン内のクリックはそれぞれのハンドラに任せる
-        if (target.closest(".menu-dropdown") || target.closest(".menu-button")) {
-          return;
-        }
-      }
-
-      // 別の箇所をクリックした場合はメニューを閉じる
-      setActiveMenu(null);
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setActiveMenu(null);
-      }
-    };
-
-    const handleWindowBlur = () => {
-      setActiveMenu(null);
-    };
-
-    const eventType = window.PointerEvent ? "pointerdown" : "mousedown";
-    window.addEventListener(eventType, handlePointerDown, true);
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("blur", handleWindowBlur);
-
-    return () => {
-      window.removeEventListener(eventType, handlePointerDown, true);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("blur", handleWindowBlur);
-    };
-  }, [activeMenu]);
+  // ドロップダウンメニュー外のクリック、Escapeキー、ウィンドウぼかしでメニューを閉じる
+  useDismiss(activeMenu !== null, () => setActiveMenu(null), {
+    ignoreSelectors: [".menu-dropdown", ".menu-button"],
+  });
 
   const latestHistory = history.slice(0, 10);
 
@@ -254,21 +221,11 @@ export function MenuBar({
       </div>
 
       {os !== 'macos' && (
-        <div className="window-controls" onMouseDown={(e) => e.stopPropagation()}>
-          <div className="window-control-button minimize" onClick={minimize}>
-            <svg width="10" height="1" viewBox="0 0 10 1"><path d="M0 0h10v1H0z" fill="currentColor"/></svg>
-          </div>
-          <div className="window-control-button maximize" onClick={toggleMaximize}>
-            <svg width="10" height="10" viewBox="0 0 10 10">
-              <path d="M0 0v10h10V0H0zm9 9H1V1h8v8z" fill="currentColor"/>
-            </svg>
-          </div>
-          <div className="window-control-button close" onClick={close}>
-            <svg width="10" height="10" viewBox="0 0 10 10">
-              <path d="M0 0l10 10M10 0L0 10" stroke="currentColor" strokeWidth="1.2" fill="none"/>
-            </svg>
-          </div>
-        </div>
+        <WindowControls 
+          onMinimize={minimize}
+          onToggleMaximize={toggleMaximize}
+          onClose={close}
+        />
       )}
     </nav>
   );

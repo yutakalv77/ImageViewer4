@@ -29,7 +29,7 @@ import "./App.css";
 
 function App() {
   const { t } = useTranslation();
-  const { handleDrag, toggleMaximize } = useWindow();
+  const { handleDrag, toggleMaximize, isFullscreen } = useWindow();
   
   const {
     currentPath, images, loading, error, loadDirectory, everythingSearch, searchFolders,
@@ -233,31 +233,35 @@ function App() {
   }, [images.length, setViewerState]);
 
   return (
-    <div className={`app-container ${background?.path ? "has-background" : ""}`}>
-      <ResizeHandles />
+    <div className={`app-container ${background?.path ? "has-background" : ""} ${isFullscreen ? "is-fullscreen" : ""}`}>
+      {!isFullscreen && <ResizeHandles />}
       <ErrorBoundary>
         <AppBackground />
       </ErrorBoundary>
 
-      <MenuBar 
-        onStartSlideshow={startSlideshow}
-        onRevealCurrentPath={handleRevealCurrentPath}
-        onLoadDirectory={handleLoadDirectory}
-        onOpenFolderDialog={handleOpenFolderDialog}
-      />
+      {!isFullscreen && (
+        <MenuBar 
+          onStartSlideshow={startSlideshow}
+          onRevealCurrentPath={handleRevealCurrentPath}
+          onLoadDirectory={handleLoadDirectory}
+          onOpenFolderDialog={handleOpenFolderDialog}
+        />
+      )}
 
-      <TopBar 
-        currentPath={currentPath}
-        canGoBack={canGoBack}
-        canGoForward={canGoForward}
-        onGoBack={handleGoBack}
-        onGoForward={handleGoForward}
-        onGoUp={handleGoUp}
-        onLoadDirectory={handleLoadDirectory}
-        onSearch={handleSearch}
-        onDrag={handleDrag}
-        onMaximize={toggleMaximize}
-      />
+      {!isFullscreen && (
+        <TopBar 
+          currentPath={currentPath}
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
+          onGoBack={handleGoBack}
+          onGoForward={handleGoForward}
+          onGoUp={handleGoUp}
+          onLoadDirectory={handleLoadDirectory}
+          onSearch={handleSearch}
+          onDrag={handleDrag}
+          onMaximize={toggleMaximize}
+        />
+      )}
 
       {persistentError && (
         <div className="error-banner">

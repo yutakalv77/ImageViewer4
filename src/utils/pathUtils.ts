@@ -93,3 +93,52 @@ export function getPathParts(path: string): string[] {
   const separator = path.includes("\\") ? "\\" : "/";
   return path.split(separator).filter(p => p !== "");
 }
+
+export interface BreadcrumbItem {
+  name: string;
+  path: string;
+}
+
+/**
+ * 現在のパスからパンくずリスト（階層一覧）を生成する
+ */
+export function getBreadcrumbs(
+  currentPath: string | null | undefined,
+  t: (key: string) => string
+): BreadcrumbItem[] {
+  if (!currentPath) return [];
+
+  if (isVirtualPath(currentPath)) {
+    return [{ name: getVirtualPathLabel(currentPath, t), path: currentPath }];
+  }
+
+  const separator = currentPath.includes("\\") ? "\\" : "/";
+  const isWindows = currentPath.includes("\\") || /^[A-Z]:/i.test(currentPath);
+
+  const parts = currentPath.split(separator).filter(p => p !== "");
+  const crumbs: BreadcrumbItem[] = [];
+
+  if (isWindows) {
+    let accumulatedPath = "";
+    for (let i = 0; i < parts.length; i++) {
+      accumulatedPath += (i === 0 ? "" : separator) + parts[i];
+      crumbs.push({
+        name: parts[i],
+        path: accumulatedPath + (i === 0 ? separator : "")
+      });
+    }
+  } else {
+    // macOS / Linux
+    let accumulatedPath = "";
+    crumbs.push({ name: "/", path: "/" });
+    for (let i = 0; i < parts.length; i++) {
+      accumulatedPath += (accumulatedPath === "/" ? "" : "/") + parts[i];
+      crumbs.push({
+        name: parts[i],
+        path: accumulatedPath
+      });
+    }
+  }
+
+  return crumbs;
+}
