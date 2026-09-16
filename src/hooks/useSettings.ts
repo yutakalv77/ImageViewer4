@@ -7,10 +7,19 @@ import i18n from "../i18n";
 import { BackgroundSettings, StartupFolderType, ThemeMode, SortBy, SortOrder, PageNumberPosition } from "../types";
 import { DEFAULT_PAGE_NUMBER_POSITION, isPageNumberPosition } from "../utils/viewerUtils";
 
-export const THUMBNAIL_SIZE_DEFAULT = 160;
-export const THUMBNAIL_SIZE_MIN = 80;
-export const THUMBNAIL_SIZE_MAX = 400;
-export const THUMBNAIL_SIZE_STEP = 20;
+import {
+  THUMBNAIL_SIZE_DEFAULT,
+  THUMBNAIL_SIZE_MIN,
+  THUMBNAIL_SIZE_MAX,
+  THUMBNAIL_SIZE_STEP,
+} from "../constants";
+
+export {
+  THUMBNAIL_SIZE_DEFAULT,
+  THUMBNAIL_SIZE_MIN,
+  THUMBNAIL_SIZE_MAX,
+  THUMBNAIL_SIZE_STEP,
+};
 
 export function useSettings() {
   const [dataStoragePath, setDataStoragePath] = useState<string>("");

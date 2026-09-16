@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -8,7 +8,13 @@ import { EntryCard } from "./EntryCard";
 import "./Gallery.css";
 import { ContextMenu } from "./ContextMenu";
 import { useGalleryNavigation } from "../hooks/useGalleryNavigation";
-import { THUMBNAIL_SIZE_STEP } from "../hooks/useSettings";
+import { useVirtualGrid } from "../hooks/useVirtualGrid";
+import {
+  THUMBNAIL_SIZE_STEP,
+  DEFAULT_GRID_GAP,
+  DEFAULT_GRID_PADDING,
+  DEFAULT_OVERSCAN_ROWS,
+} from "../constants";
 
 interface GalleryProps {
   currentPath: string;
@@ -47,13 +53,43 @@ export function Gallery({
   const lastRestoredNavIdRef = useRef<number>(-1);
   
   const {
+    startIndex,
+    endIndex,
+    columns,
+    paddingTop,
+    paddingBottom,
+    scrollToIndex,
+  } = useVirtualGrid({
+    containerRef: mainContentRef,
+    totalItems: displayEntries.length,
+    itemWidth: thumbnailSize,
+    estimatedItemHeight: Math.round(thumbnailSize * 1.41) + 38,
+    gap: DEFAULT_GRID_GAP,
+    padding: DEFAULT_GRID_PADDING,
+    overscanRows: DEFAULT_OVERSCAN_ROWS,
+  });
+
+  const {
     selectedIndex,
     setSelectedIndex,
     editingIndex,
     setEditingIndex,
     galleryRef,
     reset
-  } = useGalleryNavigation(displayEntries, onEntryClick);
+  } = useGalleryNavigation(displayEntries, onEntryClick, {
+    columns,
+    scrollToIndex,
+  });
+
+  const visibleEntries = useMemo(() => {
+    if (startIndex > endIndex || startIndex < 0 || endIndex < 0) {
+      return [];
+    }
+    return displayEntries.slice(startIndex, endIndex + 1).map((entry, offset) => ({
+      entry,
+      originalIndex: startIndex + offset,
+    }));
+  }, [displayEntries, startIndex, endIndex]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, entry: EntryItem, index: number } | null>(null);
 
@@ -228,21 +264,25 @@ export function Gallery({
       <div 
         className="gallery" 
         ref={galleryRef}
-        style={{ '--thumbnail-size': `${thumbnailSize}px` } as React.CSSProperties}
+        style={{ 
+          '--thumbnail-size': `${thumbnailSize}px`,
+          paddingTop: `${paddingTop}px`,
+          paddingBottom: `${paddingBottom}px`,
+        } as React.CSSProperties}
       >
-        {displayEntries.map((entry, idx) => (
+        {visibleEntries.map(({ entry, originalIndex }) => (
           <EntryCard 
-            key={`${entry.path}-${idx}`} 
+            key={`${entry.path}-${originalIndex}`} 
             entry={entry} 
-            isSelected={idx === selectedIndex}
-            isEditing={idx === editingIndex}
+            isSelected={originalIndex === selectedIndex}
+            isEditing={originalIndex === editingIndex}
             isFavorite={isFavorite(entry.path)}
             onClick={() => {
-              setSelectedIndex(idx);
+              setSelectedIndex(originalIndex);
               onEntryClick(entry);
             }} 
-            onContextMenu={(e) => handleContextMenu(e, entry, idx)}
-            onRenameComplete={(newName) => handleRename(idx, newName)}
+            onContextMenu={(e) => handleContextMenu(e, entry, originalIndex)}
+            onRenameComplete={(newName) => handleRename(originalIndex, newName)}
             onRenameCancel={() => setEditingIndex(-1)}
           />
         ))}

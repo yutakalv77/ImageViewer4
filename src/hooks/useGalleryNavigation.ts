@@ -1,7 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { EntryItem } from "../types";
 
-export function useGalleryNavigation(entries: EntryItem[], onEntryClick: (entry: EntryItem) => void) {
+export interface UseGalleryNavigationOptions {
+  columns?: number;
+  scrollToIndex?: (index: number) => void;
+}
+
+export function useGalleryNavigation(
+  entries: EntryItem[],
+  onEntryClick: (entry: EntryItem) => void,
+  options?: UseGalleryNavigationOptions
+) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [editingIndex, setEditingIndex] = useState(-1);
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -26,6 +35,7 @@ export function useGalleryNavigation(entries: EntryItem[], onEntryClick: (entry:
     let nextIndex = selectedIndex;
 
     const getColumnCount = () => {
+      if (options?.columns && options.columns > 0) return options.columns;
       if (!galleryRef.current) return 1;
       const style = window.getComputedStyle(galleryRef.current);
       const gridTemplateColumns = style.getPropertyValue('grid-template-columns');
@@ -61,7 +71,7 @@ export function useGalleryNavigation(entries: EntryItem[], onEntryClick: (entry:
       e.preventDefault();
       setSelectedIndex(nextIndex);
     }
-  }, [entries, selectedIndex, editingIndex, onEntryClick]);
+  }, [entries, selectedIndex, editingIndex, onEntryClick, options?.columns]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -69,13 +79,17 @@ export function useGalleryNavigation(entries: EntryItem[], onEntryClick: (entry:
   }, [handleKeyDown]);
 
   useEffect(() => {
-    if (selectedIndex >= 0 && galleryRef.current && galleryRef.current.children[selectedIndex]) {
-      const selectedEl = galleryRef.current.children[selectedIndex] as HTMLElement;
-      if (selectedEl && typeof selectedEl.scrollIntoView === 'function') {
-        selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (selectedIndex >= 0) {
+      if (options?.scrollToIndex) {
+        options.scrollToIndex(selectedIndex);
+      } else if (galleryRef.current && galleryRef.current.children[selectedIndex]) {
+        const selectedEl = galleryRef.current.children[selectedIndex] as HTMLElement;
+        if (selectedEl && typeof selectedEl.scrollIntoView === 'function') {
+          selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
       }
     }
-  }, [selectedIndex]);
+  }, [selectedIndex, options?.scrollToIndex]);
 
   return {
     selectedIndex,
