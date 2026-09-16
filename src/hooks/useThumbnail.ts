@@ -16,7 +16,7 @@ export function useThumbnail(
   const [thumbSrc, setThumbSrc] = useState<string | null>(() => {
     return entry.thumbnail_path ? convertFileSrc(entry.thumbnail_path) : null;
   });
-  const [isLoading, setIsLoading] = useState<boolean>(!entry.thumbnail_path && !entry.is_dir);
+  const [isLoading, setIsLoading] = useState<boolean>(!entry.thumbnail_path);
   const [hasError, setHasError] = useState(false);
   const isMountedRef = useRef(true);
 
@@ -27,10 +27,10 @@ export function useThumbnail(
       setHasError(false);
     } else {
       setThumbSrc(null);
-      setIsLoading(!entry.is_dir);
+      setIsLoading(true);
       setHasError(false);
     }
-  }, [entry.path, entry.thumbnail_path, entry.is_dir]);
+  }, [entry.path, entry.thumbnail_path]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -88,7 +88,7 @@ export function useThumbnail(
         isCancelled = true;
       };
     }
-  }, [entry.path, entry.is_dir, thumbSrc, hasError, elementRef]);
+  }, [entry.path, thumbSrc, hasError, elementRef]);
 
   return {
     thumbSrc,

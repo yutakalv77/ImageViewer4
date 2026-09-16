@@ -53,6 +53,36 @@ describe("EntryCard component", () => {
     });
   });
 
+  it("renders folder icon and common.folder fallback when directory has no thumbnail", async () => {
+    const emptyDirEntry: EntryItem = {
+      name: "EmptyAlbum",
+      path: "/photos/EmptyAlbum",
+      is_dir: true,
+      thumbnail_path: null,
+    };
+
+    render(<EntryCard {...defaultProps} entry={emptyDirEntry} />);
+    await waitFor(() => {
+      expect(screen.getByText("EmptyAlbum")).toBeInTheDocument();
+      expect(screen.getByText("📁")).toBeInTheDocument();
+    });
+  });
+
+  it("renders image for directory when thumbnail is available", () => {
+    const dirWithThumb: EntryItem = {
+      name: "AlbumWithCover",
+      path: "/photos/AlbumWithCover",
+      is_dir: true,
+      thumbnail_path: "/cache/thumbnails/album_thumb.jpg",
+    };
+
+    render(<EntryCard {...defaultProps} entry={dirWithThumb} />);
+    expect(screen.getByText("AlbumWithCover")).toBeInTheDocument();
+    expect(screen.getByText("📁")).toBeInTheDocument();
+    const img = screen.getByRole("img");
+    expect(img).toHaveAttribute("src", "asset:///cache/thumbnails/album_thumb.jpg");
+  });
+
   it("renders favorite star when isFavorite is true", () => {
     render(<EntryCard {...defaultProps} isFavorite={true} />);
     expect(screen.getByText("⭐")).toBeInTheDocument();

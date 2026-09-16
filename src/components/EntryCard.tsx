@@ -73,7 +73,7 @@ export function EntryCard({
           />
         ) : (
           <div className="no-thumbnail">
-            {entry.is_dir ? t('common.folder') : (isLoading ? "" : "🖼️")}
+            {isLoading ? "" : (entry.is_dir ? t('common.folder') : "🖼️")}
           </div>
         )}
         {entry.is_dir && <div className="folder-icon">📁</div>}

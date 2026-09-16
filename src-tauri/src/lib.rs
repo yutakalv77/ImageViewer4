@@ -61,10 +61,23 @@ pub(crate) fn is_image(path: &Path) -> bool {
 
 pub(crate) fn find_first_image_in_dir(dir_path: &Path) -> Option<String> {
     if let Ok(entries) = fs::read_dir(dir_path) {
+        let mut subdirs = Vec::new();
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_file() && is_image(&path) {
                 return Some(path.to_string_lossy().to_string());
+            } else if path.is_dir() && subdirs.len() < 5 {
+                subdirs.push(path);
+            }
+        }
+        for subdir in subdirs {
+            if let Ok(sub_entries) = fs::read_dir(&subdir) {
+                for sub_entry in sub_entries.flatten() {
+                    let sub_path = sub_entry.path();
+                    if sub_path.is_file() && is_image(&sub_path) {
+                        return Some(sub_path.to_string_lossy().to_string());
+                    }
+                }
             }
         }
     }
@@ -224,18 +237,9 @@ fn get_directory_entries(app: tauri::AppHandle, path: String) -> Result<Director
             let (size, modified, created) = get_entry_metadata(&entry);
 
             if is_dir {
-                let thumbnail_path = if let Some(ref cdir) = cache_dir {
-                    if let Some(first_img_str) = find_first_image_in_dir(&entry_path) {
-                        let first_img = Path::new(&first_img_str);
-                        let (isize, imod, _) = get_path_metadata(first_img);
-                        thumbnail::get_cached_thumbnail_path(cdir, first_img, imod, isize, thumbnail::DEFAULT_THUMBNAIL_MAX_SIZE)
-                            .map(|p| p.to_string_lossy().to_string())
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
+                let thumbnail_path = cache_dir.as_deref()
+                    .and_then(|cdir| thumbnail::get_cached_folder_thumbnail_path(cdir, &entry_path, modified))
+                    .map(|p| p.to_string_lossy().to_string());
 
                 result.push(EntryItem {
                     name,
@@ -254,11 +258,10 @@ fn get_directory_entries(app: tauri::AppHandle, path: String) -> Result<Director
 
                 let thumbnail_path = if ext == "svg" {
                     Some(entry_path.to_string_lossy().to_string())
-                } else if let Some(ref cdir) = cache_dir {
-                    thumbnail::get_cached_thumbnail_path(cdir, &entry_path, modified, size, thumbnail::DEFAULT_THUMBNAIL_MAX_SIZE)
-                        .map(|p| p.to_string_lossy().to_string())
                 } else {
-                    None
+                    cache_dir.as_deref()
+                        .and_then(|cdir| thumbnail::get_cached_image_thumbnail_path(cdir, &entry_path, modified, size))
+                        .map(|p| p.to_string_lossy().to_string())
                 };
 
                 result.push(EntryItem {
@@ -289,21 +292,29 @@ fn get_directory_entries(app: tauri::AppHandle, path: String) -> Result<Director
 }
 
 #[tauri::command]
-fn search_folders(root_path: String, query: String) -> Result<Vec<EntryItem>, String> {
+fn search_folders(app: tauri::AppHandle, root_path: String, query: String) -> Result<Vec<EntryItem>, String> {
     let mut results = Vec::new();
     let root = Path::new(&root_path);
     if !root.is_dir() {
         return Err("Root path is not a directory".to_string());
     }
 
+    let cache_dir = thumbnail::get_thumbnail_cache_dir(&app).ok();
     let query_lower = query.to_lowercase();
-    search_recursive(root, &query_lower, 0, 3, &mut results);
+    search_recursive(root, &query_lower, 0, 3, cache_dir.as_deref(), &mut results);
 
     results.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     Ok(results)
 }
 
-fn search_recursive(dir: &Path, query: &String, depth: u32, max_depth: u32, results: &mut Vec<EntryItem>) {
+fn search_recursive(
+    dir: &Path,
+    query: &String,
+    depth: u32,
+    max_depth: u32,
+    cache_dir: Option<&Path>,
+    results: &mut Vec<EntryItem>,
+) {
     if depth > max_depth {
         return;
     }
@@ -317,8 +328,10 @@ fn search_recursive(dir: &Path, query: &String, depth: u32, max_depth: u32, resu
                     .unwrap_or_default();
 
                 if name.to_lowercase().contains(query) {
-                    let thumbnail_path = find_first_image_in_dir(&path);
                     let (size, modified, created) = get_entry_metadata(&entry);
+                    let thumbnail_path = cache_dir
+                        .and_then(|cdir| thumbnail::get_cached_folder_thumbnail_path(cdir, &path, modified))
+                        .map(|p| p.to_string_lossy().to_string());
                     results.push(EntryItem {
                         name: name.clone(),
                         path: path.to_string_lossy().to_string(),
@@ -330,7 +343,7 @@ fn search_recursive(dir: &Path, query: &String, depth: u32, max_depth: u32, resu
                     });
                 }
                 
-                search_recursive(&path, query, depth + 1, max_depth, results);
+                search_recursive(&path, query, depth + 1, max_depth, cache_dir, results);
             }
         }
     }
@@ -400,7 +413,12 @@ fn decode_cli_output(bytes: &[u8]) -> String {
 }
 
 #[tauri::command]
-async fn search_everything(query: String, max_results: u32, cli_path: String) -> Result<Vec<EntryItem>, String> {
+async fn search_everything(
+    app: tauri::AppHandle,
+    query: String,
+    max_results: u32,
+    cli_path: String,
+) -> Result<Vec<EntryItem>, String> {
     #[cfg(windows)]
     {
         if !check_everything_running() {
@@ -426,6 +444,7 @@ async fn search_everything(query: String, max_results: u32, cli_path: String) ->
 
                 if out.status.success() {
                     let mut results = Vec::new();
+                    let cache_dir = thumbnail::get_thumbnail_cache_dir(&app).ok();
                     for line in stdout_text.lines() {
                         if results.len() >= max_results as usize { break; }
                         
@@ -437,8 +456,10 @@ async fn search_everything(query: String, max_results: u32, cli_path: String) ->
                             let name = path.file_name()
                                 .map(|n| n.to_string_lossy().to_string())
                                 .unwrap_or_else(|| path_str.to_string());
-                            let thumbnail_path = find_first_image_in_dir(path);
                             let (size, modified, created) = get_path_metadata(path);
+                            let thumbnail_path = cache_dir.as_deref()
+                                .and_then(|cdir| thumbnail::get_cached_folder_thumbnail_path(cdir, path, modified))
+                                .map(|p| p.to_string_lossy().to_string());
                             results.push(EntryItem {
                                 name,
                                 path: path_str.to_string(),

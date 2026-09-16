@@ -71,6 +71,35 @@ pub fn get_cached_thumbnail_path(
     }
 }
 
+pub fn get_cached_folder_thumbnail_path(
+    cache_dir: &Path,
+    folder_path: &Path,
+    folder_modified: Option<u64>,
+) -> Option<PathBuf> {
+    get_cached_thumbnail_path(
+        cache_dir,
+        folder_path,
+        folder_modified,
+        None,
+        DEFAULT_THUMBNAIL_MAX_SIZE,
+    )
+}
+
+pub fn get_cached_image_thumbnail_path(
+    cache_dir: &Path,
+    image_path: &Path,
+    modified: Option<u64>,
+    file_size: Option<u64>,
+) -> Option<PathBuf> {
+    get_cached_thumbnail_path(
+        cache_dir,
+        image_path,
+        modified,
+        file_size,
+        DEFAULT_THUMBNAIL_MAX_SIZE,
+    )
+}
+
 pub fn save_image_as_thumbnail(img: &image::RgbImage, target_cache_path: &Path) -> Result<PathBuf, String> {
     let parent = target_cache_path.parent().ok_or("Invalid cache path")?;
     if !parent.exists() {
@@ -377,6 +406,41 @@ pub fn extract_shell_thumbnail(
     Err("Shell thumbnail extraction is only supported on Windows".to_string())
 }
 
+pub fn create_folder_thumbnail(
+    folder_path: &Path,
+    target_cache_path: &Path,
+    size: u32,
+) -> Result<PathBuf, String> {
+    let first_image_str = find_first_image_in_dir(folder_path)
+        .ok_or_else(|| "No image found in directory".to_string())?;
+    let first_image_path = Path::new(&first_image_str);
+
+    let ext = first_image_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+
+    if ext == "svg" {
+        return Ok(first_image_path.to_path_buf());
+    }
+
+    #[cfg(windows)]
+    {
+        if let Ok(thumb_path) = extract_shell_thumbnail(first_image_path, target_cache_path, size) {
+            return Ok(thumb_path);
+        }
+    }
+
+    match generate_thumbnail(first_image_path, target_cache_path, size) {
+        Ok(thumb_path) => Ok(thumb_path),
+        Err(err) => {
+            eprintln!("Thumbnail generation failed for {:?}: {}. Falling back to original.", first_image_path, err);
+            Ok(first_image_path.to_path_buf())
+        }
+    }
+}
+
 pub fn get_or_create_thumbnail(
     app: &tauri::AppHandle,
     path_str: &str,
@@ -388,51 +452,51 @@ pub fn get_or_create_thumbnail(
         return Err(format!("File or directory does not exist: {}", path_str));
     }
 
-    let target_image_path = if p.is_dir() {
-        match find_first_image_in_dir(p) {
-            Some(first) => PathBuf::from(first),
-            None => return Err("No image found in directory".to_string()),
-        }
-    } else {
-        p.to_path_buf()
-    };
-
-    if !target_image_path.exists() {
-        return Err("Target image does not exist".to_string());
-    }
-
-    let ext = target_image_path
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(|e| e.to_lowercase())
-        .unwrap_or_default();
-
-    if ext == "svg" {
-        return Ok(target_image_path.to_string_lossy().to_string());
-    }
-
     let cache_dir = get_thumbnail_cache_dir(app)?;
-    let (file_size, modified, _) = get_path_metadata(&target_image_path);
 
-    if let Some(cached) = get_cached_thumbnail_path(&cache_dir, &target_image_path, modified, file_size, size) {
-        return Ok(cached.to_string_lossy().to_string());
-    }
-
-    let filename = compute_thumbnail_filename(&target_image_path, modified, file_size, size);
-    let target = cache_dir.join(filename);
-
-    #[cfg(windows)]
-    {
-        if let Ok(thumb_path) = extract_shell_thumbnail(&target_image_path, &target, size) {
-            return Ok(thumb_path.to_string_lossy().to_string());
+    if p.is_dir() {
+        let (_, folder_modified, _) = get_path_metadata(p);
+        if let Some(cached) = get_cached_thumbnail_path(&cache_dir, p, folder_modified, None, size) {
+            return Ok(cached.to_string_lossy().to_string());
         }
-    }
 
-    match generate_thumbnail(&target_image_path, &target, size) {
-        Ok(thumb_path) => Ok(thumb_path.to_string_lossy().to_string()),
-        Err(err) => {
-            eprintln!("Thumbnail generation failed for {:?}: {}. Falling back to original.", target_image_path, err);
-            Ok(target_image_path.to_string_lossy().to_string())
+        let filename = compute_thumbnail_filename(p, folder_modified, None, size);
+        let target = cache_dir.join(filename);
+
+        create_folder_thumbnail(p, &target, size).map(|p| p.to_string_lossy().to_string())
+    } else {
+        let ext = p
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase())
+            .unwrap_or_default();
+
+        if ext == "svg" {
+            return Ok(p.to_string_lossy().to_string());
+        }
+
+        let (file_size, modified, _) = get_path_metadata(p);
+
+        if let Some(cached) = get_cached_thumbnail_path(&cache_dir, p, modified, file_size, size) {
+            return Ok(cached.to_string_lossy().to_string());
+        }
+
+        let filename = compute_thumbnail_filename(p, modified, file_size, size);
+        let target = cache_dir.join(filename);
+
+        #[cfg(windows)]
+        {
+            if let Ok(thumb_path) = extract_shell_thumbnail(p, &target, size) {
+                return Ok(thumb_path.to_string_lossy().to_string());
+            }
+        }
+
+        match generate_thumbnail(p, &target, size) {
+            Ok(thumb_path) => Ok(thumb_path.to_string_lossy().to_string()),
+            Err(err) => {
+                eprintln!("Thumbnail generation failed for {:?}: {}. Falling back to original.", p, err);
+                Ok(p.to_string_lossy().to_string())
+            }
         }
     }
 }
@@ -526,6 +590,42 @@ mod tests {
 
         // Cleanup
         let _ = fs::remove_file(&cache_file);
+        let _ = fs::remove_dir(&temp_dir);
+    }
+
+    #[test]
+    fn test_get_cached_folder_and_image_thumbnail_path() {
+        let temp_dir = std::env::temp_dir().join("iv_test_folder_image_cache");
+        let _ = fs::create_dir_all(&temp_dir);
+
+        let folder_path = Path::new("C:/photos/my_album");
+        let image_path = Path::new("C:/photos/my_album/pic.jpg");
+
+        // Folder cache
+        let folder_filename = compute_thumbnail_filename(folder_path, Some(100), None, DEFAULT_THUMBNAIL_MAX_SIZE);
+        let folder_cache_file = temp_dir.join(&folder_filename);
+
+        // Image cache
+        let image_filename = compute_thumbnail_filename(image_path, Some(100), Some(500), DEFAULT_THUMBNAIL_MAX_SIZE);
+        let image_cache_file = temp_dir.join(&image_filename);
+
+        assert!(get_cached_folder_thumbnail_path(&temp_dir, folder_path, Some(100)).is_none());
+        assert!(get_cached_image_thumbnail_path(&temp_dir, image_path, Some(100), Some(500)).is_none());
+
+        fs::write(&folder_cache_file, b"folder").unwrap();
+        fs::write(&image_cache_file, b"image").unwrap();
+
+        assert_eq!(
+            get_cached_folder_thumbnail_path(&temp_dir, folder_path, Some(100)),
+            Some(folder_cache_file.clone())
+        );
+        assert_eq!(
+            get_cached_image_thumbnail_path(&temp_dir, image_path, Some(100), Some(500)),
+            Some(image_cache_file.clone())
+        );
+
+        let _ = fs::remove_file(&folder_cache_file);
+        let _ = fs::remove_file(&image_cache_file);
         let _ = fs::remove_dir(&temp_dir);
     }
 
@@ -639,5 +739,40 @@ mod tests {
     fn test_bgra_to_rgb_image_mismatched_length() {
         let raw = vec![0, 1, 2]; // Needs 8 for 2x1
         assert!(bgra_to_rgb_image(2, 1, &raw).is_err());
+    }
+
+    #[test]
+    fn test_create_folder_thumbnail_success_and_empty() {
+        let temp_dir = std::env::temp_dir().join("iv_test_folder_thumb");
+        let _ = fs::create_dir_all(&temp_dir);
+
+        let sub_folder = temp_dir.join("album");
+        let _ = fs::create_dir_all(&sub_folder);
+
+        let empty_folder = temp_dir.join("empty");
+        let _ = fs::create_dir_all(&empty_folder);
+
+        // Put an image in album
+        let sample_img_path = sub_folder.join("cover.png");
+        let test_img = image::RgbImage::new(40, 40);
+        test_img.save(&sample_img_path).unwrap();
+
+        let out_path = temp_dir.join("album_thumb.jpg");
+        let result = create_folder_thumbnail(&sub_folder, &out_path, 64);
+        assert!(result.is_ok());
+        let thumb_path = result.unwrap();
+        assert!(thumb_path.exists());
+
+        // Empty folder should fail with error
+        let empty_out = temp_dir.join("empty_thumb.jpg");
+        let empty_result = create_folder_thumbnail(&empty_folder, &empty_out, 64);
+        assert!(empty_result.is_err());
+
+        // Cleanup
+        let _ = fs::remove_file(&out_path);
+        let _ = fs::remove_file(&sample_img_path);
+        let _ = fs::remove_dir(&sub_folder);
+        let _ = fs::remove_dir(&empty_folder);
+        let _ = fs::remove_dir(&temp_dir);
     }
 }
