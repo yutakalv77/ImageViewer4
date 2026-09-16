@@ -1,16 +1,19 @@
 import { useTranslation } from "react-i18next";
-import { StartupFolderType, ThemeMode, BackgroundSettings } from "../../types";
+import { StartupFolderType, ThemeMode, BackgroundSettings, PageNumberPosition } from "../../types";
+import { PAGE_NUMBER_POSITION_OPTIONS } from "../../utils/viewerUtils";
 
 interface GeneralSettingsProps {
   startupFolderType: StartupFolderType;
   language: string;
   theme: ThemeMode;
   background: BackgroundSettings;
+  pageNumberPosition: PageNumberPosition;
   onUpdateStartupFolderType: (type: StartupFolderType) => void;
   onUpdateLanguage: (lang: string) => void;
   onUpdateTheme: (theme: ThemeMode) => void;
   onUpdateBackground: (updates: Partial<BackgroundSettings>) => void;
   onPickBackgroundImage: () => void;
+  onUpdatePageNumberPosition: (pos: PageNumberPosition) => void;
 }
 
 export function GeneralSettings({
@@ -18,11 +21,13 @@ export function GeneralSettings({
   language,
   theme,
   background,
+  pageNumberPosition,
   onUpdateStartupFolderType,
   onUpdateLanguage,
   onUpdateTheme,
   onUpdateBackground,
-  onPickBackgroundImage
+  onPickBackgroundImage,
+  onUpdatePageNumberPosition
 }: GeneralSettingsProps) {
   const { t } = useTranslation();
 
@@ -69,6 +74,23 @@ export function GeneralSettings({
           >
             <option value="ja">日本語 (Japanese)</option>
             <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="settings-group" style={{ marginTop: '20px' }}>
+        <label>{t('settings.page_number_position_label')}</label>
+        <div className="path-input-group">
+          <select 
+            className="settings-select"
+            value={pageNumberPosition} 
+            onChange={(e) => onUpdatePageNumberPosition(e.target.value as PageNumberPosition)}
+          >
+            {PAGE_NUMBER_POSITION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {t(opt.labelKey)}
+              </option>
+            ))}
           </select>
         </div>
       </div>

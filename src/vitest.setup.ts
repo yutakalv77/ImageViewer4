@@ -48,3 +48,8 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
   revealItemInDir: vi.fn(),
   openPath: vi.fn(),
 }));
+
+vi.mock("@tauri-apps/api/path", () => ({
+  appDataDir: vi.fn(() => Promise.resolve("/mock/appDataDir")),
+  join: vi.fn((...args: string[]) => Promise.resolve(args.join("/"))),
+}));

@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { getNextIndex, getPrevIndex } from "../utils/viewerUtils";
-import { EntryItem } from "../types";
+import {
+  getNextIndex,
+  getPrevIndex,
+  getVisibleImages,
+  formatViewerInfo,
+  DEFAULT_PAGE_NUMBER_POSITION
+} from "../utils/viewerUtils";
+import { EntryItem, PageNumberPosition } from "../types";
 import { ContextMenu } from "./ContextMenu";
 import "./ImageViewer.css";
 
@@ -17,6 +23,7 @@ interface ImageViewerProps {
   viewMode: "single" | "spread";
   readingDirection: "rtl" | "ltr";
   firstPageIsCover: boolean;
+  pageNumberPosition?: PageNumberPosition;
   onClose: () => void;
   onNavigate: (index: number) => void;
   onShowInfo: (path: string) => void;
@@ -30,6 +37,7 @@ export function ImageViewer({
   viewMode,
   readingDirection,
   firstPageIsCover,
+  pageNumberPosition = DEFAULT_PAGE_NUMBER_POSITION,
   onClose,
   onNavigate,
   onShowInfo,
@@ -104,44 +112,11 @@ export function ImageViewer({
   }, [isOpen, handleNext, handlePrev, readingDirection]);
 
   const spreadImages = useMemo(() => {
-    if (!images || images.length === 0) return [];
-    const safeIndex = Math.max(0, Math.min(currentIndex, images.length - 1));
-
-    if (viewMode === "single") {
-      const img = images[safeIndex];
-      return img ? [img] : [];
-    }
-
-    if (firstPageIsCover && safeIndex === 0) {
-      const img = images[0];
-      return img ? [img] : [];
-    }
-
-    let pairStart = safeIndex;
-    if (firstPageIsCover) {
-      if (pairStart % 2 === 0) pairStart -= 1;
-      pairStart = Math.max(1, pairStart);
-    } else {
-      if (pairStart % 2 !== 0) pairStart -= 1;
-      pairStart = Math.max(0, pairStart);
-    }
-
-    const pair: EntryItem[] = [];
-    if (images[pairStart]) {
-      pair.push(images[pairStart]);
-    }
-    if (pairStart + 1 < images.length && images[pairStart + 1]) {
-      pair.push(images[pairStart + 1]);
-    }
-
-    if (pair.length === 0 && images[safeIndex]) {
-      pair.push(images[safeIndex]);
-    }
-
-    if (readingDirection === "rtl") {
-      return [...pair].reverse();
-    }
-    return pair;
+    return getVisibleImages(images, currentIndex, {
+      viewMode,
+      firstPageIsCover,
+      readingDirection,
+    });
   }, [images, currentIndex, viewMode, firstPageIsCover, readingDirection]);
 
   if (!isOpen || !images || images.length === 0 || currentIndex < 0) return null;
@@ -171,7 +146,7 @@ export function ImageViewer({
 
   return (
     <div 
-      className="viewer-overlay" 
+      className={`viewer-overlay page-pos-${pageNumberPosition}`} 
       onClick={onClose}
       onWheel={handleWheel}
       onContextMenu={(e) => {
@@ -237,20 +212,17 @@ export function ImageViewer({
         )}
       </div>
       
-      {currentItem && (
-        <div className="viewer-info" onClick={(e) => e.stopPropagation()}>
-          {viewMode === "single" ? (
-            t('slideshow.viewer_info_single', { 
-              page: currentIndex + 1, 
-              total: images.length, 
-              name: currentItem.name 
-            })
-          ) : (
-            t('slideshow.viewer_info', { 
-              page: Math.min(currentIndex + 1, images.length), 
-              total: images.length 
-            })
-          )}
+      {currentItem && pageNumberPosition !== "hidden" && (
+        <div 
+          className={`viewer-info pos-${pageNumberPosition}`} 
+          onClick={(e) => e.stopPropagation()}
+        >
+          {formatViewerInfo(t, {
+            viewMode,
+            currentIndex,
+            totalImages: images.length,
+            currentImageName: currentItem.name,
+          })}
         </div>
       )}
 

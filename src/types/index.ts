@@ -37,6 +37,14 @@ export type ThemeMode = "dark" | "light" | "system";
 export type StartupFolderType = "none" | "last";
 export type BackgroundStyle = "cover" | "contain" | "tile";
 export type NavigationType = "open" | "back" | "forward" | "up";
+export type PageNumberPosition =
+  | "top-center"
+  | "bottom-center"
+  | "top-left"
+  | "bottom-left"
+  | "top-right"
+  | "bottom-right"
+  | "hidden";
 
 export interface BackgroundSettings {
   path: string | null;

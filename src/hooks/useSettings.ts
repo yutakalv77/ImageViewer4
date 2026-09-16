@@ -4,7 +4,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import i18n from "../i18n";
-import { BackgroundSettings, StartupFolderType, ThemeMode, SortBy, SortOrder } from "../types";
+import { BackgroundSettings, StartupFolderType, ThemeMode, SortBy, SortOrder, PageNumberPosition } from "../types";
+import { DEFAULT_PAGE_NUMBER_POSITION, isPageNumberPosition } from "../utils/viewerUtils";
 
 export const THUMBNAIL_SIZE_DEFAULT = 160;
 export const THUMBNAIL_SIZE_MIN = 80;
@@ -36,6 +37,7 @@ export function useSettings() {
   const [everythingMaxResults, setEverythingMaxResults] = useState<number>(50);
   const [everythingCliPath, setEverythingCliPath] = useState<string>("");
   const [isMenuBarPinned, setIsMenuBarPinned] = useState<boolean>(true);
+  const [pageNumberPosition, setPageNumberPosition] = useState<PageNumberPosition>(DEFAULT_PAGE_NUMBER_POSITION);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const isInitialMount = useRef(true);
@@ -100,6 +102,7 @@ export function useSettings() {
         if (config.sortBy) setSortBy(config.sortBy);
         if (config.sortOrder) setSortOrder(config.sortOrder);
         if (config.isMenuBarPinned !== undefined) setIsMenuBarPinned(config.isMenuBarPinned);
+        if (isPageNumberPosition(config.pageNumberPosition)) setPageNumberPosition(config.pageNumberPosition);
 
         setIsLoaded(true);
       } catch (e) {
@@ -145,6 +148,7 @@ export function useSettings() {
         everythingMaxResults,
         everythingCliPath,
         isMenuBarPinned,
+        pageNumberPosition,
         ...updates
       };
 
@@ -152,7 +156,7 @@ export function useSettings() {
     } catch (e) {
       console.error("Failed to save settings:", e);
     }
-  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, autoCalculateColors, language, theme, sortBy, sortOrder, background, everythingEnabled, everythingMaxResults, everythingCliPath, isMenuBarPinned]);
+  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, autoCalculateColors, language, theme, sortBy, sortOrder, background, everythingEnabled, everythingMaxResults, everythingCliPath, isMenuBarPinned, pageNumberPosition]);
 
   // Thumbnail size sync with debounce
   useEffect(() => {
@@ -301,6 +305,11 @@ export function useSettings() {
     saveSettings({ isMenuBarPinned: pinned });
   }, [saveSettings]);
 
+  const updatePageNumberPosition = useCallback(async (pos: PageNumberPosition) => {
+    setPageNumberPosition(pos);
+    await saveSettings({ pageNumberPosition: pos });
+  }, [saveSettings]);
+
   return {
     isLoaded,
     dataStoragePath,
@@ -344,6 +353,8 @@ export function useSettings() {
     isMenuBarPinned,
     toggleMenuBarPinned,
     updateMenuBarPinned,
+    pageNumberPosition,
+    updatePageNumberPosition,
     pickBackgroundImage
   };
 }

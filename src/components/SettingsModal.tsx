@@ -17,7 +17,8 @@ export function SettingsModal() {
     language, updateLanguage, theme, updateTheme, 
     background, updateBackground, pickBackgroundImage,
     everythingEnabled, updateEverythingEnabled, everythingMaxResults, updateEverythingMaxResults,
-    everythingCliPath, updateEverythingCliPath
+    everythingCliPath, updateEverythingCliPath,
+    pageNumberPosition, updatePageNumberPosition
   } = useSettingsContext();
 
   const {
@@ -152,11 +153,13 @@ export function SettingsModal() {
                 language={language}
                 theme={theme}
                 background={background}
+                pageNumberPosition={pageNumberPosition}
                 onUpdateStartupFolderType={updateStartupFolderType}
                 onUpdateLanguage={updateLanguage}
                 onUpdateTheme={updateTheme}
                 onUpdateBackground={updateBackground}
                 onPickBackgroundImage={pickBackgroundImage}
+                onUpdatePageNumberPosition={updatePageNumberPosition}
               />
             )}
             {activeSettingsTab === 'storage' && (

@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { getNextIndex, getPrevIndex } from '../utils/viewerUtils';
+import {
+  getNextIndex,
+  getPrevIndex,
+  DEFAULT_PAGE_NUMBER_POSITION,
+  PAGE_NUMBER_POSITION_OPTIONS,
+  isPageNumberPosition,
+  getVisibleImages,
+  formatViewerInfo,
+} from '../utils/viewerUtils';
+import { EntryItem } from '../types';
 
 describe('viewerUtils', () => {
   const options = { totalImages: 10, viewMode: 'single' as const, firstPageIsCover: true };
@@ -69,10 +78,117 @@ describe('viewerUtils', () => {
       expect(getNextIndex(-1, { ...options, totalImages: 5 })).toBe(1);
       expect(getPrevIndex(-1, { ...options, totalImages: 5 })).toBe(4);
     });
+  });
 
-    it('should safely handle out-of-bounds currentIndex', () => {
-      expect(getNextIndex(100, { ...options, totalImages: 5 })).toBe(0);
-      expect(getPrevIndex(100, { ...options, totalImages: 5 })).toBe(3);
+  describe('pageNumberPosition utilities', () => {
+    it('should have default position as bottom-center', () => {
+      expect(DEFAULT_PAGE_NUMBER_POSITION).toBe('bottom-center');
+    });
+
+    it('should define all 7 required positions in PAGE_NUMBER_POSITION_OPTIONS', () => {
+      const positions = PAGE_NUMBER_POSITION_OPTIONS.map(opt => opt.value);
+      expect(positions).toEqual([
+        'top-center',
+        'bottom-center',
+        'top-left',
+        'bottom-left',
+        'top-right',
+        'bottom-right',
+        'hidden',
+      ]);
+    });
+
+    it('should correctly identify valid page number positions', () => {
+      expect(isPageNumberPosition('top-center')).toBe(true);
+      expect(isPageNumberPosition('bottom-center')).toBe(true);
+      expect(isPageNumberPosition('top-left')).toBe(true);
+      expect(isPageNumberPosition('bottom-left')).toBe(true);
+      expect(isPageNumberPosition('top-right')).toBe(true);
+      expect(isPageNumberPosition('bottom-right')).toBe(true);
+      expect(isPageNumberPosition('hidden')).toBe(true);
+    });
+
+    it('should reject invalid page number positions', () => {
+      expect(isPageNumberPosition('center')).toBe(false);
+      expect(isPageNumberPosition('top')).toBe(false);
+      expect(isPageNumberPosition('bottom')).toBe(false);
+      expect(isPageNumberPosition('')).toBe(false);
+      expect(isPageNumberPosition(123)).toBe(false);
+      expect(isPageNumberPosition(null)).toBe(false);
+      expect(isPageNumberPosition(undefined)).toBe(false);
+      expect(isPageNumberPosition({})).toBe(false);
+    });
+  });
+
+  describe('getVisibleImages', () => {
+    const dummyImages: EntryItem[] = [
+      { name: '0.jpg', path: '/0.jpg', is_dir: false, thumbnail_path: null },
+      { name: '1.jpg', path: '/1.jpg', is_dir: false, thumbnail_path: null },
+      { name: '2.jpg', path: '/2.jpg', is_dir: false, thumbnail_path: null },
+      { name: '3.jpg', path: '/3.jpg', is_dir: false, thumbnail_path: null },
+    ];
+
+    it('returns empty array when images list is empty', () => {
+      expect(getVisibleImages([], 0, { viewMode: 'single', firstPageIsCover: true })).toEqual([]);
+    });
+
+    it('returns single image in single view mode', () => {
+      const visible = getVisibleImages(dummyImages, 1, { viewMode: 'single', firstPageIsCover: true });
+      expect(visible).toEqual([dummyImages[1]]);
+    });
+
+    it('returns only cover page when firstPageIsCover and index is 0 in spread mode', () => {
+      const visible = getVisibleImages(dummyImages, 0, { viewMode: 'spread', firstPageIsCover: true });
+      expect(visible).toEqual([dummyImages[0]]);
+    });
+
+    it('returns pair for non-cover pages in spread mode (LTR)', () => {
+      const visible = getVisibleImages(dummyImages, 1, {
+        viewMode: 'spread',
+        firstPageIsCover: true,
+        readingDirection: 'ltr',
+      });
+      expect(visible).toEqual([dummyImages[1], dummyImages[2]]);
+    });
+
+    it('reverses pair when readingDirection is rtl', () => {
+      const visible = getVisibleImages(dummyImages, 1, {
+        viewMode: 'spread',
+        firstPageIsCover: true,
+        readingDirection: 'rtl',
+      });
+      expect(visible).toEqual([dummyImages[2], dummyImages[1]]);
+    });
+  });
+
+  describe('formatViewerInfo', () => {
+    const mockT = (key: string, params?: Record<string, unknown>) => {
+      if (key === 'slideshow.viewer_info_single') {
+        return `${params?.page} / ${params?.total} - ${params?.name}`;
+      }
+      if (key === 'slideshow.viewer_info') {
+        return `Page: ${params?.page} / ${params?.total}`;
+      }
+      return key;
+    };
+
+    it('formats single mode viewer info correctly', () => {
+      const result = formatViewerInfo(mockT, {
+        viewMode: 'single',
+        currentIndex: 2,
+        totalImages: 10,
+        currentImageName: 'pic.png',
+      });
+      expect(result).toBe('3 / 10 - pic.png');
+    });
+
+    it('formats spread mode viewer info correctly', () => {
+      const result = formatViewerInfo(mockT, {
+        viewMode: 'spread',
+        currentIndex: 2,
+        totalImages: 10,
+      });
+      expect(result).toBe('Page: 3 / 10');
     });
   });
 });

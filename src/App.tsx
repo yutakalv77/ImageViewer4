@@ -44,7 +44,7 @@ function App() {
     everythingMaxResults, everythingCliPath, background,
     slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
     thumbnailSize, updateThumbnailSize, updateBackground, updateViewMode,
-    isMenuBarPinned
+    isMenuBarPinned, pageNumberPosition
   } = useSettingsContext();
 
   const {
@@ -302,6 +302,7 @@ function App() {
           viewMode={viewMode}
           readingDirection={readingDirection}
           firstPageIsCover={firstPageIsCover}
+          pageNumberPosition={pageNumberPosition}
           onClose={closeViewer}
           onNavigate={onNavigateViewer}
           onShowInfo={setSelectedInfoPath}

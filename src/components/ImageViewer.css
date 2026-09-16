@@ -113,11 +113,71 @@
 
 .viewer-info {
   position: absolute;
-  bottom: 20px;
   background: rgba(0, 0, 0, 0.6);
   padding: 5px 15px;
   border-radius: 20px;
   color: #fff;
   font-size: 0.8em;
   pointer-events: auto;
+  z-index: 1002;
+  box-sizing: border-box;
+  max-width: calc(100vw - 40px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Default / bottom-center */
+.viewer-info,
+.viewer-info.pos-bottom-center {
+  bottom: 20px;
+  top: auto;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.viewer-info.pos-top-center {
+  top: 20px;
+  bottom: auto;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.viewer-info.pos-top-left {
+  top: 20px;
+  bottom: auto;
+  left: 20px;
+  right: auto;
+  transform: none;
+}
+
+.viewer-info.pos-bottom-left {
+  bottom: 20px;
+  top: auto;
+  left: 20px;
+  right: auto;
+  transform: none;
+}
+
+.viewer-info.pos-top-right {
+  top: 20px;
+  bottom: auto;
+  right: 20px;
+  left: auto;
+  transform: none;
+}
+
+.viewer-info.pos-bottom-right {
+  bottom: 20px;
+  top: auto;
+  right: 20px;
+  left: auto;
+  transform: none;
+}
+
+/* Avoid overlap with reading direction indicator when page number is top-left */
+.viewer-overlay.page-pos-top-left .direction-indicator {
+  top: 55px;
 }
