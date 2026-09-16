@@ -35,6 +35,7 @@ export function useSettings() {
   const [everythingEnabled, setEverythingEnabled] = useState<boolean>(false);
   const [everythingMaxResults, setEverythingMaxResults] = useState<number>(50);
   const [everythingCliPath, setEverythingCliPath] = useState<string>("");
+  const [isMenuBarPinned, setIsMenuBarPinned] = useState<boolean>(true);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const isInitialMount = useRef(true);
@@ -98,6 +99,7 @@ export function useSettings() {
         if (config.everythingCliPath !== undefined) setEverythingCliPath(config.everythingCliPath);
         if (config.sortBy) setSortBy(config.sortBy);
         if (config.sortOrder) setSortOrder(config.sortOrder);
+        if (config.isMenuBarPinned !== undefined) setIsMenuBarPinned(config.isMenuBarPinned);
 
         setIsLoaded(true);
       } catch (e) {
@@ -142,6 +144,7 @@ export function useSettings() {
         everythingEnabled,
         everythingMaxResults,
         everythingCliPath,
+        isMenuBarPinned,
         ...updates
       };
 
@@ -149,7 +152,7 @@ export function useSettings() {
     } catch (e) {
       console.error("Failed to save settings:", e);
     }
-  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, autoCalculateColors, language, theme, sortBy, sortOrder, background, everythingEnabled, everythingMaxResults, everythingCliPath]);
+  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, autoCalculateColors, language, theme, sortBy, sortOrder, background, everythingEnabled, everythingMaxResults, everythingCliPath, isMenuBarPinned]);
 
   // Thumbnail size sync with debounce
   useEffect(() => {
@@ -285,6 +288,19 @@ export function useSettings() {
     }
   }, [updateBackground]);
 
+  const toggleMenuBarPinned = useCallback(() => {
+    setIsMenuBarPinned(prev => {
+      const next = !prev;
+      saveSettings({ isMenuBarPinned: next });
+      return next;
+    });
+  }, [saveSettings]);
+
+  const updateMenuBarPinned = useCallback((pinned: boolean) => {
+    setIsMenuBarPinned(pinned);
+    saveSettings({ isMenuBarPinned: pinned });
+  }, [saveSettings]);
+
   return {
     isLoaded,
     dataStoragePath,
@@ -325,6 +341,9 @@ export function useSettings() {
     updateEverythingMaxResults,
     everythingCliPath,
     updateEverythingCliPath,
+    isMenuBarPinned,
+    toggleMenuBarPinned,
+    updateMenuBarPinned,
     pickBackgroundImage
   };
 }

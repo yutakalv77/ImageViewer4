@@ -14,13 +14,15 @@ interface MenuBarProps {
   onRevealCurrentPath: () => void;
   onLoadDirectory?: (path: string) => void;
   onOpenFolderDialog?: () => void;
+  onMenuOpenChange?: (isOpen: boolean) => void;
 }
 
 export function MenuBar({ 
   onStartSlideshow,
   onRevealCurrentPath,
   onLoadDirectory,
-  onOpenFolderDialog
+  onOpenFolderDialog,
+  onMenuOpenChange
 }: MenuBarProps) {
   const { t } = useTranslation();
   const {
@@ -37,7 +39,8 @@ export function MenuBar({
     slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
     thumbnailSize, updateThumbnailSize, resetThumbnailSize, thumbnailSizeDefault,
     updateSlideInterval, toggleSlideLoop, updateViewMode, updateReadingDirection,
-    toggleFirstPageIsCover, sortBy, sortOrder, updateSortBy, updateSortOrder
+    toggleFirstPageIsCover, sortBy, sortOrder, updateSortBy, updateSortOrder,
+    isMenuBarPinned = true, toggleMenuBarPinned
   } = useSettingsContext();
 
   const {
@@ -50,6 +53,13 @@ export function MenuBar({
   const {
     setIsFavoritesOpen, setIsIntervalDialogOpen, setIsSettingsOpen
   } = useUIContext();
+
+  useEffect(() => {
+    onMenuOpenChange?.(activeMenu !== null);
+    return () => {
+      onMenuOpenChange?.(false);
+    };
+  }, [activeMenu, onMenuOpenChange]);
 
   useEffect(() => {
     if (activeMenu !== "view") {
@@ -178,6 +188,10 @@ export function MenuBar({
               <li onClick={(e) => { e.stopPropagation(); resetThumbnailSize(); }}>
                 {t('view_menu.reset_thumb')} ({thumbnailPercentage}%)
               </li>
+              <li className="separator"></li>
+              <li onClick={(e) => { e.stopPropagation(); toggleMenuBarPinned(); }}>
+                {renderCheck(isMenuBarPinned)} {t('view_menu.pin_menubar')}
+              </li>
             </ul>
           )}
         </div>
@@ -284,13 +298,41 @@ export function MenuBar({
         </div>
       </div>
 
-      {os !== 'macos' && (
-        <WindowControls 
-          onMinimize={minimize}
-          onToggleMaximize={toggleMaximize}
-          onClose={close}
-        />
-      )}
+      <div className="menu-bar-right" onMouseDown={(e) => e.stopPropagation()}>
+        <button
+          className={`pin-button ${isMenuBarPinned ? "pinned" : "unpinned"}`}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleMenuBarPinned();
+          }}
+          title={isMenuBarPinned ? t('menu.unpin_menubar') : t('menu.pin_menubar')}
+          aria-label={isMenuBarPinned ? t('menu.unpin_menubar') : t('menu.pin_menubar')}
+        >
+          <svg 
+            className="pin-icon" 
+            width="14" 
+            height="14" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <line x1="12" y1="17" x2="12" y2="22"></line>
+            <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+          </svg>
+        </button>
+
+        {os !== 'macos' && (
+          <WindowControls 
+            onMinimize={minimize}
+            onToggleMaximize={toggleMaximize}
+            onClose={close}
+          />
+        )}
+      </div>
     </nav>
   );
 }

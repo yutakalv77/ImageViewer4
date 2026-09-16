@@ -27,6 +27,9 @@ vi.mock('react-i18next', () => ({
         'view_menu.sort_asc': '昇順',
         'view_menu.sort_desc': '降順',
         'slide_menu.start': '開始',
+        'view_menu.pin_menubar': '上部バーを固定',
+        'menu.pin_menubar': '上部バーを固定',
+        'menu.unpin_menubar': '上部バーを自動的に隠す',
       };
       return translations[key] || key;
     },
@@ -46,6 +49,11 @@ vi.mock('../hooks/useWindow', () => ({
 const mockUpdateViewMode = vi.fn();
 const mockUpdateSortBy = vi.fn();
 const mockUpdateSortOrder = vi.fn();
+const mockToggleMenuBarPinned = vi.fn();
+
+let mockSettings = {
+  isMenuBarPinned: true,
+};
 
 vi.mock('../context/SettingsContext', () => ({
   useSettingsContext: () => ({
@@ -58,6 +66,8 @@ vi.mock('../context/SettingsContext', () => ({
     thumbnailSizeDefault: 150,
     sortBy: 'name',
     sortOrder: 'asc',
+    isMenuBarPinned: mockSettings.isMenuBarPinned,
+    toggleMenuBarPinned: mockToggleMenuBarPinned,
     updateThumbnailSize: vi.fn(),
     resetThumbnailSize: vi.fn(),
     updateSlideInterval: vi.fn(),
@@ -298,5 +308,79 @@ describe('MenuBar', () => {
     // 再度クリックすると閉じること
     fireEvent.click(viewButton);
     expect(screen.queryByText('単ページ表示')).not.toBeInTheDocument();
+  });
+
+  it('固定表示状態（デフォルト）ではピンボタンが pinned で表示される', () => {
+    mockSettings.isMenuBarPinned = true;
+    render(
+      <div>
+        <MenuBar {...defaultProps} />
+      </div>
+    );
+
+    // ピンボタンが存在し、pinned クラスを持つ
+    const pinButton = screen.getByTitle('上部バーを自動的に隠す');
+    expect(pinButton).toBeInTheDocument();
+    expect(pinButton).toHaveClass('pinned');
+
+    // ピンボタンをクリックすると toggleMenuBarPinned が呼ばれる
+    fireEvent.click(pinButton);
+    expect(mockToggleMenuBarPinned).toHaveBeenCalled();
+  });
+
+  it('「表示」メニュー内の「上部バーを固定」をクリックすると toggleMenuBarPinned が呼ばれる', () => {
+    mockSettings.isMenuBarPinned = true;
+    render(
+      <div>
+        <MenuBar {...defaultProps} />
+      </div>
+    );
+
+    // 「表示」メニューを開く
+    fireEvent.click(screen.getByText('表示'));
+    const pinMenuItem = screen.getByText('上部バーを固定');
+    expect(pinMenuItem).toBeInTheDocument();
+
+    // クリック
+    fireEvent.click(pinMenuItem);
+    expect(mockToggleMenuBarPinned).toHaveBeenCalled();
+  });
+
+  it('未固定状態（isMenuBarPinned: false）ではピンボタンが unpinned クラスを持つ', () => {
+    mockSettings.isMenuBarPinned = false;
+    render(
+      <div>
+        <MenuBar {...defaultProps} />
+      </div>
+    );
+
+    // ピンボタンは unpinned クラスを持つ
+    const pinButton = screen.getByTitle('上部バーを固定');
+    expect(pinButton).toBeInTheDocument();
+    expect(pinButton).toHaveClass('unpinned');
+
+    // ピンボタンをクリックすると toggleMenuBarPinned が呼ばれる
+    fireEvent.click(pinButton);
+    expect(mockToggleMenuBarPinned).toHaveBeenCalled();
+  });
+
+  it('メニューの開閉状態の変化が onMenuOpenChange に通知される', () => {
+    const mockMenuOpenChange = vi.fn();
+    render(
+      <div>
+        <MenuBar {...defaultProps} onMenuOpenChange={mockMenuOpenChange} />
+      </div>
+    );
+
+    // 最初はメニューが閉じている
+    expect(mockMenuOpenChange).toHaveBeenCalledWith(false);
+
+    // 「ファイル」メニューをクリックして開く
+    fireEvent.click(screen.getByText('ファイル'));
+    expect(mockMenuOpenChange).toHaveBeenCalledWith(true);
+
+    // 再度クリックして閉じる
+    fireEvent.click(screen.getByText('ファイル'));
+    expect(mockMenuOpenChange).toHaveBeenCalledWith(false);
   });
 });

@@ -7,6 +7,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useSlideshow } from "./hooks/useSlideshow";
 import { useAppEvents } from "./hooks/useAppEvents";
 import { useFileOperations } from "./hooks/useFileOperations";
+import { AppHeader } from "./components/AppHeader";
 import { MenuBar } from "./components/MenuBar";
 import { TopBar } from "./components/TopBar";
 import { Gallery } from "./components/Gallery";
@@ -42,7 +43,8 @@ function App() {
     isLoaded: isSettingsLoaded, startupFolderType, everythingEnabled,
     everythingMaxResults, everythingCliPath, background,
     slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
-    thumbnailSize, updateThumbnailSize, updateBackground, updateViewMode
+    thumbnailSize, updateThumbnailSize, updateBackground, updateViewMode,
+    isMenuBarPinned
   } = useSettingsContext();
 
   const {
@@ -53,6 +55,7 @@ function App() {
   } = useUIContext();
 
   const [isStarted, setIsStarted] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { renameEntry } = useFileOperations(loadDirectory);
 
   // Sync external error to UI context
@@ -233,34 +236,34 @@ function App() {
   }, [images.length, setViewerState]);
 
   return (
-    <div className={`app-container ${background?.path ? "has-background" : ""} ${isFullscreen ? "is-fullscreen" : ""}`}>
+    <div className={`app-container ${background?.path ? "has-background" : ""} ${isFullscreen ? "is-fullscreen" : ""} ${!isMenuBarPinned ? "is-menubar-unpinned" : ""}`}>
       {!isFullscreen && <ResizeHandles />}
       <ErrorBoundary>
         <AppBackground />
       </ErrorBoundary>
 
       {!isFullscreen && (
-        <MenuBar 
-          onStartSlideshow={startSlideshow}
-          onRevealCurrentPath={handleRevealCurrentPath}
-          onLoadDirectory={handleLoadDirectory}
-          onOpenFolderDialog={handleOpenFolderDialog}
-        />
-      )}
-
-      {!isFullscreen && (
-        <TopBar 
-          currentPath={currentPath}
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          onGoBack={handleGoBack}
-          onGoForward={handleGoForward}
-          onGoUp={handleGoUp}
-          onLoadDirectory={handleLoadDirectory}
-          onSearch={handleSearch}
-          onDrag={handleDrag}
-          onMaximize={toggleMaximize}
-        />
+        <AppHeader isPinned={isMenuBarPinned} isLocked={isMenuOpen}>
+          <MenuBar 
+            onStartSlideshow={startSlideshow}
+            onRevealCurrentPath={handleRevealCurrentPath}
+            onLoadDirectory={handleLoadDirectory}
+            onOpenFolderDialog={handleOpenFolderDialog}
+            onMenuOpenChange={setIsMenuOpen}
+          />
+          <TopBar 
+            currentPath={currentPath}
+            canGoBack={canGoBack}
+            canGoForward={canGoForward}
+            onGoBack={handleGoBack}
+            onGoForward={handleGoForward}
+            onGoUp={handleGoUp}
+            onLoadDirectory={handleLoadDirectory}
+            onSearch={handleSearch}
+            onDrag={handleDrag}
+            onMaximize={toggleMaximize}
+          />
+        </AppHeader>
       )}
 
       {persistentError && (

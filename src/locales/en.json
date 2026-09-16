@@ -6,7 +6,9 @@
     "favorites": "Favorites(B)",
     "history": "History(R)",
     "settings": "Settings(S)",
-    "help": "Help(H)"
+    "help": "Help(H)",
+    "pin_menubar": "Pin Top Bar",
+    "unpin_menubar": "Auto-hide Top Bar"
   },
   "file_menu": {
     "open_folder": "Open Folder(O)...",
@@ -14,6 +16,7 @@
     "exit": "Exit(X)"
   },
   "view_menu": {
+    "pin_menubar": "Pin Top Bar",
     "single": "Single View",
     "spread": "Spread View",
     "rtl": "Right to Left (Japanese)",

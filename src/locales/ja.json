@@ -6,7 +6,9 @@
     "favorites": "お気に入り(B)",
     "history": "履歴(R)",
     "settings": "設定(S)",
-    "help": "ヘルプ(H)"
+    "help": "ヘルプ(H)",
+    "pin_menubar": "上部バーを固定",
+    "unpin_menubar": "上部バーを自動的に隠す"
   },
   "file_menu": {
     "open_folder": "フォルダを開く(O)...",
@@ -14,6 +16,7 @@
     "exit": "終了(X)"
   },
   "view_menu": {
+    "pin_menubar": "上部バーを固定",
     "single": "単一表示",
     "spread": "見開き表示",
     "rtl": "右から左（日本語）",
