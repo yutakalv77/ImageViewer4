@@ -91,4 +91,17 @@ describe('AppHeader', () => {
     fireEvent.contextMenu(header);
     expect(handleContextMenu).toHaveBeenCalledTimes(1);
   });
+
+  it('ヘッダーダブルクリック時に onDoubleClick が呼び出されること', () => {
+    const handleDoubleClick = vi.fn();
+    render(
+      <AppHeader isPinned={true} onDoubleClick={handleDoubleClick}>
+        <div>Header Content</div>
+      </AppHeader>
+    );
+
+    const header = screen.getByTestId('app-header');
+    fireEvent.doubleClick(header);
+    expect(handleDoubleClick).toHaveBeenCalledTimes(1);
+  });
 });

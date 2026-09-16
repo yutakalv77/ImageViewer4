@@ -36,13 +36,16 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+const mockToggleMaximize = vi.fn();
+const mockHandleDrag = vi.fn();
+
 vi.mock('../hooks/useWindow', () => ({
   useWindow: () => ({
     os: 'windows',
-    toggleMaximize: vi.fn(),
+    toggleMaximize: mockToggleMaximize,
     minimize: vi.fn(),
     close: vi.fn(),
-    handleDrag: vi.fn(),
+    handleDrag: mockHandleDrag,
   }),
 }));
 
@@ -382,5 +385,29 @@ describe('MenuBar', () => {
     // 再度クリックして閉じる
     fireEvent.click(screen.getByText('ファイル'));
     expect(mockMenuOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('背景のダブルクリックで toggleMaximize が呼ばれ、メニュー項目や右側領域では呼ばれないこと', () => {
+    const { container } = render(
+      <div>
+        <MenuBar {...defaultProps} />
+      </div>
+    );
+
+    const menuBar = container.querySelector('.menu-bar')!;
+    const menuItemsContainer = container.querySelector('.menu-items-container')!;
+    const menuBarRight = container.querySelector('.menu-bar-right')!;
+
+    // メニュー項目群のダブルクリックでは呼ばれない
+    fireEvent.doubleClick(menuItemsContainer);
+    expect(mockToggleMaximize).not.toHaveBeenCalled();
+
+    // 右側領域（ピンボタン等）のダブルクリックでは呼ばれない
+    fireEvent.doubleClick(menuBarRight);
+    expect(mockToggleMaximize).not.toHaveBeenCalled();
+
+    // 背景領域のダブルクリックで toggleMaximize が呼ばれる
+    fireEvent.doubleClick(menuBar);
+    expect(mockToggleMaximize).toHaveBeenCalledTimes(1);
   });
 });

@@ -49,15 +49,39 @@ export function useWindow() {
 
   const handleDrag = useCallback(async (e: React.MouseEvent) => {
     if (e.button !== 0) return;
+    // ダブルクリック（e.detail > 1）時はドラッグ処理を実行せず、onDoubleClick に委譲する
+    if (e.detail > 1) return;
     
-    if (await appWindow.isMaximized()) {
-      await appWindow.unmaximize();
+    try {
+      if (typeof appWindow?.startDragging === "function") {
+        await appWindow.startDragging();
+      }
+    } catch (err) {
+      console.error("Failed to start dragging:", err);
     }
-    await appWindow.startDragging();
   }, [appWindow]);
 
-  const toggleMaximize = useCallback(() => {
-    appWindow.toggleMaximize();
+  const toggleMaximize = useCallback(async () => {
+    try {
+      if (typeof appWindow?.isMaximized === "function") {
+        const maximized = await appWindow.isMaximized();
+        if (maximized) {
+          if (typeof appWindow.unmaximize === "function") {
+            await appWindow.unmaximize();
+          }
+          setIsMaximized(false);
+        } else {
+          if (typeof appWindow.maximize === "function") {
+            await appWindow.maximize();
+          }
+          setIsMaximized(true);
+        }
+      } else {
+        setIsMaximized((prev) => !prev);
+      }
+    } catch (err) {
+      console.error("Failed to toggle maximize:", err);
+    }
   }, [appWindow]);
 
   const toggleFullscreen = useCallback(async () => {

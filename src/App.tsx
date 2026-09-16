@@ -270,6 +270,7 @@ function App() {
           isPinned={isMenuBarPinned} 
           isLocked={isMenuOpen}
           onContextMenu={handleHeaderContextMenu}
+          onDoubleClick={toggleMaximize}
         >
           <MenuBar 
             onStartSlideshow={startSlideshow}

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { isSearchPath, getBreadcrumbs, isVirtualPath } from "../utils/pathUtils";
 import "./TopBar.css";
 
-interface TopBarProps {
+export interface TopBarProps {
   currentPath: string;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -46,10 +46,16 @@ export function TopBar({
     <header 
       className="top-bar" 
       onMouseDown={onDrag}
-      onDoubleClick={onMaximize}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onMaximize();
+      }}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="nav-buttons-group">
+      <div 
+        className="nav-buttons-group"
+        onDoubleClick={(e) => e.stopPropagation()}
+      >
         <button 
           className="nav-button back-button" 
           onMouseDown={(e) => e.stopPropagation()}
@@ -89,7 +95,10 @@ export function TopBar({
         {!currentPath ? (
           <div className="current-path-display">{t('common.drag_hint')}</div>
         ) : (
-          <div className="breadcrumbs-list">
+          <div 
+            className="breadcrumbs-list"
+            onDoubleClick={(e) => e.stopPropagation()}
+          >
             {isInSearch && (
               <button 
                 className="exit-search-btn" 
@@ -118,7 +127,11 @@ export function TopBar({
         )}
       </div>
 
-      <div className="search-container" onMouseDown={(e) => e.stopPropagation()}>
+      <div 
+        className="search-container" 
+        onMouseDown={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+      >
         <input 
           type="text" 
           className="search-input" 

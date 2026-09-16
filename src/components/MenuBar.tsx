@@ -82,9 +82,15 @@ export function MenuBar({
       className={`menu-bar ${os === 'macos' ? 'macos' : ''}`} 
       onClick={(e) => e.stopPropagation()} 
       onMouseDown={handleDrag}
-      onDoubleClick={toggleMaximize}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        toggleMaximize();
+      }}
     >
-      <div className="menu-items-container">
+      <div 
+        className="menu-items-container"
+        onDoubleClick={(e) => e.stopPropagation()}
+      >
         {/* 1. ファイル */}
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
@@ -298,7 +304,11 @@ export function MenuBar({
         </div>
       </div>
 
-      <div className="menu-bar-right" onMouseDown={(e) => e.stopPropagation()}>
+      <div 
+        className="menu-bar-right" 
+        onMouseDown={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+      >
         <button
           className={`pin-button ${isMenuBarPinned ? "pinned" : "unpinned"}`}
           onMouseDown={(e) => e.stopPropagation()}

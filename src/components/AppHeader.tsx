@@ -6,6 +6,7 @@ export interface AppHeaderProps {
   isPinned: boolean;
   isLocked?: boolean;
   onContextMenu?: (e: React.MouseEvent) => void;
+  onDoubleClick?: (e: React.MouseEvent) => void;
   children: React.ReactNode;
 }
 
@@ -16,6 +17,7 @@ export function AppHeader({
   isPinned,
   isLocked = false,
   onContextMenu,
+  onDoubleClick,
   children
 }: AppHeaderProps) {
   const { isVisible, show, scheduleHide } = useAutoHide({
@@ -37,6 +39,7 @@ export function AppHeader({
         onMouseEnter={show}
         onMouseLeave={scheduleHide}
         onContextMenu={onContextMenu}
+        onDoubleClick={onDoubleClick}
         data-testid="app-header"
       >
         {children}

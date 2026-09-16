@@ -10,7 +10,11 @@ export function WindowControls({
   onClose
 }: WindowControlsProps) {
   return (
-    <div className="window-controls" onMouseDown={(e) => e.stopPropagation()}>
+    <div 
+      className="window-controls" 
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+    >
       <div 
         className="window-control-button minimize" 
         onClick={onMinimize}
