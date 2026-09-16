@@ -6,7 +6,7 @@ import { useSettingsContext } from "../context/SettingsContext";
 import { useFileSystemContext } from "../context/FileSystemContext";
 import { useUIContext } from "../context/UIContext";
 import { WindowControls } from "./WindowControls";
-import { useDismiss } from "../hooks/useDismiss";
+import { useMenuState } from "../hooks/useMenuState";
 import "./MenuBar.css";
 
 interface MenuBarProps {
@@ -23,7 +23,13 @@ export function MenuBar({
   onOpenFolderDialog
 }: MenuBarProps) {
   const { t } = useTranslation();
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const {
+    activeMenu,
+    closeMenu,
+    handleMenuClick,
+    handleMenuHover,
+    handleMenuButtonLeave,
+  } = useMenuState();
   const [isSortSubmenuOpen, setIsSortSubmenuOpen] = useState(false);
   const { os, toggleMaximize, minimize, close, handleDrag } = useWindow();
   
@@ -44,11 +50,6 @@ export function MenuBar({
   const {
     setIsFavoritesOpen, setIsIntervalDialogOpen, setIsSettingsOpen
   } = useUIContext();
-
-  // ドロップダウンメニュー外のクリック、Escapeキー、ウィンドウぼかしでメニューを閉じる
-  useDismiss(activeMenu !== null, () => setActiveMenu(null), {
-    ignoreSelectors: [".menu-dropdown", ".menu-button"],
-  });
 
   useEffect(() => {
     if (activeMenu !== "view") {
@@ -78,14 +79,16 @@ export function MenuBar({
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "file" ? "active" : ""}`}
-            onClick={() => setActiveMenu(activeMenu === "file" ? null : "file")}
+            onClick={() => handleMenuClick("file")}
+            onMouseEnter={() => handleMenuHover("file")}
+            onMouseLeave={() => handleMenuButtonLeave("file")}
           >
             {t('menu.file')}
           </button>
           {activeMenu === "file" && (
             <ul className="menu-dropdown">
-              <li onClick={() => { openFolder(); setActiveMenu(null); }}>{t('file_menu.open_folder')}</li>
-              <li onClick={() => { onRevealCurrentPath(); setActiveMenu(null); }}>{t('file_menu.reveal_in_explorer')}</li>
+              <li onClick={() => { openFolder(); closeMenu(); }}>{t('file_menu.open_folder')}</li>
+              <li onClick={() => { onRevealCurrentPath(); closeMenu(); }}>{t('file_menu.reveal_in_explorer')}</li>
               <li className="separator"></li>
               <li onClick={close}>{t('file_menu.exit')}</li>
             </ul>
@@ -96,7 +99,9 @@ export function MenuBar({
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "view" ? "active" : ""}`}
-            onClick={() => setActiveMenu(activeMenu === "view" ? null : "view")}
+            onClick={() => handleMenuClick("view")}
+            onMouseEnter={() => handleMenuHover("view")}
+            onMouseLeave={() => handleMenuButtonLeave("view")}
           >
             {t('menu.view')}
           </button>
@@ -181,13 +186,15 @@ export function MenuBar({
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "slide" ? "active" : ""}`}
-            onClick={() => setActiveMenu(activeMenu === "slide" ? null : "slide")}
+            onClick={() => handleMenuClick("slide")}
+            onMouseEnter={() => handleMenuHover("slide")}
+            onMouseLeave={() => handleMenuButtonLeave("slide")}
           >
             {t('menu.slide')}
           </button>
           {activeMenu === "slide" && (
             <ul className="menu-dropdown">
-              <li onClick={() => { onStartSlideshow(); setActiveMenu(null); }}>{t('slide_menu.start')}</li>
+              <li onClick={() => { onStartSlideshow(); closeMenu(); }}>{t('slide_menu.start')}</li>
               <li onClick={(e) => { e.stopPropagation(); toggleSlideLoop(); }}>
                 {renderCheck(slideLoop)} {t('slide_menu.loop')}
               </li>
@@ -198,7 +205,7 @@ export function MenuBar({
                 </li>
               ))}
               <li className="separator"></li>
-              <li onClick={() => { setIsIntervalDialogOpen(true); setActiveMenu(null); }}>
+              <li onClick={() => { setIsIntervalDialogOpen(true); closeMenu(); }}>
                 {renderCheck(!isStandardInterval)} {t('slide_menu.interval_custom')}（{slideInterval.toFixed(1)}{t('slide_menu.interval_unit')}）
               </li>
             </ul>
@@ -209,16 +216,18 @@ export function MenuBar({
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "favorites" ? "active" : ""}`}
-            onClick={() => setActiveMenu(activeMenu === "favorites" ? null : "favorites")}
+            onClick={() => handleMenuClick("favorites")}
+            onMouseEnter={() => handleMenuHover("favorites")}
+            onMouseLeave={() => handleMenuButtonLeave("favorites")}
           >
             {t('menu.favorites')}
           </button>
           {activeMenu === "favorites" && (
             <ul className="menu-dropdown">
-              <li onClick={() => { loadFolder(VIRTUAL_PATH_FAVORITES); setActiveMenu(null); }}>
+              <li onClick={() => { loadFolder(VIRTUAL_PATH_FAVORITES); closeMenu(); }}>
                 {t('favorites.view_as_gallery')}
               </li>
-              <li onClick={() => { setIsFavoritesOpen(true); setActiveMenu(null); }}>
+              <li onClick={() => { setIsFavoritesOpen(true); closeMenu(); }}>
                 {t('favorites.show_list')}
               </li>
             </ul>
@@ -229,7 +238,9 @@ export function MenuBar({
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "history" ? "active" : ""}`}
-            onClick={() => setActiveMenu(activeMenu === "history" ? null : "history")}
+            onClick={() => handleMenuClick("history")}
+            onMouseEnter={() => handleMenuHover("history")}
+            onMouseLeave={() => handleMenuButtonLeave("history")}
           >
             {t('menu.history')}
           </button>
@@ -237,7 +248,7 @@ export function MenuBar({
             <ul className="menu-dropdown history-dropdown">
               {latestHistory.length > 0 ? (
                 latestHistory.map((entry, idx) => (
-                  <li key={idx} onClick={() => { loadFolder(entry.path); setActiveMenu(null); }}>
+                  <li key={idx} onClick={() => { loadFolder(entry.path); closeMenu(); }}>
                     {entry.path}
                   </li>
                 ))
@@ -252,7 +263,9 @@ export function MenuBar({
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className={`menu-button ${activeMenu === "settings" ? "active" : ""}`}
-            onClick={() => { setIsSettingsOpen(true); setActiveMenu(null); }}
+            onClick={() => { setIsSettingsOpen(true); closeMenu(); }}
+            onMouseEnter={() => handleMenuHover("settings")}
+            onMouseLeave={() => handleMenuButtonLeave("settings")}
           >
             {t('menu.settings')}
           </button>
@@ -260,7 +273,14 @@ export function MenuBar({
 
         {/* 7. ヘルプ */}
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
-          <button className="menu-button">{t('menu.help')}</button>
+          <button 
+            className={`menu-button ${activeMenu === "help" ? "active" : ""}`}
+            onClick={() => handleMenuClick("help")}
+            onMouseEnter={() => handleMenuHover("help")}
+            onMouseLeave={() => handleMenuButtonLeave("help")}
+          >
+            {t('menu.help')}
+          </button>
         </div>
       </div>
 

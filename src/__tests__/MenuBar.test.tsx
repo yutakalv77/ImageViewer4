@@ -26,6 +26,7 @@ vi.mock('react-i18next', () => ({
         'view_menu.sort_type': '種類順',
         'view_menu.sort_asc': '昇順',
         'view_menu.sort_desc': '降順',
+        'slide_menu.start': '開始',
       };
       return translations[key] || key;
     },
@@ -226,5 +227,76 @@ describe('MenuBar', () => {
     // 「降順」をクリック
     fireEvent.click(screen.getByText('降順'));
     expect(mockUpdateSortOrder).toHaveBeenCalledWith('desc');
+  });
+
+  it('メニューが開いていない状態でメニューボタンにマウスを移動してもメニューは開かない', () => {
+    render(
+      <div>
+        <MenuBar {...defaultProps} />
+      </div>
+    );
+
+    // 最初は閉じた状態
+    expect(screen.queryByText('単ページ表示')).not.toBeInTheDocument();
+
+    // 「表示」ボタンにホバーする
+    fireEvent.mouseEnter(screen.getByText('表示'));
+
+    // 開かないこと
+    expect(screen.queryByText('単ページ表示')).not.toBeInTheDocument();
+  });
+
+  it('メニューが開いている状態で他メニューにマウスカーソルを移動（mouseEnter）すると、前のメニューが閉じて新しいメニューが開く（Windows メモ帳挙動）', () => {
+    render(
+      <div>
+        <MenuBar {...defaultProps} />
+      </div>
+    );
+
+    // 「ファイル」メニューをクリックして開く
+    fireEvent.click(screen.getByText('ファイル'));
+    expect(screen.getByText('フォルダを開く')).toBeInTheDocument();
+    expect(screen.queryByText('単ページ表示')).not.toBeInTheDocument();
+
+    // 「表示」メニューボタンにマウスを移動する（mouseEnter）
+    fireEvent.mouseEnter(screen.getByText('表示'));
+
+    // 「ファイル」メニューが閉じ、「表示」メニューが開くこと
+    expect(screen.queryByText('フォルダを開く')).not.toBeInTheDocument();
+    expect(screen.getByText('単ページ表示')).toBeInTheDocument();
+
+    // さらに「スライド」メニューボタンにマウスを移動する
+    fireEvent.mouseEnter(screen.getByText('スライド'));
+
+    // 「表示」メニューが閉じ、「スライド」メニューが開くこと
+    expect(screen.queryByText('単ページ表示')).not.toBeInTheDocument();
+    expect(screen.getByText('開始')).toBeInTheDocument();
+  });
+
+  it('ホバーでメニューを開いた直後にそのメニューボタンをクリックしても閉じずに開いたままになる', () => {
+    render(
+      <div>
+        <MenuBar {...defaultProps} />
+      </div>
+    );
+
+    // 「ファイル」メニューを開く
+    fireEvent.click(screen.getByText('ファイル'));
+    expect(screen.getByText('フォルダを開く')).toBeInTheDocument();
+
+    // 「表示」メニューにマウスを移動して開く
+    const viewButton = screen.getByText('表示');
+    fireEvent.mouseEnter(viewButton);
+    expect(screen.getByText('単ページ表示')).toBeInTheDocument();
+
+    // そのまま「表示」ボタンをクリックする
+    fireEvent.click(viewButton);
+
+    // 閉じずに開いたまま維持されること
+    expect(screen.getByText('単ページ表示')).toBeInTheDocument();
+
+    // 再度クリックすると閉じること
+    fireEvent.click(viewButton);
+    expect(screen.queryByText('単ページ表示')).not.toBeInTheDocument();
   });
 });
