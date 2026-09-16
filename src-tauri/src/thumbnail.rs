@@ -5,6 +5,20 @@ use tauri::Manager;
 
 use crate::{find_first_image_in_dir, get_path_metadata};
 
+#[cfg(windows)]
+use windows_sys::{
+    core::{GUID, HRESULT},
+    Win32::{
+        Foundation::{S_FALSE, S_OK, SIZE},
+        Graphics::Gdi::{
+            CreateCompatibleDC, DeleteDC, DeleteObject, GetDIBits, GetObjectW, BITMAP, BITMAPINFO,
+            BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HBITMAP, HDC,
+        },
+        System::Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE},
+        UI::Shell::SHCreateItemFromParsingName,
+    },
+};
+
 pub const DEFAULT_THUMBNAIL_MAX_SIZE: u32 = 384;
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -57,17 +71,11 @@ pub fn get_cached_thumbnail_path(
     }
 }
 
-pub fn generate_thumbnail(source_path: &Path, target_cache_path: &Path, max_size: u32) -> Result<PathBuf, String> {
+pub fn save_image_as_thumbnail(img: &image::RgbImage, target_cache_path: &Path) -> Result<PathBuf, String> {
     let parent = target_cache_path.parent().ok_or("Invalid cache path")?;
     if !parent.exists() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-
-    let img = image::open(source_path)
-        .map_err(|e| format!("Failed to open image {:?}: {}", source_path, e))?;
-
-    let thumb = img.thumbnail(max_size, max_size);
-    let rgb = thumb.to_rgb8();
 
     let count = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     let tmp_name = format!(
@@ -78,7 +86,7 @@ pub fn generate_thumbnail(source_path: &Path, target_cache_path: &Path, max_size
     );
     let tmp_path = parent.join(tmp_name);
 
-    rgb.save_with_format(&tmp_path, image::ImageFormat::Jpeg)
+    img.save_with_format(&tmp_path, image::ImageFormat::Jpeg)
         .map_err(|e| format!("Failed to encode thumbnail: {}", e))?;
 
     if let Err(e) = fs::rename(&tmp_path, target_cache_path) {
@@ -87,6 +95,286 @@ pub fn generate_thumbnail(source_path: &Path, target_cache_path: &Path, max_size
     }
 
     Ok(target_cache_path.to_path_buf())
+}
+
+pub fn generate_thumbnail(source_path: &Path, target_cache_path: &Path, max_size: u32) -> Result<PathBuf, String> {
+    let img = image::open(source_path)
+        .map_err(|e| format!("Failed to open image {:?}: {}", source_path, e))?;
+
+    let thumb = img.thumbnail(max_size, max_size);
+    let rgb = thumb.to_rgb8();
+
+    save_image_as_thumbnail(&rgb, target_cache_path)
+}
+
+#[cfg(windows)]
+const IID_ISHELLITEMIMAGEFACTORY: GUID = GUID {
+    data1: 0xbcc18b79,
+    data2: 0xba16,
+    data3: 0x442f,
+    data4: [0x80, 0xc4, 0x7a, 0x14, 0x0c, 0x1d, 0x11, 0x4e],
+};
+
+#[cfg(windows)]
+#[allow(non_snake_case)]
+#[repr(C)]
+struct IShellItemImageFactoryVtbl {
+    pub QueryInterface: unsafe extern "system" fn(
+        this: *mut std::ffi::c_void,
+        riid: *const GUID,
+        ppv: *mut *mut std::ffi::c_void,
+    ) -> HRESULT,
+    pub AddRef: unsafe extern "system" fn(this: *mut std::ffi::c_void) -> u32,
+    pub Release: unsafe extern "system" fn(this: *mut std::ffi::c_void) -> u32,
+    pub GetImage: unsafe extern "system" fn(
+        this: *mut std::ffi::c_void,
+        size: SIZE,
+        flags: u32,
+        phbm: *mut HBITMAP,
+    ) -> HRESULT,
+}
+
+#[cfg(windows)]
+#[allow(non_snake_case)]
+#[repr(C)]
+struct IShellItemImageFactory {
+    pub lpVtbl: *const IShellItemImageFactoryVtbl,
+}
+
+#[cfg(windows)]
+struct ComGuard {
+    should_uninit: bool,
+}
+
+#[cfg(windows)]
+impl ComGuard {
+    fn new() -> Self {
+        unsafe {
+            let hr = CoInitializeEx(
+                std::ptr::null_mut(),
+                (COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) as u32,
+            );
+            Self {
+                should_uninit: hr == S_OK || hr == S_FALSE,
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+impl Drop for ComGuard {
+    fn drop(&mut self) {
+        if self.should_uninit {
+            unsafe {
+                CoUninitialize();
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+struct ComReleaseGuard(*mut IShellItemImageFactory);
+
+#[cfg(windows)]
+impl Drop for ComReleaseGuard {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe {
+                ((*(*self.0).lpVtbl).Release)(self.0 as *mut std::ffi::c_void);
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+struct BitmapGuard(HBITMAP);
+
+#[cfg(windows)]
+impl Drop for BitmapGuard {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe {
+                DeleteObject(self.0 as _);
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+struct DcGuard(HDC);
+
+#[cfg(windows)]
+impl Drop for DcGuard {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe {
+                DeleteDC(self.0);
+            }
+        }
+    }
+}
+
+/// Converts a 32-bit BGRA DIB pixel buffer to an `image::RgbImage`.
+/// If the buffer contains alpha transparency, it composites over a white background.
+/// If all alpha values are 0 (standard Windows GDI opaque bitmap), alpha is ignored.
+pub fn bgra_to_rgb_image(width: u32, height: u32, raw_pixels: &[u8]) -> Result<image::RgbImage, String> {
+    let expected_len = (width as usize) * (height as usize) * 4;
+    if raw_pixels.len() != expected_len {
+        return Err(format!(
+            "Pixel buffer length mismatch: expected {}, got {}",
+            expected_len,
+            raw_pixels.len()
+        ));
+    }
+
+    let has_alpha = raw_pixels.chunks_exact(4).any(|p| p[3] > 0 && p[3] < 255);
+    let mut rgb_pixels = Vec::with_capacity((width as usize) * (height as usize) * 3);
+
+    for chunk in raw_pixels.chunks_exact(4) {
+        let b = chunk[0];
+        let g = chunk[1];
+        let r = chunk[2];
+        let a = chunk[3];
+
+        if has_alpha {
+            let alpha = a as u32;
+            let inv_alpha = 255 - alpha;
+            let blended_r = ((r as u32 * alpha + 255 * inv_alpha) / 255) as u8;
+            let blended_g = ((g as u32 * alpha + 255 * inv_alpha) / 255) as u8;
+            let blended_b = ((b as u32 * alpha + 255 * inv_alpha) / 255) as u8;
+            rgb_pixels.push(blended_r);
+            rgb_pixels.push(blended_g);
+            rgb_pixels.push(blended_b);
+        } else {
+            rgb_pixels.push(r);
+            rgb_pixels.push(g);
+            rgb_pixels.push(b);
+        }
+    }
+
+    image::RgbImage::from_raw(width, height, rgb_pixels)
+        .ok_or_else(|| "Failed to construct RgbImage from pixel buffer".to_string())
+}
+
+#[cfg(windows)]
+pub fn extract_shell_thumbnail(
+    source_path: &Path,
+    target_cache_path: &Path,
+    max_size: u32,
+) -> Result<PathBuf, String> {
+    use std::os::windows::ffi::OsStrExt;
+
+    let _com_guard = ComGuard::new();
+
+    let path_wide: Vec<u16> = source_path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let mut factory_ptr: *mut std::ffi::c_void = std::ptr::null_mut();
+    let hr = unsafe {
+        SHCreateItemFromParsingName(
+            path_wide.as_ptr(),
+            std::ptr::null_mut(),
+            &IID_ISHELLITEMIMAGEFACTORY,
+            &mut factory_ptr,
+        )
+    };
+
+    if hr != S_OK || factory_ptr.is_null() {
+        return Err(format!("SHCreateItemFromParsingName failed with hr=0x{:08x}", hr as u32));
+    }
+
+    let factory_guard = ComReleaseGuard(factory_ptr as *mut IShellItemImageFactory);
+    let size = SIZE {
+        cx: max_size as i32,
+        cy: max_size as i32,
+    };
+
+    let mut raw_hbitmap: HBITMAP = std::ptr::null_mut();
+    // Try SIIGBF_BIGGERSIZEOK | SIIGBF_THUMBNAILONLY (0x1 | 0x8 = 0x9) first
+    let mut hr_get = unsafe {
+        ((*(*factory_guard.0).lpVtbl).GetImage)(factory_ptr, size, 0x9, &mut raw_hbitmap)
+    };
+
+    // If thumbnail-only flag failed, try SIIGBF_BIGGERSIZEOK (0x1)
+    if hr_get != S_OK || raw_hbitmap.is_null() {
+        hr_get = unsafe {
+            ((*(*factory_guard.0).lpVtbl).GetImage)(factory_ptr, size, 0x1, &mut raw_hbitmap)
+        };
+    }
+
+    if hr_get != S_OK || raw_hbitmap.is_null() {
+        return Err(format!("IShellItemImageFactory::GetImage failed with hr=0x{:08x}", hr_get as u32));
+    }
+
+    let bitmap_guard = BitmapGuard(raw_hbitmap);
+
+    // Inspect bitmap geometry
+    let mut bm: BITMAP = unsafe { std::mem::zeroed() };
+    let get_obj_res = unsafe {
+        GetObjectW(
+            bitmap_guard.0 as _,
+            std::mem::size_of::<BITMAP>() as i32,
+            &mut bm as *mut _ as *mut std::ffi::c_void,
+        )
+    };
+
+    if get_obj_res == 0 || bm.bmWidth <= 0 || bm.bmHeight <= 0 {
+        return Err("GetObjectW failed or invalid bitmap dimensions".to_string());
+    }
+
+    let width = bm.bmWidth as u32;
+    let height = bm.bmHeight as u32;
+
+    // Filter out fallback icons (e.g. 16x16 or 32x32 generic file icons when large thumbnail requested)
+    if width < 48 && height < 48 && max_size >= 64 {
+        return Err("Returned image is an icon rather than a thumbnail".to_string());
+    }
+
+    let raw_hdc = unsafe { CreateCompatibleDC(std::ptr::null_mut()) };
+    if raw_hdc.is_null() {
+        return Err("CreateCompatibleDC failed".to_string());
+    }
+    let dc_guard = DcGuard(raw_hdc);
+
+    let mut bmi: BITMAPINFO = unsafe { std::mem::zeroed() };
+    bmi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+    bmi.bmiHeader.biWidth = width as i32;
+    bmi.bmiHeader.biHeight = -(height as i32); // Negative for top-down DIB
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    let mut raw_pixels = vec![0u8; (width * height * 4) as usize];
+    let lines = unsafe {
+        GetDIBits(
+            dc_guard.0,
+            bitmap_guard.0 as _,
+            0,
+            height,
+            raw_pixels.as_mut_ptr() as *mut std::ffi::c_void,
+            &mut bmi,
+            DIB_RGB_COLORS,
+        )
+    };
+
+    if lines == 0 {
+        return Err("GetDIBits failed".to_string());
+    }
+
+    let rgb_img = bgra_to_rgb_image(width, height, &raw_pixels)?;
+    save_image_as_thumbnail(&rgb_img, target_cache_path)
+}
+
+#[cfg(not(windows))]
+pub fn extract_shell_thumbnail(
+    _source_path: &Path,
+    _target_cache_path: &Path,
+    _max_size: u32,
+) -> Result<PathBuf, String> {
+    Err("Shell thumbnail extraction is only supported on Windows".to_string())
 }
 
 pub fn get_or_create_thumbnail(
@@ -132,6 +420,13 @@ pub fn get_or_create_thumbnail(
 
     let filename = compute_thumbnail_filename(&target_image_path, modified, file_size, size);
     let target = cache_dir.join(filename);
+
+    #[cfg(windows)]
+    {
+        if let Ok(thumb_path) = extract_shell_thumbnail(&target_image_path, &target, size) {
+            return Ok(thumb_path.to_string_lossy().to_string());
+        }
+    }
 
     match generate_thumbnail(&target_image_path, &target, size) {
         Ok(thumb_path) => Ok(thumb_path.to_string_lossy().to_string()),
@@ -258,5 +553,91 @@ mod tests {
 
         // Cleanup
         let _ = fs::remove_dir(&temp_dir);
+    }
+
+    #[test]
+    fn test_save_image_as_thumbnail() {
+        let temp_dir = std::env::temp_dir().join("iv_test_save_thumb");
+        let _ = fs::create_dir_all(&temp_dir);
+
+        let out_path = temp_dir.join("saved_thumb.jpg");
+        let img = image::RgbImage::new(50, 50);
+
+        let res = save_image_as_thumbnail(&img, &out_path);
+        assert!(res.is_ok());
+        assert!(out_path.exists());
+        assert!(fs::metadata(&out_path).unwrap().len() > 0);
+
+        let _ = fs::remove_file(&out_path);
+        let _ = fs::remove_dir(&temp_dir);
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_extract_shell_thumbnail_or_fallback() {
+        let temp_dir = std::env::temp_dir().join("iv_test_shell_thumb");
+        let _ = fs::create_dir_all(&temp_dir);
+
+        let sample_img_path = temp_dir.join("sample.jpg");
+        let sample_thumb_path = temp_dir.join("sample_thumb.jpg");
+
+        let test_img = image::RgbImage::new(100, 100);
+        test_img.save(&sample_img_path).unwrap();
+
+        // Even if shell thumbnail extraction fails or succeeds, it must not panic
+        let result = extract_shell_thumbnail(&sample_img_path, &sample_thumb_path, 64);
+        if let Ok(path) = result {
+            assert!(path.exists());
+            assert!(fs::metadata(&path).unwrap().len() > 0);
+            let _ = fs::remove_file(&sample_thumb_path);
+        }
+
+        // Invalid path must return Err
+        let invalid_path = temp_dir.join("non_existent.jpg");
+        let invalid_out = temp_dir.join("non_existent_thumb.jpg");
+        assert!(extract_shell_thumbnail(&invalid_path, &invalid_out, 64).is_err());
+
+        let _ = fs::remove_file(&sample_img_path);
+        let _ = fs::remove_dir(&temp_dir);
+    }
+
+    #[test]
+    fn test_bgra_to_rgb_image_opaque() {
+        // 2x1 image, all alpha = 0 (opaque in GDI convention)
+        // Pixel 0: B=10, G=20, R=30, A=0 -> RGB: [30, 20, 10]
+        // Pixel 1: B=100, G=150, R=200, A=0 -> RGB: [200, 150, 100]
+        let raw = vec![10, 20, 30, 0, 100, 150, 200, 0];
+        let img = bgra_to_rgb_image(2, 1, &raw).unwrap();
+        assert_eq!(img.width(), 2);
+        assert_eq!(img.height(), 1);
+
+        let p0 = img.get_pixel(0, 0);
+        assert_eq!(p0.0, [30, 20, 10]);
+
+        let p1 = img.get_pixel(1, 0);
+        assert_eq!(p1.0, [200, 150, 100]);
+    }
+
+    #[test]
+    fn test_bgra_to_rgb_image_blended_alpha() {
+        // 2x1 image with alpha channel
+        // Pixel 0: B=0, G=0, R=0, A=128 (50% black over white background) -> ~[127, 127, 127]
+        // Pixel 1: B=0, G=0, R=0, A=0 (100% transparent over white background) -> [255, 255, 255]
+        let raw = vec![0, 0, 0, 128, 0, 0, 0, 0];
+        let img = bgra_to_rgb_image(2, 1, &raw).unwrap();
+
+        let p0 = img.get_pixel(0, 0);
+        assert!((p0.0[0] as i32 - 127).abs() <= 1);
+        assert!((p0.0[1] as i32 - 127).abs() <= 1);
+        assert!((p0.0[2] as i32 - 127).abs() <= 1);
+
+        let p1 = img.get_pixel(1, 0);
+        assert_eq!(p1.0, [255, 255, 255]);
+    }
+
+    #[test]
+    fn test_bgra_to_rgb_image_mismatched_length() {
+        let raw = vec![0, 1, 2]; // Needs 8 for 2x1
+        assert!(bgra_to_rgb_image(2, 1, &raw).is_err());
     }
 }
