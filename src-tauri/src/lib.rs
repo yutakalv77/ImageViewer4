@@ -3,6 +3,8 @@ use std::fs;
 use std::path::Path;
 use encoding_rs::SHIFT_JIS;
 
+mod thumbnail;
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EntryItem {
     pub name: String,
@@ -32,7 +34,7 @@ fn get_entry_metadata(entry: &fs::DirEntry) -> (Option<u64>, Option<u64>, Option
     }
 }
 
-fn get_path_metadata(path: &Path) -> (Option<u64>, Option<u64>, Option<u64>) {
+pub(crate) fn get_path_metadata(path: &Path) -> (Option<u64>, Option<u64>, Option<u64>) {
     if let Ok(meta) = fs::metadata(path) {
         let size = Some(meta.len());
         let modified = meta.modified().ok()
@@ -47,7 +49,7 @@ fn get_path_metadata(path: &Path) -> (Option<u64>, Option<u64>, Option<u64>) {
     }
 }
 
-fn is_image(path: &Path) -> bool {
+pub(crate) fn is_image(path: &Path) -> bool {
     let extensions = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "jfif", "avif", "tiff", "tif", "ico", "svg"];
     if let Some(ext) = path.extension() {
         if let Some(ext_str) = ext.to_str() {
@@ -57,7 +59,7 @@ fn is_image(path: &Path) -> bool {
     false
 }
 
-fn find_first_image_in_dir(dir_path: &Path) -> Option<String> {
+pub(crate) fn find_first_image_in_dir(dir_path: &Path) -> Option<String> {
     if let Ok(entries) = fs::read_dir(dir_path) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -195,7 +197,7 @@ fn get_image_info(path: String, calculate_colors: bool) -> Result<ImageInfo, Str
 }
 
 #[tauri::command]
-fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
+fn get_directory_entries(app: tauri::AppHandle, path: String) -> Result<DirectoryResult, String> {
     let p = Path::new(&path);
     let root = if p.is_file() {
         p.parent().ok_or("No parent directory")?
@@ -206,6 +208,8 @@ fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
     if !root.is_dir() {
         return Err("Not a directory".to_string());
     }
+
+    let cache_dir = thumbnail::get_thumbnail_cache_dir(&app).ok();
 
     let mut result = Vec::new();
     if let Ok(entries) = fs::read_dir(root) {
@@ -220,7 +224,19 @@ fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
             let (size, modified, created) = get_entry_metadata(&entry);
 
             if is_dir {
-                let thumbnail_path = find_first_image_in_dir(&entry_path);
+                let thumbnail_path = if let Some(ref cdir) = cache_dir {
+                    if let Some(first_img_str) = find_first_image_in_dir(&entry_path) {
+                        let first_img = Path::new(&first_img_str);
+                        let (isize, imod, _) = get_path_metadata(first_img);
+                        thumbnail::get_cached_thumbnail_path(cdir, first_img, imod, isize, thumbnail::DEFAULT_THUMBNAIL_MAX_SIZE)
+                            .map(|p| p.to_string_lossy().to_string())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
                 result.push(EntryItem {
                     name,
                     path: entry_path.to_string_lossy().to_string(),
@@ -231,11 +247,25 @@ fn get_directory_entries(path: String) -> Result<DirectoryResult, String> {
                     created,
                 });
             } else if is_image(&entry_path) {
+                let ext = entry_path.extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.to_lowercase())
+                    .unwrap_or_default();
+
+                let thumbnail_path = if ext == "svg" {
+                    Some(entry_path.to_string_lossy().to_string())
+                } else if let Some(ref cdir) = cache_dir {
+                    thumbnail::get_cached_thumbnail_path(cdir, &entry_path, modified, size, thumbnail::DEFAULT_THUMBNAIL_MAX_SIZE)
+                        .map(|p| p.to_string_lossy().to_string())
+                } else {
+                    None
+                };
+
                 result.push(EntryItem {
                     name,
                     path: entry_path.to_string_lossy().to_string(),
                     is_dir: false,
-                    thumbnail_path: Some(entry_path.to_string_lossy().to_string()),
+                    thumbnail_path,
                     size,
                     modified,
                     created,
@@ -452,6 +482,37 @@ fn rename_entry(old_path: String, new_path: String) -> Result<(), String> {
     fs::rename(old_path, new_path).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn get_thumbnail(
+    app: tauri::AppHandle,
+    path: String,
+    max_size: Option<u32>,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        thumbnail::get_or_create_thumbnail(&app, &path, max_size)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn clear_thumbnail_cache(app: tauri::AppHandle) -> Result<u64, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        thumbnail::clear_thumbnail_cache(&app)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn get_thumbnail_cache_size(app: tauri::AppHandle) -> Result<u64, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        thumbnail::get_thumbnail_cache_size(&app)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -468,7 +529,10 @@ pub fn run() {
             search_folders, 
             rename_entry,
             search_everything,
-            check_everything_running
+            check_everything_running,
+            get_thumbnail,
+            clear_thumbnail_cache,
+            get_thumbnail_cache_size
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

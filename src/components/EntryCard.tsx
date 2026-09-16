@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { EntryItem } from "../types";
+import { useThumbnail } from "../hooks/useThumbnail";
 import "./EntryCard.css";
 
 interface EntryCardProps {
@@ -26,14 +26,15 @@ export function EntryCard({
   onRenameCancel 
 }: EntryCardProps) {
   const { t } = useTranslation();
+  const cardRef = useRef<HTMLDivElement>(null);
   const [tempName, setLocalName] = useState(entry.name);
-  const [imgError, setImgError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { thumbSrc, isLoading, hasError, onError } = useThumbnail(entry, cardRef);
 
   useEffect(() => {
     setLocalName(entry.name);
-    setImgError(false);
-  }, [entry.name, entry.thumbnail_path]);
+  }, [entry.name]);
 
   useEffect(() => {
     if (isEditing) {
@@ -53,24 +54,26 @@ export function EntryCard({
 
   return (
     <div 
+      ref={cardRef}
       className={`entry-card ${entry.is_dir ? 'is-dir' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
       onContextMenu={onContextMenu}
     >
       <div 
-        className="thumbnail-container" 
+        className={`thumbnail-container ${isLoading ? 'is-loading' : ''}`} 
         title={entry.is_dir ? entry.name : undefined}
       >
-        {entry.thumbnail_path && !imgError ? (
+        {thumbSrc && !hasError ? (
           <img 
-            src={convertFileSrc(entry.thumbnail_path)} 
+            src={thumbSrc} 
             alt={entry.name} 
             loading="lazy" 
-            onError={() => setImgError(true)}
+            decoding="async"
+            onError={onError}
           />
         ) : (
           <div className="no-thumbnail">
-            {entry.is_dir ? t('common.folder') : "🖼️"}
+            {entry.is_dir ? t('common.folder') : (isLoading ? "" : "🖼️")}
           </div>
         )}
         {entry.is_dir && <div className="folder-icon">📁</div>}

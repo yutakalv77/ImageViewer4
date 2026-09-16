@@ -31,6 +31,8 @@ vi.mock("@tauri-apps/plugin-os", () => ({
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
   message: vi.fn(),
+  confirm: vi.fn(() => Promise.resolve(true)),
+  ask: vi.fn(() => Promise.resolve(true)),
 }));
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
@@ -53,3 +55,26 @@ vi.mock("@tauri-apps/api/path", () => ({
   appDataDir: vi.fn(() => Promise.resolve("/mock/appDataDir")),
   join: vi.fn((...args: string[]) => Promise.resolve(args.join("/"))),
 }));
+
+if (typeof window !== "undefined") {
+  class MockIntersectionObserver {
+    callback: IntersectionObserverCallback;
+    constructor(callback: IntersectionObserverCallback) {
+      this.callback = callback;
+    }
+    observe = vi.fn((target: Element) => {
+      // Trigger intersection immediately in tests
+      this.callback(
+        [{ isIntersecting: true, target } as IntersectionObserverEntry],
+        this as unknown as IntersectionObserver
+      );
+    });
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn(() => []);
+    root = null;
+    rootMargin = "";
+    thresholds = [];
+  }
+  window.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
+}
