@@ -128,5 +128,41 @@ describe("EntryCard component", () => {
     });
   });
 
+  it("isEditing が true の時、入力フィールドが表示され Enter でリネーム完了すること", () => {
+    const onRenameComplete = vi.fn();
+    render(
+      <EntryCard
+        {...defaultProps}
+        isEditing={true}
+        onRenameComplete={onRenameComplete}
+      />
+    );
+
+    const input = screen.getByRole("textbox") as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.value).toBe("image1.jpg");
+
+    fireEvent.change(input, { target: { value: "renamed_image.jpg" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(onRenameComplete).toHaveBeenCalledWith("renamed_image.jpg");
+  });
+
+  it("isEditing の時、Escapeキーでリネームがキャンセルされること", () => {
+    const onRenameCancel = vi.fn();
+    render(
+      <EntryCard
+        {...defaultProps}
+        isEditing={true}
+        onRenameCancel={onRenameCancel}
+      />
+    );
+
+    const input = screen.getByRole("textbox");
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(onRenameCancel).toHaveBeenCalled();
+  });
 });
+
 

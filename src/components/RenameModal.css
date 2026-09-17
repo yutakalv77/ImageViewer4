@@ -1,0 +1,32 @@
+.rename-modal {
+  width: 460px !important;
+  height: auto !important;
+  max-width: 90vw;
+}
+
+.rename-modal-body {
+  padding: 24px;
+}
+
+.rename-input-field {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-input, #1e1e1e);
+  border: 1px solid var(--border-main, #333);
+  border-radius: 4px;
+  color: var(--text-main, #eee);
+  font-size: 0.95em;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.rename-input-field:focus {
+  border-color: var(--accent, #2962ff);
+  box-shadow: 0 0 0 2px var(--accent-glow, rgba(41, 98, 255, 0.3));
+}
+
+.rename-error-hint {
+  color: #ff5252;
+  font-size: 0.8em;
+  margin-top: 6px;
+}

@@ -20,7 +20,8 @@ type FileSystemContextType = ReturnType<typeof useFileSystem> & {
   updateAllFavorites: ReturnType<typeof useFavorites>["updateAllFavorites"];
   displayEntries: EntryItem[];
   images: EntryItem[];
-  renameEntry: (oldPath: string, newName: string, currentPath: string) => Promise<void>;
+  renameEntry: (oldPath: string, newName: string, currentPath: string) => Promise<string>;
+
   openFolderDialog: () => Promise<void>;
 };
 

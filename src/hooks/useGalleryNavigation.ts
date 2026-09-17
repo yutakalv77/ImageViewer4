@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { EntryItem } from "../types";
+import { isTargetEditable } from "../utils/domUtils";
 
 export interface UseGalleryNavigationOptions {
   columns?: number;
@@ -29,6 +30,7 @@ export function useGalleryNavigation(
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (editingIndex !== -1) return;
+    if (isTargetEditable(e.target)) return;
     if (document.querySelector('.viewer-overlay') || document.querySelector('.settings-overlay') || document.querySelector('.image-info-overlay')) return;
     if (!entries || entries.length === 0) return;
 
@@ -59,11 +61,15 @@ export function useGalleryNavigation(
       }
       return;
     } else if (e.key === "F2") {
-      if (selectedIndex >= 0 && selectedIndex < entries.length) {
-        setEditingIndex(selectedIndex);
+      e.preventDefault();
+      const targetIdx = selectedIndex >= 0 && selectedIndex < entries.length ? selectedIndex : (entries.length > 0 ? 0 : -1);
+      if (targetIdx !== -1) {
+        setSelectedIndex(targetIdx);
+        setEditingIndex(targetIdx);
       }
       return;
     } else {
+
       return;
     }
 

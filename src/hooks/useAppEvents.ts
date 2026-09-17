@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { isTargetEditable } from "../utils/domUtils";
 
 interface AppEventHandlers {
   closeViewer: () => void;
@@ -71,6 +72,11 @@ export function useAppEvents(handlers: AppEventHandlers, state: AppState) {
         return;
       }
 
+      // 入力フォーム操作中（リネーム・検索・モーダル等）はグローバルショートカット（Backspaceでの戻る・移動等）を抑止
+      if (isTargetEditable(e.target)) {
+        return;
+      }
+
       if (state.isViewerOpen) {
         if (e.key.toLowerCase() === "f") {
           const win = getCurrentWindow();
@@ -88,20 +94,25 @@ export function useAppEvents(handlers: AppEventHandlers, state: AppState) {
           handlers.onSetIsIntervalDialogOpen(false);
         }
       } else {
-        try {
-          const win = getCurrentWindow();
-          if (win.isFullscreen && win.setFullscreen) {
-            const isFull = await win.isFullscreen();
-            if (isFull && e.key === "Escape") {
-              await win.setFullscreen(false);
-              return;
+        if (e.key === "Escape") {
+          try {
+            const win = getCurrentWindow();
+            if (win.isFullscreen && win.setFullscreen) {
+              const isFull = await win.isFullscreen();
+              if (isFull) {
+                await win.setFullscreen(false);
+                return;
+              }
             }
-          }
-        } catch {}
-
-        if (e.key === "Escape" || e.key === "Backspace") handlers.onGoUp();
-        if (e.altKey && e.key === "ArrowLeft") handlers.onGoBack();
-        else if (e.altKey && e.key === "ArrowRight") handlers.onGoForward();
+          } catch {}
+          handlers.onGoUp();
+        } else if (e.key === "Backspace") {
+          handlers.onGoUp();
+        } else if (e.altKey && e.key === "ArrowLeft") {
+          handlers.onGoBack();
+        } else if (e.altKey && e.key === "ArrowRight") {
+          handlers.onGoForward();
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);

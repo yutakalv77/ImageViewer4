@@ -28,7 +28,8 @@ interface GalleryProps {
   scrollTarget?: ScrollTarget;
   onSaveScrollPosition?: (path: string, scrollTop: number) => void;
   onEntryClick: (entry: EntryItem) => void;
-  onRenameEntry: (oldPath: string, newName: string) => Promise<void>;
+  onRenameEntry: (oldPath: string, newName: string) => Promise<string | void>;
+
   onToggleFavorite: (path: string) => void;
   onUpdateBackground: (updates: { path: string }) => void;
   onShowInfo: (path: string) => void;
@@ -253,8 +254,10 @@ export function Gallery({
       { label: t('context_menu.show_info'), onClick: () => onShowInfo(contextMenu.entry.path) }
     ] : []),
     ...(!isZipVirtual ? [
-      { separator: true, label: t('context_menu.rename'), onClick: () => setEditingIndex(contextMenu.index) },
+      { separator: true },
+      { label: t('context_menu.rename'), shortcut: "F2", onClick: () => setEditingIndex(contextMenu.index) },
     ] : []),
+
   ] : [];
 
 

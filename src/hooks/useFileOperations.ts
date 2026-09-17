@@ -1,22 +1,37 @@
 import { useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
+import { message } from "@tauri-apps/plugin-dialog";
+import { getRenamedPath, isValidFileName } from "../utils/fileUtils";
 
 export function useFileOperations(loadDirectory: (path: string, skipHistory?: boolean) => Promise<void>) {
   const { t } = useTranslation();
 
-  const renameEntry = useCallback(async (oldPath: string, newName: string, currentPath: string) => {
-    try {
-      const separator = oldPath.includes('\\') ? '\\' : '/';
-      const pathParts = oldPath.split(separator);
-      pathParts.pop();
-      const newPath = [...pathParts, newName].join(separator);
+  const renameEntry = useCallback(async (oldPath: string, newName: string, currentPath: string): Promise<string> => {
+    const trimmed = newName.trim();
+    if (!isValidFileName(trimmed)) {
+      await message(t('common.error_rename_invalid', { defaultValue: 'ファイル名に無効な文字が含まれているか、空です。' }), {
+        title: t('common.error_rename', { defaultValue: '名前の変更に失敗しました' }),
+        kind: 'error',
+      });
+      throw new Error("Invalid file name");
+    }
 
+    try {
+      const newPath = getRenamedPath(oldPath, trimmed);
+      if (newPath === oldPath) {
+        return oldPath;
+      }
       await invoke("rename_entry", { oldPath, newPath });
       await loadDirectory(currentPath, true); // Refresh without adding to history
-    } catch (err) {
+      return newPath;
+    } catch (err: any) {
       console.error("Failed to rename:", err);
-      alert(t('common.error_rename'));
+      const errMsg = err?.message || String(err);
+      await message(errMsg, {
+        title: t('common.error_rename', { defaultValue: '名前の変更に失敗しました' }),
+        kind: 'error',
+      });
       throw err;
     }
   }, [loadDirectory, t]);
@@ -25,3 +40,4 @@ export function useFileOperations(loadDirectory: (path: string, skipHistory?: bo
     renameEntry
   };
 }
+

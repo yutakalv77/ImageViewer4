@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { EntryItem } from "../types";
 import { useThumbnail } from "../hooks/useThumbnail";
+import { getNameAndExtension } from "../utils/fileUtils";
 import "./EntryCard.css";
 
 interface EntryCardProps {
@@ -29,6 +30,7 @@ export function EntryCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const [tempName, setLocalName] = useState(entry.name);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef(false);
 
   const { thumbSrc, isLoading, hasError, onError } = useThumbnail(entry, cardRef);
 
@@ -38,19 +40,48 @@ export function EntryCard({
 
   useEffect(() => {
     if (isEditing) {
+      isSubmittingRef.current = false;
       setLocalName(entry.name);
-      setTimeout(() => inputRef.current?.focus(), 50);
-      inputRef.current?.select();
+      setTimeout(() => {
+        if (!inputRef.current) return;
+        inputRef.current.focus();
+        // 拡張子を除いたベース名のみを選択（フォルダ以外）
+        const { baseName } = getNameAndExtension(entry.name);
+        if (!entry.is_dir && baseName.length > 0 && baseName !== entry.name) {
+          inputRef.current.setSelectionRange(0, baseName.length);
+        } else {
+          inputRef.current.select();
+        }
+      }, 50);
     }
-  }, [isEditing, entry.name]);
+  }, [isEditing, entry.name, entry.is_dir]);
+
+  const handleComplete = () => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    onRenameComplete(tempName);
+  };
+
+  const handleCancel = () => {
+    isSubmittingRef.current = true;
+    setLocalName(entry.name);
+    onRenameCancel();
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (e.nativeEvent) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
     if (e.key === "Enter") {
-      onRenameComplete(tempName);
+      e.preventDefault();
+      handleComplete();
     } else if (e.key === "Escape") {
-      onRenameCancel();
+      e.preventDefault();
+      handleCancel();
     }
   };
+
 
   const isArchive = !!entry.is_archive;
   const archiveLabel = entry.name.toLowerCase().endsWith('.cbz') ? 'CBZ' : 'ZIP';
@@ -93,7 +124,8 @@ export function EntryCard({
             value={tempName}
             onChange={(e) => setLocalName(e.target.value)}
             onKeyDown={handleKeyDown}
-            onBlur={() => onRenameComplete(tempName)}
+            onBlur={handleComplete}
+
             onClick={(e) => e.stopPropagation()}
           />
         ) : (

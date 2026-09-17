@@ -22,6 +22,7 @@ import { AppBackground } from "./components/AppBackground";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { EntryItem } from "./types";
 import { isVirtualPath } from "./utils/pathUtils";
+import { isTargetEditable } from "./utils/domUtils";
 import { useTranslation } from "react-i18next";
 import { useSettingsContext } from "./context/SettingsContext";
 import { useFileSystemContext } from "./context/FileSystemContext";
@@ -81,8 +82,7 @@ function App() {
   // Prevent default HTML browser context menu across the entire app
   useEffect(() => {
     const handleGlobalContextMenu = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+      if (isTargetEditable(e.target)) {
         return;
       }
       e.preventDefault();
@@ -322,7 +322,10 @@ function App() {
           scrollTarget={scrollTarget}
           onSaveScrollPosition={saveScrollPosition}
           onEntryClick={handleEntryClick}
-          onRenameEntry={(oldPath, newName) => renameEntry(oldPath, newName, currentPath)}
+          onRenameEntry={async (oldPath, newName) => {
+            await renameEntry(oldPath, newName, currentPath);
+          }}
+
           onToggleFavorite={toggleFavorite}
           onUpdateBackground={updateBackground}
           onShowInfo={setSelectedInfoPath}
@@ -343,7 +346,11 @@ function App() {
           onNavigate={onNavigateViewer}
           onShowInfo={setSelectedInfoPath}
           onManualInteraction={stopTimer}
+          onRenameImage={async (oldPath, newName) => {
+            await renameEntry(oldPath, newName, currentPath);
+          }}
         />
+
       </ErrorBoundary>
 
       <ErrorBoundary>

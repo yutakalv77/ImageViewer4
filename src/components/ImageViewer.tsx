@@ -10,6 +10,9 @@ import {
 import { EntryItem, PageNumberPosition } from "../types";
 import { ContextMenu } from "./ContextMenu";
 import { ViewerImageItem } from "./ViewerImageItem";
+import { RenameModal } from "./RenameModal";
+import { isZipVirtualPath } from "../utils/pathUtils";
+import { isTargetEditable } from "../utils/domUtils";
 import "./ImageViewer.css";
 
 // Navigation Constants
@@ -28,6 +31,7 @@ interface ImageViewerProps {
   onNavigate: (index: number) => void;
   onShowInfo: (path: string) => void;
   onManualInteraction: () => void;
+  onRenameImage?: (oldPath: string, newName: string) => Promise<void>;
 }
 
 export function ImageViewer({ 
@@ -41,11 +45,13 @@ export function ImageViewer({
   onClose,
   onNavigate,
   onShowInfo,
-  onManualInteraction
+  onManualInteraction,
+  onRenameImage
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const lastWheelTime = useRef(0);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
 
   // Auto-close viewer if images array becomes empty while open
   useEffect(() => {
@@ -90,10 +96,18 @@ export function ImageViewer({
     lastWheelTime.current = now;
   }, [handleNext, handlePrev]);
 
+  const currentItem = images && images.length > 0 && currentIndex >= 0
+    ? images[Math.max(0, Math.min(currentIndex, images.length - 1))]
+    : null;
+
+  const canRename = !!onRenameImage && !!currentItem && !isZipVirtualPath(currentItem.path);
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isRenameOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isTargetEditable(e.target)) return;
+
       const isRtl = readingDirection === "rtl";
       const nextKey = isRtl ? "ArrowLeft" : "ArrowRight";
       const prevKey = isRtl ? "ArrowRight" : "ArrowLeft";
@@ -104,11 +118,14 @@ export function ImageViewer({
       } else if (e.key === prevKey) {
         e.preventDefault();
         handlePrev();
+      } else if (e.key === "F2" && canRename) {
+        e.preventDefault();
+        setIsRenameOpen(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, handleNext, handlePrev, readingDirection]);
+  }, [isOpen, isRenameOpen, handleNext, handlePrev, readingDirection, canRename]);
 
   const spreadImages = useMemo(() => {
     return getVisibleImages(images, currentIndex, {
@@ -120,15 +137,21 @@ export function ImageViewer({
 
   if (!isOpen || !images || images.length === 0 || currentIndex < 0) return null;
 
-  const currentItem = images[Math.max(0, Math.min(currentIndex, images.length - 1))];
-
   const menuItems = [
     ...(currentItem ? [
       { label: t('context_menu.show_info'), onClick: () => onShowInfo(currentItem.path) },
+      ...(canRename ? [
+        { 
+          label: t('context_menu.rename', { defaultValue: '名前を変更' }), 
+          shortcut: "F2", 
+          onClick: () => setIsRenameOpen(true) 
+        },
+      ] : []),
       { separator: true }
     ] : []),
     { label: t('common.close'), onClick: onClose },
   ];
+
 
   return (
     <div 
@@ -193,6 +216,18 @@ export function ImageViewer({
           onClose={() => setContextMenu(null)} 
         />
       )}
+
+      {currentItem && canRename && (
+        <RenameModal
+          isOpen={isRenameOpen}
+          currentName={currentItem.name}
+          onRename={async (newName) => {
+            await onRenameImage(currentItem.path, newName);
+          }}
+          onClose={() => setIsRenameOpen(false)}
+        />
+      )}
     </div>
+
   );
 }

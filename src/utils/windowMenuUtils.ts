@@ -60,10 +60,4 @@ export function buildWindowMenuItems(options: WindowMenuActionOptions): ContextM
   ];
 }
 
-/**
- * イベントのターゲット要素が入力フォーム（テキスト選択・編集用）であるかを判定するヘルパー
- */
-export function isTargetInputOrTextarea(target: EventTarget | null): boolean {
-  if (!target || !(target instanceof HTMLElement)) return false;
-  return target.tagName === "INPUT" || target.tagName === "TEXTAREA";
-}
+export { isTargetInputOrTextarea, isTargetEditable } from "./domUtils";
