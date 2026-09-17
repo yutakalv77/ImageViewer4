@@ -70,6 +70,14 @@ Tauri (Rust) + React + TypeScript で構築された、圧倒的な描画パフ�
   - **右綴じ（RTL）**: 和書・日本の漫画に最適化。
   - **左綴じ（LTR）**: 洋書・海外コミック・雑誌に最適化。
   - **表紙モード（First page is cover）**: 1ページ目を単独表示し、2ページ目以降を見開きペアリング。
+- **全体ズーム ＆ マウスドラッグ・パン（Pan & Zoom）**:
+  - 画像全体を自在に拡大・縮小し、マウスドラッグで広大なキャンバスを掴んで見渡す本格的パン・ズーム機能。
+  - **カーソル追従ズーム**: `Ctrl + マウスホイール` でカーソル直下を中心に滑らかに無段階拡大（50%〜1000%）。
+  - **マウスドラッグ移動（パン）**: 拡大時に左ボタンドラッグで画像を自在にスクロール移動（グラブカーソル表示、境界クランプ対応）。
+  - **ワンタッチ切り替え**: ダブルクリックで「200%拡大 ⇄ 画面フィット」を素早くトグル。
+  - **キーボードショートカット**: `+` / `-` キーでステップズーム、`0` キー（または `Ctrl+0`）で画面フィットへリセット、`1` キー（または `Ctrl+1`）で100%等倍表示。
+  - **ズーム倍率バッジ**: 拡大中は画面上部に `150%`、`200%` などの倍率バッジを表示（クリックで即座にリセット可能）。
+  - `Escape` キー押下時、ズーム中ならまず画面フィットへリセット。
 - **角丸四角形 拡大鏡（虫眼鏡）機能（`Z` キー / 右クリック）**:
   - 細部や文字を自由な倍率で拡大観察できる高品質な角丸四角形ルーペ。
   - `Z` キーまたは右クリックメニューから瞬時にオン/オフ切り替え。
@@ -152,7 +160,7 @@ Tauri (Rust) + React + TypeScript で構築された、圧倒的な描画パフ�
 - **Image & Archive Processing**: `image` crate, `zip` crate, Windows Shell API (`IShellItemImageFactory`)
 - **Styling**: Modern Vanilla CSS (CSS Variables, Flexbox, Grid)
 - **Internationalization**: i18next (日本語 / English)
-- **Testing**: Vitest (290 tests), React Testing Library, Cargo test (31 tests)（合計 320+ unit tests）
+- **Testing**: Vitest (315 tests), React Testing Library, Cargo test (31 tests)（合計 340+ unit tests）
 
 ---
 

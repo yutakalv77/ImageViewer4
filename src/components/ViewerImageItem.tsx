@@ -6,6 +6,7 @@ interface ViewerImageItemProps {
   image: EntryItem;
   readingDirection: "rtl" | "ltr";
   isMagnifierActive?: boolean;
+  isZoomed?: boolean;
   onNext: () => void;
   onPrev: () => void;
 }
@@ -18,6 +19,7 @@ export function ViewerImageItem({
   image,
   readingDirection,
   isMagnifierActive = false,
+  isZoomed = false,
   onNext,
   onPrev,
 }: ViewerImageItemProps) {
@@ -41,7 +43,7 @@ export function ViewerImageItem({
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLImageElement>) => {
       e.stopPropagation();
-      if (isMagnifierActive) return;
+      if (isMagnifierActive || isZoomed) return;
 
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;

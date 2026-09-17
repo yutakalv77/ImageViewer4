@@ -13,6 +13,9 @@ import { ViewerImageItem } from "./ViewerImageItem";
 import { RenameModal } from "./RenameModal";
 import { MagnifierLens } from "./MagnifierLens";
 import { useMagnifier } from "../hooks/useMagnifier";
+import { useZoomPan } from "../hooks/useZoomPan";
+import { useBadgeFade } from "../hooks/useBadgeFade";
+import { formatZoomPercent } from "../utils/zoomPanUtils";
 import { isZipVirtualPath } from "../utils/pathUtils";
 import { isTargetEditable } from "../utils/domUtils";
 import "./ImageViewer.css";
@@ -57,6 +60,18 @@ export function ImageViewer({
   const [isRenameOpen, setIsRenameOpen] = useState(false);
 
   const magnifier = useMagnifier(overlayRef, currentIndex);
+  const zoomPan = useZoomPan({
+    containerRef: overlayRef,
+    activeKey: currentIndex,
+    enabled: !magnifier.isMagnifierActive,
+  });
+
+  const badgeFade = useBadgeFade({
+    triggerKey: `${zoomPan.scale}-${zoomPan.offset.x}-${zoomPan.offset.y}`,
+    enabled: zoomPan.isZoomed && !magnifier.isMagnifierActive,
+    activeDurationMs: 2000,
+    fadeDurationMs: 2000,
+  });
 
   // Auto-close magnifier when viewer closes
   useEffect(() => {
@@ -110,8 +125,14 @@ export function ImageViewer({
 
   const handleCombinedWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     if (magnifier.handleWheel(e)) return;
+    if (zoomPan.handleWheel(e)) return;
     handleWheel(e);
-  }, [magnifier, handleWheel]);
+  }, [magnifier, zoomPan, handleWheel]);
+
+  const handleCombinedMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    magnifier.handleMouseMove(e);
+    zoomPan.handleMouseMove(e);
+  }, [magnifier, zoomPan]);
 
   const currentItem = images && images.length > 0 && currentIndex >= 0
     ? images[Math.max(0, Math.min(currentIndex, images.length - 1))]
@@ -141,10 +162,16 @@ export function ImageViewer({
       } else if (e.key.toLowerCase() === "z") {
         e.preventDefault();
         magnifier.toggleMagnifier();
-      } else if (e.key === "Escape" && magnifier.isMagnifierActive) {
+      } else if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
-        magnifier.setMagnifierActive(false);
+        if (magnifier.isMagnifierActive) {
+          magnifier.setMagnifierActive(false);
+        } else if (zoomPan.isZoomed) {
+          zoomPan.resetZoom();
+        } else {
+          onClose();
+        }
       } else if (magnifier.isMagnifierActive) {
         const isNumpadAdd = e.code === "NumpadAdd";
         const isNumpadSubtract = e.code === "NumpadSubtract";
@@ -179,11 +206,26 @@ export function ImageViewer({
             magnifier.zoomOut();
           }
         }
+      } else {
+        // Zoom & Pan shortcuts when magnifier is not active
+        if (e.key === "0" || (e.ctrlKey && e.key === "0")) {
+          e.preventDefault();
+          zoomPan.resetZoom();
+        } else if (e.key === "1" || (e.ctrlKey && e.key === "1")) {
+          e.preventDefault();
+          zoomPan.setActualSize();
+        } else if (e.key === "+" || (!e.shiftKey && e.key === "=") || e.code === "NumpadAdd") {
+          e.preventDefault();
+          zoomPan.zoomIn();
+        } else if (e.key === "-" || e.code === "NumpadSubtract") {
+          e.preventDefault();
+          zoomPan.zoomOut();
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isRenameOpen, handleNext, handlePrev, readingDirection, canRename, magnifier]);
+  }, [isOpen, isRenameOpen, handleNext, handlePrev, readingDirection, canRename, magnifier, zoomPan, onClose]);
 
   const spreadImages = useMemo(() => {
     return getVisibleImages(images, currentIndex, {
@@ -219,12 +261,22 @@ export function ImageViewer({
   return (
     <div 
       ref={overlayRef}
-      className={`viewer-overlay page-pos-${pageNumberPosition} ${magnifier.isMagnifierActive ? 'magnifier-mode' : ''}`} 
+      className={`viewer-overlay page-pos-${pageNumberPosition} ${magnifier.isMagnifierActive ? 'magnifier-mode' : ''} ${zoomPan.isZoomed ? 'is-zoomed' : ''} ${zoomPan.isDragging ? 'is-dragging' : ''}`} 
       onClick={() => {
         if (magnifier.isMagnifierActive) return;
+        if (zoomPan.hasDragged) {
+          zoomPan.clearHasDragged();
+          return;
+        }
+        if (zoomPan.isZoomed) {
+          return;
+        }
         onClose();
       }}
-      onMouseMove={magnifier.handleMouseMove}
+      onMouseDown={zoomPan.handleMouseDown}
+      onMouseMove={handleCombinedMouseMove}
+      onMouseUp={zoomPan.handleMouseUp}
+      onDoubleClick={zoomPan.handleDoubleClick}
       onWheel={handleCombinedWheel}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -235,31 +287,56 @@ export function ImageViewer({
       <div className="direction-indicator" title={t('common.reading_direction')}>
         {readingDirection === "rtl" ? "⇦" : "⇨"}
       </div>
+
+      {badgeFade.isVisible && (
+        <div
+          className={`viewer-zoom-badge fade-${badgeFade.fadeState}`}
+          data-testid="viewer-zoom-badge"
+          onMouseEnter={badgeFade.handleMouseEnter}
+          onMouseLeave={badgeFade.handleMouseLeave}
+          onClick={(e) => {
+            e.stopPropagation();
+            zoomPan.resetZoom();
+          }}
+          title={t("viewer.zoom_reset", { defaultValue: "クリックでリセット" })}
+        >
+          <span className="viewer-zoom-badge-text">{formatZoomPercent(zoomPan.scale)}</span>
+          <span className="viewer-zoom-badge-reset">✕</span>
+        </div>
+      )}
       
       <div className={`viewer-container ${viewMode === 'spread' ? 'spread-view' : ''}`}>
-        {spreadImages.length > 0 ? (
-          spreadImages.map((img, idx) => {
-            if (!img) return null;
-            return (
-              <ViewerImageItem
-                key={`${img.path}-${idx}`}
-                image={img}
-                readingDirection={readingDirection}
-                isMagnifierActive={magnifier.isMagnifierActive}
-                onNext={handleNext}
-                onPrev={handlePrev}
-              />
-            );
-          })
-        ) : (
-          <div className="viewer-image-error" onClick={(e) => e.stopPropagation()}>
-            <div className="error-icon">🖼️</div>
-            <div className="error-text">表示できる画像がありません</div>
-            <button className="error-retry-btn" onClick={onClose}>
-              {t('common.close')}
-            </button>
-          </div>
-        )}
+        <div
+          className={`viewer-zoom-layer ${zoomPan.isDragging ? "is-dragging" : ""}`}
+          style={{
+            transform: `translate(${zoomPan.offset.x}px, ${zoomPan.offset.y}px) scale(${zoomPan.scale})`,
+          }}
+        >
+          {spreadImages.length > 0 ? (
+            spreadImages.map((img, idx) => {
+              if (!img) return null;
+              return (
+                <ViewerImageItem
+                  key={`${img.path}-${idx}`}
+                  image={img}
+                  readingDirection={readingDirection}
+                  isMagnifierActive={magnifier.isMagnifierActive}
+                  isZoomed={zoomPan.isZoomed}
+                  onNext={handleNext}
+                  onPrev={handlePrev}
+                />
+              );
+            })
+          ) : (
+            <div className="viewer-image-error" onClick={(e) => e.stopPropagation()}>
+              <div className="error-icon">🖼️</div>
+              <div className="error-text">表示できる画像がありません</div>
+              <button className="error-retry-btn" onClick={onClose}>
+                {t('common.close')}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       
