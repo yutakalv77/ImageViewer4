@@ -83,6 +83,10 @@ export function useAppEvents(handlers: AppEventHandlers, state: AppState) {
           const isFull = await win.isFullscreen();
           await win.setFullscreen(!isFull);
         } else if (e.key === "Escape" || e.key === "Backspace") {
+          // 拡大鏡（ルーペ）表示中のEscapeは拡大鏡の終了を優先しビューワーを閉じない
+          if (e.key === "Escape" && document.querySelector(".magnifier-lens")) {
+            return;
+          }
           handlers.closeViewer();
         } else if (e.key.toLowerCase() === "m") {
           handlers.onUpdateViewMode(state.viewMode === "single" ? "spread" : "single");

@@ -70,8 +70,13 @@
     "fav_add": "お気に入りに追加",
     "fav_remove": "お気に入りから削除",
     "rename": "名前を変更",
+    "magnifier": "拡大鏡",
     "set_bg": "背景に設定する",
     "show_info": "情報の表示..."
+  },
+  "magnifier": {
+    "zoom_help": "ズーム倍率変更：Ctrl+ホイールまたは+/-キー",
+    "size_help": "レンズサイズ調整：Shift+ホイールまたは+/-キー"
   },
   "image_info": {
     "title": "画像の情報",

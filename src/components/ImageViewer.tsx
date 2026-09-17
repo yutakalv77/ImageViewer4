@@ -11,6 +11,8 @@ import { EntryItem, PageNumberPosition } from "../types";
 import { ContextMenu } from "./ContextMenu";
 import { ViewerImageItem } from "./ViewerImageItem";
 import { RenameModal } from "./RenameModal";
+import { MagnifierLens } from "./MagnifierLens";
+import { useMagnifier } from "../hooks/useMagnifier";
 import { isZipVirtualPath } from "../utils/pathUtils";
 import { isTargetEditable } from "../utils/domUtils";
 import "./ImageViewer.css";
@@ -50,8 +52,18 @@ export function ImageViewer({
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const lastWheelTime = useRef(0);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
+
+  const magnifier = useMagnifier(overlayRef, currentIndex);
+
+  // Auto-close magnifier when viewer closes
+  useEffect(() => {
+    if (!isOpen) {
+      magnifier.setMagnifierActive(false);
+    }
+  }, [isOpen, magnifier]);
 
   // Auto-close viewer if images array becomes empty while open
   useEffect(() => {
@@ -96,6 +108,11 @@ export function ImageViewer({
     lastWheelTime.current = now;
   }, [handleNext, handlePrev]);
 
+  const handleCombinedWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (magnifier.handleWheel(e)) return;
+    handleWheel(e);
+  }, [magnifier, handleWheel]);
+
   const currentItem = images && images.length > 0 && currentIndex >= 0
     ? images[Math.max(0, Math.min(currentIndex, images.length - 1))]
     : null;
@@ -121,11 +138,52 @@ export function ImageViewer({
       } else if (e.key === "F2" && canRename) {
         e.preventDefault();
         setIsRenameOpen(true);
+      } else if (e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        magnifier.toggleMagnifier();
+      } else if (e.key === "Escape" && magnifier.isMagnifierActive) {
+        e.preventDefault();
+        e.stopPropagation();
+        magnifier.setMagnifierActive(false);
+      } else if (magnifier.isMagnifierActive) {
+        const isNumpadAdd = e.code === "NumpadAdd";
+        const isNumpadSubtract = e.code === "NumpadSubtract";
+        const isMinusKey = e.code === "Minus" || e.key === "-";
+        const isPlusKey = e.key === "+" || (!e.shiftKey && e.key === "=");
+
+        if (e.ctrlKey) {
+          if (isPlusKey || isNumpadAdd) {
+            e.preventDefault();
+            magnifier.zoomIn();
+          } else if (isMinusKey || isNumpadSubtract) {
+            e.preventDefault();
+            magnifier.zoomOut();
+          }
+        } else if (e.shiftKey) {
+          if (isNumpadAdd || e.code === "Equal" || e.key === "*" || e.code === "BracketRight") {
+            e.preventDefault();
+            magnifier.increaseLensSize();
+          } else if (isMinusKey || isNumpadSubtract || e.key === "_" || (e.code === "Minus" && e.key === "=")) {
+            e.preventDefault();
+            magnifier.decreaseLensSize();
+          } else if (isPlusKey) {
+            e.preventDefault();
+            magnifier.zoomIn();
+          }
+        } else {
+          if (isPlusKey || isNumpadAdd) {
+            e.preventDefault();
+            magnifier.zoomIn();
+          } else if (isMinusKey || isNumpadSubtract) {
+            e.preventDefault();
+            magnifier.zoomOut();
+          }
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isRenameOpen, handleNext, handlePrev, readingDirection, canRename]);
+  }, [isOpen, isRenameOpen, handleNext, handlePrev, readingDirection, canRename, magnifier]);
 
   const spreadImages = useMemo(() => {
     return getVisibleImages(images, currentIndex, {
@@ -140,6 +198,11 @@ export function ImageViewer({
   const menuItems = [
     ...(currentItem ? [
       { label: t('context_menu.show_info'), onClick: () => onShowInfo(currentItem.path) },
+      { 
+        label: t('context_menu.magnifier', { defaultValue: '拡大鏡' }), 
+        shortcut: "Z", 
+        onClick: () => magnifier.toggleMagnifier() 
+      },
       ...(canRename ? [
         { 
           label: t('context_menu.rename', { defaultValue: '名前を変更' }), 
@@ -155,9 +218,14 @@ export function ImageViewer({
 
   return (
     <div 
-      className={`viewer-overlay page-pos-${pageNumberPosition}`} 
-      onClick={onClose}
-      onWheel={handleWheel}
+      ref={overlayRef}
+      className={`viewer-overlay page-pos-${pageNumberPosition} ${magnifier.isMagnifierActive ? 'magnifier-mode' : ''}`} 
+      onClick={() => {
+        if (magnifier.isMagnifierActive) return;
+        onClose();
+      }}
+      onMouseMove={magnifier.handleMouseMove}
+      onWheel={handleCombinedWheel}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -177,6 +245,7 @@ export function ImageViewer({
                 key={`${img.path}-${idx}`}
                 image={img}
                 readingDirection={readingDirection}
+                isMagnifierActive={magnifier.isMagnifierActive}
                 onNext={handleNext}
                 onPrev={handlePrev}
               />
@@ -227,6 +296,16 @@ export function ImageViewer({
           onClose={() => setIsRenameOpen(false)}
         />
       )}
+
+      <MagnifierLens
+        isActive={magnifier.isMagnifierActive}
+        zoom={magnifier.zoom}
+        lensSize={magnifier.lensSize}
+        cursorPos={magnifier.cursorPos}
+        imageSrc={magnifier.activeImageSrc}
+        imageRect={magnifier.activeImageRect}
+        containerRect={magnifier.containerRect}
+      />
     </div>
 
   );

@@ -13,6 +13,14 @@
   user-select: none;
 }
 
+.viewer-overlay.magnifier-mode {
+  cursor: crosshair;
+}
+
+.viewer-overlay.magnifier-mode .viewer-image {
+  cursor: crosshair;
+}
+
 .direction-indicator {
   position: absolute;
   top: 20px;

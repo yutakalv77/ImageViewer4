@@ -70,8 +70,13 @@
     "fav_add": "Add to Favorites",
     "fav_remove": "Remove from Favorites",
     "rename": "Rename",
+    "magnifier": "Magnifier",
     "set_bg": "Set as Background",
     "show_info": "Show Info..."
+  },
+  "magnifier": {
+    "zoom_help": "Zoom: Ctrl+Wheel or +/-",
+    "size_help": "Size: Shift+Wheel or +/-"
   },
   "image_info": {
     "title": "Image Information",

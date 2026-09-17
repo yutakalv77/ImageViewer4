@@ -1,0 +1,104 @@
+.magnifier-lens {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 16px;
+  border: 3px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.8), 0 8px 32px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  background-color: #1a1a1a;
+  z-index: 1002;
+  box-sizing: border-box;
+}
+
+.magnifier-image {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none !important;
+  max-height: none !important;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+}
+
+.magnifier-crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.magnifier-crosshair::before,
+.magnifier-crosshair::after {
+  content: "";
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+}
+
+.magnifier-crosshair::before {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  transform: translateX(-50%);
+}
+
+.magnifier-crosshair::after {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  transform: translateY(-50%);
+}
+
+.magnifier-info-panel {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1002;
+  box-sizing: border-box;
+  background-color: rgba(18, 18, 18, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
+  padding: 8px 12px;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.magnifier-info-header {
+  display: flex;
+  align-items: center;
+}
+
+.magnifier-info-badge {
+  display: inline-block;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.magnifier-info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.magnifier-info-line {
+  font-size: 11px;
+  color: #e5e7eb;
+  line-height: 1.4;
+  white-space: nowrap;
+}

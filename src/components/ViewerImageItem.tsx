@@ -5,6 +5,7 @@ import { useImageSource } from "../hooks/useImageSource";
 interface ViewerImageItemProps {
   image: EntryItem;
   readingDirection: "rtl" | "ltr";
+  isMagnifierActive?: boolean;
   onNext: () => void;
   onPrev: () => void;
 }
@@ -16,6 +17,7 @@ interface ViewerImageItemProps {
 export function ViewerImageItem({
   image,
   readingDirection,
+  isMagnifierActive = false,
   onNext,
   onPrev,
 }: ViewerImageItemProps) {
@@ -39,6 +41,8 @@ export function ViewerImageItem({
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLImageElement>) => {
       e.stopPropagation();
+      if (isMagnifierActive) return;
+
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const isRtl = readingDirection === "rtl";
@@ -51,7 +55,7 @@ export function ViewerImageItem({
         isRtl ? onNext() : onPrev();
       }
     },
-    [readingDirection, onNext, onPrev]
+    [isMagnifierActive, readingDirection, onNext, onPrev]
   );
 
   return (

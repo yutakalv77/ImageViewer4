@@ -133,4 +133,39 @@ describe('ViewerImageItem', () => {
     expect(retryBtn).toBeInTheDocument();
     fireEvent.click(retryBtn);
   });
+
+  it('isMagnifierActive が true の時はクリックしても画像送りが実行されないこと', () => {
+    vi.spyOn(useImageSourceModule, 'useImageSource').mockReturnValue({
+      src: 'asset://localhost/test.jpg',
+      isLoading: false,
+      error: null,
+    });
+
+    render(
+      <ViewerImageItem
+        image={dummyImage}
+        readingDirection="ltr"
+        isMagnifierActive={true}
+        onNext={onNext}
+        onPrev={onPrev}
+      />
+    );
+
+    const img = screen.getByRole('img');
+    vi.spyOn(img, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 200,
+      height: 200,
+      right: 200,
+      bottom: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    fireEvent.click(img, { clientX: 150 });
+    expect(onNext).not.toHaveBeenCalled();
+    expect(onPrev).not.toHaveBeenCalled();
+  });
 });
