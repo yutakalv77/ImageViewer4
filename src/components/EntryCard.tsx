@@ -52,16 +52,19 @@ export function EntryCard({
     }
   };
 
+  const isArchive = !!entry.is_archive;
+  const archiveLabel = entry.name.toLowerCase().endsWith('.cbz') ? 'CBZ' : 'ZIP';
+
   return (
     <div 
       ref={cardRef}
-      className={`entry-card ${entry.is_dir ? 'is-dir' : ''} ${isSelected ? 'selected' : ''}`}
+      className={`entry-card ${entry.is_dir ? 'is-dir' : ''} ${isArchive ? 'is-archive' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
       onContextMenu={onContextMenu}
     >
       <div 
         className={`thumbnail-container ${isLoading ? 'is-loading' : ''}`} 
-        title={entry.is_dir ? entry.name : undefined}
+        title={entry.is_dir || isArchive ? entry.name : undefined}
       >
         {thumbSrc && !hasError ? (
           <img 
@@ -73,12 +76,14 @@ export function EntryCard({
           />
         ) : (
           <div className="no-thumbnail">
-            {isLoading ? "" : (entry.is_dir ? t('common.folder') : "🖼️")}
+            {isLoading ? "" : (entry.is_dir ? t('common.folder') : isArchive ? "📦" : "🖼️")}
           </div>
         )}
         {entry.is_dir && <div className="folder-icon">📁</div>}
+        {isArchive && <div className="archive-badge" title="Archive">📦 {archiveLabel}</div>}
         {isFavorite && <div className="favorite-star" title={t('favorites.label')}>⭐</div>}
       </div>
+
       
       <div className="entry-name-container">
         {isEditing ? (

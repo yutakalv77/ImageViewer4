@@ -19,10 +19,17 @@ export function sortEntries(
   const orderMultiplier = sortOrder === "asc" ? 1 : -1;
 
   sorted.sort((a, b) => {
-    // フォルダは常に先頭に配置
+    // フォルダおよびアーカイブ（ZIP）は通常ファイルより前に配置
+    const isFolderLikeA = a.is_dir || !!a.is_archive;
+    const isFolderLikeB = b.is_dir || !!b.is_archive;
+    if (isFolderLikeA !== isFolderLikeB) {
+      return isFolderLikeA ? -1 : 1;
+    }
+    // フォルダとアーカイブが混在する場合は、通常フォルダを先頭、その後にアーカイブを配置
     if (a.is_dir !== b.is_dir) {
       return a.is_dir ? -1 : 1;
     }
+
 
     let comparison = 0;
 

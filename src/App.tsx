@@ -249,7 +249,7 @@ function App() {
 
   const handleEntryClick = useCallback((entry: EntryItem) => {
     if (!entry) return;
-    if (entry.is_dir) {
+    if (entry.is_dir || entry.is_archive) {
       handleLoadDirectory(entry.path);
     } else {
       const idx = images.findIndex(img => img.path === entry.path);

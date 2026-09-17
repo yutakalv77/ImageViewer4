@@ -2,6 +2,7 @@ export interface EntryItem {
   name: string;
   path: string;
   is_dir: boolean;
+  is_archive?: boolean | null;
   thumbnail_path: string | null;
   size?: number;
   modified?: number; // timestamp (ms)

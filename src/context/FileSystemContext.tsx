@@ -56,7 +56,8 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return sortEntries(rawEntries, sortBy, sortOrder);
   }, [fs.currentPath, fs.entries, favorites, sortBy, sortOrder]);
 
-  const images = useMemo(() => displayEntries.filter(e => !e.is_dir), [displayEntries]);
+  const images = useMemo(() => displayEntries.filter(e => !e.is_dir && !e.is_archive), [displayEntries]);
+
 
   const value = {
     ...fs,

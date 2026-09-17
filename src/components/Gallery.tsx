@@ -15,6 +15,8 @@ import {
   DEFAULT_GRID_PADDING,
 } from "../constants";
 import { calculateOverscanRows } from "../utils/virtualGridUtils";
+import { isZipVirtualPath, parseZipPath } from "../utils/pathUtils";
+
 
 interface GalleryProps {
   currentPath: string;
@@ -229,11 +231,15 @@ export function Gallery({
 
   const handleReveal = async (path: string) => {
     try {
-      await revealItemInDir(path);
+      const targetPath = isZipVirtualPath(path) ? parseZipPath(path).zipPath : path;
+      await revealItemInDir(targetPath);
     } catch (err) {
       console.error("Failed to reveal:", err);
     }
   };
+
+  const isZipVirtual = contextMenu ? isZipVirtualPath(contextMenu.entry.path) : false;
+  const isImageEntry = contextMenu ? !contextMenu.entry.is_dir && !contextMenu.entry.is_archive : false;
 
   const menuItems = contextMenu ? [
     { label: t('context_menu.reveal'), onClick: () => handleReveal(contextMenu.entry.path) },
@@ -242,12 +248,15 @@ export function Gallery({
       label: isFavorite(contextMenu.entry.path) ? t('context_menu.fav_remove') : t('context_menu.fav_add'), 
       onClick: () => onToggleFavorite(contextMenu.entry.path) 
     },
-    ...(!contextMenu.entry.is_dir ? [
+    ...(isImageEntry ? [
       { label: t('context_menu.set_bg'), onClick: () => onUpdateBackground({ path: contextMenu.entry.path }) },
       { label: t('context_menu.show_info'), onClick: () => onShowInfo(contextMenu.entry.path) }
     ] : []),
-    { separator: true, label: t('context_menu.rename'), onClick: () => setEditingIndex(contextMenu.index) },
+    ...(!isZipVirtual ? [
+      { separator: true, label: t('context_menu.rename'), onClick: () => setEditingIndex(contextMenu.index) },
+    ] : []),
   ] : [];
+
 
   return (
     <div 

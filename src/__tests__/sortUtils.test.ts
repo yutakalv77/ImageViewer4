@@ -19,12 +19,18 @@ describe('sortUtils', () => {
     expect(getFileExtension('UPPER.PNG')).toBe('png');
   });
 
-  it('フォルダは常に先頭に配置されること', () => {
-    const sorted = sortEntries(sampleEntries, 'name', 'asc');
-    expect(sorted[0].is_dir).toBe(true);
-    expect(sorted[1].is_dir).toBe(true);
-    expect(sorted[2].is_dir).toBe(false);
+  it('フォルダは常に先頭、次にアーカイブ、最後にファイルが配置されること', () => {
+    const entriesWithArchive: EntryItem[] = [
+      { name: 'photo1.jpg', path: '/p1', is_dir: false, thumbnail_path: null },
+      { name: 'archive.zip', path: '/a.zip', is_dir: false, is_archive: true, thumbnail_path: null },
+      { name: 'FolderA', path: '/fa', is_dir: true, thumbnail_path: null },
+    ];
+    const sorted = sortEntries(entriesWithArchive, 'name', 'asc');
+    expect(sorted[0].name).toBe('FolderA');
+    expect(sorted[1].name).toBe('archive.zip');
+    expect(sorted[2].name).toBe('photo1.jpg');
   });
+
 
   it('名前順（自然順）で昇順ソートされること', () => {
     const sorted = sortEntries(sampleEntries, 'name', 'asc');

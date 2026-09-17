@@ -95,4 +95,38 @@ describe("EntryCard component", () => {
     fireEvent.click(screen.getByText("image1.jpg"));
     expect(onClick).toHaveBeenCalled();
   });
+
+  it("renders archive badge when is_archive is true", async () => {
+    const archiveEntry: EntryItem = {
+      name: "manga.zip",
+      path: "/comics/manga.zip",
+      is_dir: false,
+      is_archive: true,
+      thumbnail_path: null,
+    };
+
+    render(<EntryCard {...defaultProps} entry={archiveEntry} />);
+    await waitFor(() => {
+      expect(screen.getByText("manga.zip")).toBeInTheDocument();
+      expect(screen.getByText("📦 ZIP")).toBeInTheDocument();
+    });
+  });
+
+  it("renders CBZ label on archive badge for .cbz files", async () => {
+    const cbzEntry: EntryItem = {
+      name: "comic.cbz",
+      path: "/comics/comic.cbz",
+      is_dir: false,
+      is_archive: true,
+      thumbnail_path: null,
+    };
+
+    render(<EntryCard {...defaultProps} entry={cbzEntry} />);
+    await waitFor(() => {
+      expect(screen.getByText("comic.cbz")).toBeInTheDocument();
+      expect(screen.getByText("📦 CBZ")).toBeInTheDocument();
+    });
+  });
+
 });
+

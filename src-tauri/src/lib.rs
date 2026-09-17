@@ -5,12 +5,15 @@ use std::sync::Arc;
 use encoding_rs::SHIFT_JIS;
 
 mod thumbnail;
+pub mod zip_handler;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EntryItem {
     pub name: String,
     pub path: String,
     pub is_dir: bool,
+    #[serde(default)]
+    pub is_archive: Option<bool>,
     pub thumbnail_path: Option<String>,
     #[serde(default)]
     pub size: Option<u64>,
@@ -137,6 +140,51 @@ fn get_image_order_in_folder(path: &Path) -> String {
 
 #[tauri::command]
 fn get_image_info(path: String, calculate_colors: bool) -> Result<ImageInfo, String> {
+    if zip_handler::is_zip_path(&path) {
+        if let Some((zip_path, inner_path)) = zip_handler::parse_zip_path(&path) {
+            let start_time = std::time::Instant::now();
+            let (bytes, _mime) = zip_handler::read_zip_entry_bytes(&zip_path, &inner_path)?;
+            let load_time_ms = start_time.elapsed().as_millis() as u64;
+
+            let img = image::load_from_memory(&bytes).map_err(|e| e.to_string())?;
+            let (width, height) = (img.width(), img.height());
+            let format = Path::new(&inner_path)
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("IMG")
+                .to_uppercase();
+            let bpp = img.color().bits_per_pixel() as u32;
+            let size_bytes = bytes.len() as u64;
+            let colors = if calculate_colors {
+                Some(count_unique_colors(&img))
+            } else {
+                None
+            };
+            let name = Path::new(&inner_path)
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| inner_path.clone());
+            let location = format!("{} (ZIP)", zip_path.to_string_lossy());
+            let modified = String::new();
+            let order = String::new();
+
+            return Ok(ImageInfo {
+                name,
+                location,
+                full_path: path,
+                format,
+                width,
+                height,
+                bpp,
+                size_bytes,
+                colors,
+                modified,
+                order,
+                load_time_ms,
+            });
+        }
+    }
+
     let p = Path::new(&path);
     if !p.is_file() {
         return Err("Not a file".to_string());
@@ -212,6 +260,25 @@ fn get_image_info(path: String, calculate_colors: bool) -> Result<ImageInfo, Str
 
 #[tauri::command]
 fn get_directory_entries(app: tauri::AppHandle, path: String) -> Result<DirectoryResult, String> {
+    let cache_dir = thumbnail::get_thumbnail_cache_dir(&app).ok();
+
+    if zip_handler::is_zip_path(&path) {
+        if let Some((zip_path, inner_path)) = zip_handler::parse_zip_path(&path) {
+            let mut entries = zip_handler::list_zip_entries(&zip_path, &inner_path, cache_dir.as_deref())?;
+            entries.sort_by(|a, b| {
+                if a.is_dir != b.is_dir {
+                    b.is_dir.cmp(&a.is_dir)
+                } else {
+                    a.name.to_lowercase().cmp(&b.name.to_lowercase())
+                }
+            });
+            return Ok(DirectoryResult {
+                entries,
+                path: path.clone(),
+            });
+        }
+    }
+
     let p = Path::new(&path);
     let root = if p.is_file() {
         p.parent().ok_or("No parent directory")?
@@ -222,8 +289,6 @@ fn get_directory_entries(app: tauri::AppHandle, path: String) -> Result<Director
     if !root.is_dir() {
         return Err("Not a directory".to_string());
     }
-
-    let cache_dir = thumbnail::get_thumbnail_cache_dir(&app).ok();
 
     let mut result = Vec::new();
     if let Ok(entries) = fs::read_dir(root) {
@@ -246,6 +311,22 @@ fn get_directory_entries(app: tauri::AppHandle, path: String) -> Result<Director
                     name,
                     path: entry_path.to_string_lossy().to_string(),
                     is_dir: true,
+                    is_archive: Some(false),
+                    thumbnail_path,
+                    size,
+                    modified,
+                    created,
+                });
+            } else if zip_handler::is_zip_file(&entry_path) {
+                let thumbnail_path = cache_dir.as_deref()
+                    .and_then(|cdir| thumbnail::get_cached_thumbnail_path(cdir, &entry_path, modified, size, thumbnail::DEFAULT_THUMBNAIL_MAX_SIZE))
+                    .map(|p| p.to_string_lossy().to_string());
+
+                result.push(EntryItem {
+                    name,
+                    path: entry_path.to_string_lossy().to_string(),
+                    is_dir: false,
+                    is_archive: Some(true),
                     thumbnail_path,
                     size,
                     modified,
@@ -269,6 +350,7 @@ fn get_directory_entries(app: tauri::AppHandle, path: String) -> Result<Director
                     name,
                     path: entry_path.to_string_lossy().to_string(),
                     is_dir: false,
+                    is_archive: Some(false),
                     thumbnail_path,
                     size,
                     modified,
@@ -337,6 +419,7 @@ fn search_recursive(
                         name: name.clone(),
                         path: path.to_string_lossy().to_string(),
                         is_dir: true,
+                        is_archive: Some(false),
                         thumbnail_path,
                         size,
                         modified,
@@ -465,6 +548,7 @@ async fn search_everything(
                                 name,
                                 path: path_str.to_string(),
                                 is_dir: true,
+                                is_archive: Some(false),
                                 thumbnail_path,
                                 size,
                                 modified,
@@ -561,6 +645,25 @@ fn cancel_background_thumbnails(
     Ok(())
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ZipImageData {
+    pub mime: String,
+    pub data: Vec<u8>,
+}
+
+#[tauri::command]
+fn get_zip_image_data(path: String) -> Result<ZipImageData, String> {
+    if let Some((zip_path, inner_path)) = zip_handler::parse_zip_path(&path) {
+        let (bytes, mime) = zip_handler::read_zip_entry_bytes(&zip_path, &inner_path)?;
+        Ok(ZipImageData {
+            mime: mime.to_string(),
+            data: bytes,
+        })
+    } else {
+        Err(format!("Not a valid ZIP path: {}", path))
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -583,7 +686,8 @@ pub fn run() {
             clear_thumbnail_cache,
             get_thumbnail_cache_size,
             start_background_thumbnails,
-            cancel_background_thumbnails
+            cancel_background_thumbnails,
+            get_zip_image_data
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

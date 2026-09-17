@@ -112,6 +112,23 @@ pub fn get_cached_image_thumbnail_path(
     )
 }
 
+pub fn get_cached_zip_thumbnail_path(
+    cache_dir: &Path,
+    zip_path: &Path,
+    inner_path: &str,
+) -> Option<PathBuf> {
+    let virtual_path_str = crate::zip_handler::make_zip_path(zip_path, inner_path);
+    let virtual_p = Path::new(&virtual_path_str);
+    let (file_size, modified, _) = get_path_metadata(zip_path);
+    get_cached_thumbnail_path(
+        cache_dir,
+        virtual_p,
+        modified,
+        file_size,
+        DEFAULT_THUMBNAIL_MAX_SIZE,
+    )
+}
+
 pub fn calculate_thumbnail_dimensions(src_w: u32, src_h: u32, max_size: u32) -> (u32, u32) {
     if src_w == 0 || src_h == 0 || max_size == 0 {
         return (0, 0);
@@ -192,6 +209,18 @@ pub fn save_image_as_thumbnail(img: &image::RgbImage, target_cache_path: &Path) 
     }
 
     Ok(target_cache_path.to_path_buf())
+}
+
+pub fn generate_thumbnail_from_bytes(
+    bytes: &[u8],
+    target_cache_path: &Path,
+    max_size: u32,
+) -> Result<PathBuf, String> {
+    let img = image::load_from_memory(bytes)
+        .map_err(|e| format!("Failed to decode image from memory: {}", e))?;
+    let rgb = dynamic_image_to_rgb(&img);
+    let resized = resize_image_fast(&rgb, max_size)?;
+    save_image_as_thumbnail(&resized, target_cache_path)
 }
 
 pub fn resize_image_fast(
@@ -877,12 +906,45 @@ pub fn get_or_create_thumbnail(
     max_size: Option<u32>,
 ) -> Result<String, String> {
     let size = max_size.unwrap_or(DEFAULT_THUMBNAIL_MAX_SIZE);
+    let cache_dir = get_thumbnail_cache_dir(app)?;
+
+    // Handle ZIP files and virtual ZIP paths
+    if crate::zip_handler::is_zip_path(path_str) {
+        if let Some((zip_path, inner_path)) = crate::zip_handler::parse_zip_path(path_str) {
+            if !zip_path.exists() {
+                return Err(format!("ZIP file does not exist: {:?}", zip_path));
+            }
+            let (zip_size, zip_modified, _) = get_path_metadata(&zip_path);
+
+            if inner_path.is_empty() {
+                // ZIP cover thumbnail
+                if let Some(cached) = get_cached_thumbnail_path(&cache_dir, &zip_path, zip_modified, zip_size, size) {
+                    return Ok(cached.to_string_lossy().to_string());
+                }
+                let (bytes, _, _) = crate::zip_handler::read_first_image_bytes(&zip_path)?;
+                let filename = compute_thumbnail_filename(&zip_path, zip_modified, zip_size, size);
+                let target = cache_dir.join(filename);
+                let thumb_path = generate_thumbnail_from_bytes(&bytes, &target, size)?;
+                return Ok(thumb_path.to_string_lossy().to_string());
+            } else {
+                // Specific image inside ZIP
+                let virtual_p = Path::new(path_str);
+                if let Some(cached) = get_cached_thumbnail_path(&cache_dir, virtual_p, zip_modified, zip_size, size) {
+                    return Ok(cached.to_string_lossy().to_string());
+                }
+                let (bytes, _) = crate::zip_handler::read_zip_entry_bytes(&zip_path, &inner_path)?;
+                let filename = compute_thumbnail_filename(virtual_p, zip_modified, zip_size, size);
+                let target = cache_dir.join(filename);
+                let thumb_path = generate_thumbnail_from_bytes(&bytes, &target, size)?;
+                return Ok(thumb_path.to_string_lossy().to_string());
+            }
+        }
+    }
+
     let p = Path::new(path_str);
     if !p.exists() {
         return Err(format!("File or directory does not exist: {}", path_str));
     }
-
-    let cache_dir = get_thumbnail_cache_dir(app)?;
 
     if p.is_dir() {
         let (_, folder_modified, _) = get_path_metadata(p);

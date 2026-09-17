@@ -69,6 +69,25 @@
   border-radius: 4px;
 }
 
+.archive-badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: 0.7em;
+  font-weight: 700;
+  background: rgba(26, 115, 232, 0.88);
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+}
+
+
 .entry-name {
   padding: 6px;
   font-size: 0.75em;

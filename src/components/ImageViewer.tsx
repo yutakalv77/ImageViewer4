@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   getNextIndex,
   getPrevIndex,
@@ -10,6 +9,7 @@ import {
 } from "../utils/viewerUtils";
 import { EntryItem, PageNumberPosition } from "../types";
 import { ContextMenu } from "./ContextMenu";
+import { ViewerImageItem } from "./ViewerImageItem";
 import "./ImageViewer.css";
 
 // Navigation Constants
@@ -46,7 +46,6 @@ export function ImageViewer({
   const { t } = useTranslation();
   const lastWheelTime = useRef(0);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
-  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   // Auto-close viewer if images array becomes empty while open
   useEffect(() => {
@@ -123,19 +122,6 @@ export function ImageViewer({
 
   const currentItem = images[Math.max(0, Math.min(currentIndex, images.length - 1))];
 
-  const handleImageError = (path: string) => {
-    setFailedImages(prev => ({ ...prev, [path]: true }));
-  };
-
-  const handleRetryImage = (e: React.MouseEvent, path: string) => {
-    e.stopPropagation();
-    setFailedImages(prev => {
-      const next = { ...prev };
-      delete next[path];
-      return next;
-    });
-  };
-
   const menuItems = [
     ...(currentItem ? [
       { label: t('context_menu.show_info'), onClick: () => onShowInfo(currentItem.path) },
@@ -163,42 +149,14 @@ export function ImageViewer({
         {spreadImages.length > 0 ? (
           spreadImages.map((img, idx) => {
             if (!img) return null;
-            const isFailed = !!failedImages[img.path];
-
             return (
-              <div key={`${img.path}-${idx}`} className="viewer-image-wrapper">
-                {isFailed ? (
-                  <div className="viewer-image-error" onClick={(e) => e.stopPropagation()}>
-                    <div className="error-icon">⚠️</div>
-                    <div className="error-filename">{img.name}</div>
-                    <div className="error-text">画像を読み込めませんでした</div>
-                    <button className="error-retry-btn" onClick={(e) => handleRetryImage(e, img.path)}>
-                      再試行
-                    </button>
-                  </div>
-                ) : (
-                  <img 
-                    src={convertFileSrc(img.path)} 
-                    alt={img.name} 
-                    className="viewer-image"
-                    onError={() => handleImageError(img.path)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const isRtl = readingDirection === "rtl";
-                      
-                      if (x > rect.width / 2) {
-                        // Right side click
-                        isRtl ? handlePrev() : handleNext();
-                      } else {
-                        // Left side click
-                        isRtl ? handleNext() : handlePrev();
-                      }
-                    }}
-                  />
-                )}
-              </div>
+              <ViewerImageItem
+                key={`${img.path}-${idx}`}
+                image={img}
+                readingDirection={readingDirection}
+                onNext={handleNext}
+                onPrev={handlePrev}
+              />
             );
           })
         ) : (
@@ -211,6 +169,7 @@ export function ImageViewer({
           </div>
         )}
       </div>
+
       
       {currentItem && pageNumberPosition !== "hidden" && (
         <div 
