@@ -28,6 +28,10 @@ tauri-plugin-clipboard-manager = "2"
 encoding_rs = "0.8"
 image = { version = "0.24", features = ["jpeg", "png", "gif", "webp", "bmp", "ico", "tiff"] }
 chrono = "0.4"
+tokio = { version = "1", features = ["sync"] }
+fast_image_resize = "5"
+webp = "0.3.1"
+
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = [

@@ -7,6 +7,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useSlideshow } from "./hooks/useSlideshow";
 import { useAppEvents } from "./hooks/useAppEvents";
 import { useFileOperations } from "./hooks/useFileOperations";
+import { useBackgroundThumbnails } from "./hooks/useBackgroundThumbnails";
 import { AppHeader } from "./components/AppHeader";
 import { MenuBar } from "./components/MenuBar";
 import { TopBar } from "./components/TopBar";
@@ -52,7 +53,7 @@ function App() {
     everythingMaxResults, everythingCliPath, background,
     slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
     thumbnailSize, updateThumbnailSize, updateBackground, updateViewMode,
-    isMenuBarPinned, pageNumberPosition
+    isMenuBarPinned, pageNumberPosition, highPerformanceMode
   } = useSettingsContext();
 
   const {
@@ -65,6 +66,12 @@ function App() {
   const [isStarted, setIsStarted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { renameEntry } = useFileOperations(loadDirectory);
+
+  // Background thumbnail generation for current directory entries
+  useBackgroundThumbnails({
+    entries: displayEntries,
+    highPerformanceMode,
+  });
 
   // Sync external error to UI context
   useEffect(() => {
@@ -310,6 +317,7 @@ function App() {
           displayEntries={displayEntries}
           loading={loading}
           thumbnailSize={thumbnailSize}
+          highPerformanceMode={highPerformanceMode}
           isFavorite={isFavorite}
           scrollTarget={scrollTarget}
           onSaveScrollPosition={saveScrollPosition}

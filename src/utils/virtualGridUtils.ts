@@ -1,3 +1,5 @@
+import { DEFAULT_OVERSCAN_ROWS, HIGH_PERF_OVERSCAN_ROWS } from "../constants";
+
 /**
  * Pure utility functions for virtual grid calculations.
  */
@@ -171,4 +173,12 @@ export function calculateItemScrollPosition(
   }
 
   return currentScrollTop;
+}
+
+/**
+ * Calculates overscan rows based on highPerformanceMode.
+ * Returns HIGH_PERF_OVERSCAN_ROWS (8) when enabled, otherwise DEFAULT_OVERSCAN_ROWS (2).
+ */
+export function calculateOverscanRows(highPerformanceMode: boolean): number {
+  return highPerformanceMode ? HIGH_PERF_OVERSCAN_ROWS : DEFAULT_OVERSCAN_ROWS;
 }

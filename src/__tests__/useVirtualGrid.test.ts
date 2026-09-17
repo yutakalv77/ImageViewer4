@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useVirtualGrid } from "../hooks/useVirtualGrid";
+import { HIGH_PERF_OVERSCAN_ROWS } from "../constants";
 
 describe("useVirtualGrid hook", () => {
   const createMockContainer = (width = 800, height = 600, initialScrollTop = 0) => {
@@ -99,5 +100,35 @@ describe("useVirtualGrid hook", () => {
     });
 
     expect(container.scrollTop).toBeGreaterThan(0);
+  });
+
+  it("expands visible item slice when overscanRows is set to HIGH_PERF_OVERSCAN_ROWS", () => {
+    const container = createMockContainer(800, 600, 0);
+    const containerRef = { current: container };
+
+    const { result: normalResult } = renderHook(() =>
+      useVirtualGrid({
+        containerRef,
+        totalItems: 100,
+        itemWidth: 160,
+        estimatedItemHeight: 260,
+        overscanRows: 2,
+      })
+    );
+
+    const { result: highPerfResult } = renderHook(() =>
+      useVirtualGrid({
+        containerRef,
+        totalItems: 100,
+        itemWidth: 160,
+        estimatedItemHeight: 260,
+        overscanRows: HIGH_PERF_OVERSCAN_ROWS,
+      })
+    );
+
+    // With 8 overscan rows, endIndex should be significantly larger than with 2 overscan rows
+    expect(highPerfResult.current.endIndex).toBeGreaterThan(normalResult.current.endIndex);
+    // At top (startRow=0), with overscan=8, visible rows reach up to clampedLast (2) + 8 = 10 rows (40 items: 0..39)
+    expect(highPerfResult.current.endIndex).toBe(43); // 0..10 rows = 11 rows * 4 - 1 = 43
   });
 });

@@ -8,7 +8,9 @@ import {
   calculateVisibleItemIndices,
   calculateVirtualPadding,
   calculateItemScrollPosition,
+  calculateOverscanRows,
 } from "../utils/virtualGridUtils";
+import { DEFAULT_OVERSCAN_ROWS, HIGH_PERF_OVERSCAN_ROWS } from "../constants";
 
 describe("virtualGridUtils", () => {
   describe("calculateGridColumns", () => {
@@ -173,6 +175,18 @@ describe("virtualGridUtils", () => {
       // currentScrollTop = 500, viewport = 600 (visible range 500 to 1100)
       const newScroll = calculateItemScrollPosition(8, 4, 260, 500, 600, 20, 20);
       expect(newScroll).toBe(500);
+    });
+  });
+
+  describe("calculateOverscanRows", () => {
+    it("returns DEFAULT_OVERSCAN_ROWS (2) when highPerformanceMode is false", () => {
+      expect(calculateOverscanRows(false)).toBe(DEFAULT_OVERSCAN_ROWS);
+      expect(calculateOverscanRows(false)).toBe(2);
+    });
+
+    it("returns HIGH_PERF_OVERSCAN_ROWS (8) when highPerformanceMode is true", () => {
+      expect(calculateOverscanRows(true)).toBe(HIGH_PERF_OVERSCAN_ROWS);
+      expect(calculateOverscanRows(true)).toBe(8);
     });
   });
 });

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 use encoding_rs::SHIFT_JIS;
 
 mod thumbnail;
@@ -534,9 +535,36 @@ async fn get_thumbnail_cache_size(app: tauri::AppHandle) -> Result<u64, String> 
     .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+async fn start_background_thumbnails(
+    app: tauri::AppHandle,
+    manager: tauri::State<'_, Arc<thumbnail::ThumbnailManager>>,
+    paths: Vec<String>,
+    high_performance: bool,
+) -> Result<u64, String> {
+    let gen = thumbnail::run_background_thumbnails(
+        app,
+        manager.inner().clone(),
+        paths,
+        high_performance,
+        None,
+    )
+    .await;
+    Ok(gen)
+}
+
+#[tauri::command]
+fn cancel_background_thumbnails(
+    manager: tauri::State<'_, Arc<thumbnail::ThumbnailManager>>,
+) -> Result<(), String> {
+    manager.cancel();
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(Arc::new(thumbnail::ThumbnailManager::new()))
         .plugin(tauri_plugin_window_state::Builder::new()
             .with_filename("window-state.json")
             .build())
@@ -553,7 +581,9 @@ pub fn run() {
             check_everything_running,
             get_thumbnail,
             clear_thumbnail_cache,
-            get_thumbnail_cache_size
+            get_thumbnail_cache_size,
+            start_background_thumbnails,
+            cancel_background_thumbnails
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

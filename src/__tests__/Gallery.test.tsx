@@ -91,4 +91,18 @@ describe("Gallery component with virtual grid", () => {
     });
     expect(onEntryClick).toHaveBeenCalledWith(entries[0]);
   });
+
+  it("renders correctly with highPerformanceMode enabled", () => {
+    const entries = createMockEntries(30);
+    render(
+      <Gallery
+        {...defaultProps}
+        displayEntries={entries}
+        highPerformanceMode={true}
+      />
+    );
+
+    const firstCard = screen.getByText("image_0.jpg");
+    expect(firstCard).toBeInTheDocument();
+  });
 });

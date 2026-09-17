@@ -7,6 +7,11 @@ vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: vi.fn((path) => `asset://${path}`),
 }));
 
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(() => Promise.resolve(() => {})),
+  emit: vi.fn(() => Promise.resolve()),
+}));
+
 const mockWindowInstance = {
   onDragDropEvent: vi.fn(() => Promise.resolve(() => {})),
   isFullscreen: vi.fn(() => Promise.resolve(false)),

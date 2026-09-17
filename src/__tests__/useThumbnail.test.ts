@@ -3,10 +3,12 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { useThumbnail } from "../hooks/useThumbnail";
 import { EntryItem } from "../types";
 import { invoke } from "@tauri-apps/api/core";
+import { setCachedThumbnailPath, clearThumbnailMemoryCache } from "../utils/thumbnailCache";
 
 describe("useThumbnail hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearThumbnailMemoryCache();
   });
 
   const dummyEntry: EntryItem = {
@@ -29,6 +31,17 @@ describe("useThumbnail hook", () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.hasError).toBe(false);
     expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("returns thumbSrc from in-memory cache if available", () => {
+    setCachedThumbnailPath(dummyEntry.path, "/cache/thumbnails/mem_cached.jpg");
+
+    const elementRef = { current: document.createElement("div") };
+    const { result } = renderHook(() => useThumbnail(dummyEntry, elementRef));
+
+    expect(result.current.thumbSrc).toBe("asset:///cache/thumbnails/mem_cached.jpg");
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.hasError).toBe(false);
   });
 
   it("calls get_thumbnail when thumbnail_path is null", async () => {

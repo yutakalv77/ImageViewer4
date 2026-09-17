@@ -1,9 +1,21 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use tokio::sync::Semaphore;
+
+use fast_image_resize as fr;
 
 use crate::{find_first_image_in_dir, get_path_metadata};
+
+
+
+
+
+
+
 
 #[cfg(windows)]
 use windows_sys::{
@@ -100,7 +112,23 @@ pub fn get_cached_image_thumbnail_path(
     )
 }
 
-pub fn save_image_as_thumbnail(img: &image::RgbImage, target_cache_path: &Path) -> Result<PathBuf, String> {
+pub fn calculate_thumbnail_dimensions(src_w: u32, src_h: u32, max_size: u32) -> (u32, u32) {
+    if src_w == 0 || src_h == 0 || max_size == 0 {
+        return (0, 0);
+    }
+    if src_w <= max_size && src_h <= max_size {
+        return (src_w, src_h);
+    }
+    if src_w > src_h {
+        let h = ((src_h as u64 * max_size as u64 + src_w as u64 / 2) / src_w as u64) as u32;
+        (max_size, h.max(1))
+    } else {
+        let w = ((src_w as u64 * max_size as u64 + src_h as u64 / 2) / src_h as u64) as u32;
+        (w.max(1), max_size)
+    }
+}
+
+pub fn save_raw_thumbnail(bytes: &[u8], target_cache_path: &Path) -> Result<PathBuf, String> {
     let parent = target_cache_path.parent().ok_or("Invalid cache path")?;
     if !parent.exists() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -115,26 +143,414 @@ pub fn save_image_as_thumbnail(img: &image::RgbImage, target_cache_path: &Path) 
     );
     let tmp_path = parent.join(tmp_name);
 
-    img.save_with_format(&tmp_path, image::ImageFormat::Jpeg)
-        .map_err(|e| format!("Failed to encode thumbnail: {}", e))?;
+    fs::write(&tmp_path, bytes).map_err(|e| format!("Failed to write raw thumbnail: {}", e))?;
 
     if let Err(e) = fs::rename(&tmp_path, target_cache_path) {
         let _ = fs::remove_file(&tmp_path);
+        if target_cache_path.exists() {
+            return Ok(target_cache_path.to_path_buf());
+        }
+        return Err(format!("Failed to rename raw thumbnail to target: {}", e));
+    }
+
+    Ok(target_cache_path.to_path_buf())
+}
+
+pub fn save_image_as_thumbnail(img: &image::RgbImage, target_cache_path: &Path) -> Result<PathBuf, String> {
+    use std::io::{BufWriter, Write};
+
+    let parent = target_cache_path.parent().ok_or("Invalid cache path")?;
+    if !parent.exists() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let count = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let tmp_name = format!(
+        "tmp_{}_{}_{}.jpg",
+        std::process::id(),
+        count,
+        target_cache_path.file_name().and_then(|n| n.to_str()).unwrap_or("thumb")
+    );
+    let tmp_path = parent.join(tmp_name);
+
+    {
+        let file = fs::File::create(&tmp_path).map_err(|e| format!("Failed to create tmp file: {}", e))?;
+        let mut writer = BufWriter::with_capacity(64 * 1024, file);
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut writer, 80);
+        encoder
+            .encode(img.as_raw(), img.width(), img.height(), image::ColorType::Rgb8)
+            .map_err(|e| format!("Failed to encode thumbnail: {}", e))?;
+        writer.flush().map_err(|e| format!("Failed to flush thumbnail file: {}", e))?;
+    }
+
+    if let Err(e) = fs::rename(&tmp_path, target_cache_path) {
+        let _ = fs::remove_file(&tmp_path);
+        if target_cache_path.exists() {
+            return Ok(target_cache_path.to_path_buf());
+        }
         return Err(format!("Failed to rename thumbnail to target: {}", e));
     }
 
     Ok(target_cache_path.to_path_buf())
 }
 
+pub fn resize_image_fast(
+    src_rgb: &image::RgbImage,
+    max_size: u32,
+) -> Result<image::RgbImage, String> {
+    let (src_w, src_h) = (src_rgb.width(), src_rgb.height());
+    let (dst_w, dst_h) = calculate_thumbnail_dimensions(src_w, src_h, max_size);
+
+    if dst_w == 0 || dst_h == 0 {
+        return Err("Zero dimension for resized thumbnail".to_string());
+    }
+
+    if src_w == dst_w && src_h == dst_h {
+        return Ok(src_rgb.clone());
+    }
+
+    let src_ref = fr::images::ImageRef::new(src_w, src_h, src_rgb.as_raw(), fr::PixelType::U8x3)
+        .map_err(|e| format!("Failed to wrap source image for fast resize: {:?}", e))?;
+    let mut dst_image = fr::images::Image::new(dst_w, dst_h, fr::PixelType::U8x3);
+    let mut resizer = fr::Resizer::new();
+
+    resizer
+        .resize(&src_ref, &mut dst_image, None)
+        .map_err(|e| format!("Fast image resize failed: {:?}", e))?;
+
+    image::RgbImage::from_raw(dst_w, dst_h, dst_image.into_vec())
+        .ok_or_else(|| "Failed to construct RgbImage from resized buffer".to_string())
+}
+
+/// Blends a single RGBA pixel over a pure white background (255, 255, 255).
+#[inline]
+pub fn blend_rgba_to_rgb(r: u8, g: u8, b: u8, a: u8) -> (u8, u8, u8) {
+    if a == 255 {
+        (r, g, b)
+    } else if a == 0 {
+        (255, 255, 255)
+    } else {
+        let alpha = a as u32;
+        let inv_alpha = 255 - alpha;
+        let blended_r = ((r as u32 * alpha + 255 * inv_alpha) / 255) as u8;
+        let blended_g = ((g as u32 * alpha + 255 * inv_alpha) / 255) as u8;
+        let blended_b = ((b as u32 * alpha + 255 * inv_alpha) / 255) as u8;
+        (blended_r, blended_g, blended_b)
+    }
+}
+
+/// Composites an RGBA byte slice over a pure white background and returns an RgbImage.
+pub fn rgba_to_rgb_with_white_bg(width: u32, height: u32, raw_rgba: &[u8]) -> Result<image::RgbImage, String> {
+    let expected_len = (width as usize) * (height as usize) * 4;
+    if raw_rgba.len() < expected_len {
+        return Err("RGBA buffer length mismatch".to_string());
+    }
+
+    let mut rgb_pixels = Vec::with_capacity((width as usize) * (height as usize) * 3);
+    for chunk in raw_rgba[..expected_len].chunks_exact(4) {
+        let (r, g, b) = blend_rgba_to_rgb(chunk[0], chunk[1], chunk[2], chunk[3]);
+        rgb_pixels.push(r);
+        rgb_pixels.push(g);
+        rgb_pixels.push(b);
+    }
+
+    image::RgbImage::from_raw(width, height, rgb_pixels)
+        .ok_or_else(|| "Failed to construct RgbImage from blended RGBA buffer".to_string())
+}
+
+/// Resizes an RGBA image buffer using SIMD acceleration, then composites the resized image
+/// over a white background. This avoids blending millions of input pixels upfront.
+pub fn resize_rgba_to_rgb_fast(
+    src_w: u32,
+    src_h: u32,
+    src_rgba: &[u8],
+    max_size: u32,
+) -> Result<image::RgbImage, String> {
+    let (dst_w, dst_h) = calculate_thumbnail_dimensions(src_w, src_h, max_size);
+
+    if dst_w == 0 || dst_h == 0 {
+        return Err("Zero dimension for resized thumbnail".to_string());
+    }
+
+    let expected_len = (src_w as usize) * (src_h as usize) * 4;
+    if src_rgba.len() < expected_len {
+        return Err("RGBA source buffer too small".to_string());
+    }
+
+    let src_ref = fr::images::ImageRef::new(src_w, src_h, &src_rgba[..expected_len], fr::PixelType::U8x4)
+        .map_err(|e| format!("Failed to wrap RGBA source image: {:?}", e))?;
+    let mut dst_image = fr::images::Image::new(dst_w, dst_h, fr::PixelType::U8x4);
+    let mut resizer = fr::Resizer::new();
+
+    resizer
+        .resize(&src_ref, &mut dst_image, None)
+        .map_err(|e| format!("Fast RGBA resize failed: {:?}", e))?;
+
+    rgba_to_rgb_with_white_bg(dst_w, dst_h, dst_image.buffer())
+}
+
+/// Converts a `DynamicImage` to `RgbImage`. If the image has an alpha channel,
+/// it composites the pixels over a pure white background instead of rendering transparent areas black.
+#[allow(dead_code)]
+pub fn dynamic_image_to_rgb(img: &image::DynamicImage) -> image::RgbImage {
+    if img.color().has_alpha() {
+        let rgba = img.to_rgba8();
+        let (w, h) = rgba.dimensions();
+        rgba_to_rgb_with_white_bg(w, h, rgba.as_raw()).unwrap_or_else(|_| img.to_rgb8())
+    } else {
+        img.to_rgb8()
+    }
+}
+
+fn parse_tiff_thumbnail(tiff: &[u8]) -> Option<&[u8]> {
+    if tiff.len() < 8 {
+        return None;
+    }
+
+    let is_le = match &tiff[0..2] {
+        b"II" => true,
+        b"MM" => false,
+        _ => return None,
+    };
+
+    let read_u16 = |buf: &[u8], offset: usize| -> Option<u16> {
+        let b = buf.get(offset..offset + 2)?;
+        Some(if is_le {
+            u16::from_le_bytes([b[0], b[1]])
+        } else {
+            u16::from_be_bytes([b[0], b[1]])
+        })
+    };
+
+    let read_u32 = |buf: &[u8], offset: usize| -> Option<u32> {
+        let b = buf.get(offset..offset + 4)?;
+        Some(if is_le {
+            u32::from_le_bytes([b[0], b[1], b[2], b[3]])
+        } else {
+            u32::from_be_bytes([b[0], b[1], b[2], b[3]])
+        })
+    };
+
+    // Verify TIFF marker 42
+    if read_u16(tiff, 2)? != 42 {
+        return None;
+    }
+
+    // Offset to IFD0
+    let ifd0_offset = read_u32(tiff, 4)? as usize;
+    if ifd0_offset >= tiff.len() {
+        return None;
+    }
+
+    let ifd0_entries = read_u16(tiff, ifd0_offset)? as usize;
+
+    // Check IFD0 Orientation (tag 0x0112). If orientation is rotated (> 1),
+    // skip direct extraction so full pipeline can properly rotate the image.
+    for i in 0..ifd0_entries {
+        let entry_pos = ifd0_offset.checked_add(2)?.checked_add(i.checked_mul(12)?)?;
+        if read_u16(tiff, entry_pos) == Some(0x0112) {
+            let orientation = read_u16(tiff, entry_pos.checked_add(8)?)?;
+            if orientation > 1 {
+                return None;
+            }
+            break;
+        }
+    }
+
+    let ifd0_next_offset_pos = ifd0_offset
+        .checked_add(2)?
+        .checked_add(ifd0_entries.checked_mul(12)?)?;
+    let ifd1_offset = read_u32(tiff, ifd0_next_offset_pos)? as usize;
+
+    if ifd1_offset == 0 || ifd1_offset >= tiff.len() {
+        return None;
+    }
+
+    // IFD1 contains thumbnail metadata
+    let ifd1_entries = read_u16(tiff, ifd1_offset)? as usize;
+    let mut thumb_offset: Option<usize> = None;
+    let mut thumb_len: Option<usize> = None;
+
+    for i in 0..ifd1_entries {
+        let entry_pos = ifd1_offset.checked_add(2)?.checked_add(i.checked_mul(12)?)?;
+        let tag = read_u16(tiff, entry_pos)?;
+        let val_offset = entry_pos.checked_add(8)?;
+
+        match tag {
+            0x0201 => {
+                // JPEGInterchangeFormat (offset from TIFF header start)
+                thumb_offset = Some(read_u32(tiff, val_offset)? as usize);
+            }
+            0x0202 => {
+                // JPEGInterchangeFormatLength (byte count)
+                thumb_len = Some(read_u32(tiff, val_offset)? as usize);
+            }
+            _ => {}
+        }
+    }
+
+    if let (Some(offset), Some(len)) = (thumb_offset, thumb_len) {
+        if offset.checked_add(len)? <= tiff.len() && len > 4 {
+            let thumb_data = &tiff[offset..offset + len];
+            // Verify thumbnail begins with JPEG SOI (0xFF, 0xD8)
+            if thumb_data[0] == 0xFF && thumb_data[1] == 0xD8 {
+                return Some(thumb_data);
+            }
+        }
+    }
+
+    None
+}
+
+/// Extracts standalone JPEG thumbnail bytes from JPEG file header data.
+pub fn extract_exif_thumbnail_from_bytes(data: &[u8]) -> Option<&[u8]> {
+    if data.len() < 4 || data[0] != 0xFF || data[1] != 0xD8 {
+        return None;
+    }
+
+    let mut pos = 2;
+    while pos + 4 <= data.len() {
+        if data[pos] != 0xFF {
+            pos += 1;
+            continue;
+        }
+
+        let marker = data[pos + 1];
+        if marker == 0x00 || marker == 0xFF {
+            pos += 1;
+            continue;
+        }
+
+        if marker == 0xDA || marker == 0xD9 {
+            break;
+        }
+
+        let seg_len = u16::from_be_bytes([data[pos + 2], data[pos + 3]]) as usize;
+        if seg_len < 2 {
+            break;
+        }
+
+        let seg_end = pos + 2 + seg_len;
+        if seg_end > data.len() {
+            break;
+        }
+
+        if marker == 0xE1 {
+            let app1_data = &data[pos + 4..seg_end];
+            if app1_data.len() >= 14 && &app1_data[..6] == b"Exif\0\0" {
+                let tiff_bytes = &app1_data[6..];
+                if let Some(thumb) = parse_tiff_thumbnail(tiff_bytes) {
+                    return Some(thumb);
+                }
+            }
+        }
+
+        pos = seg_end;
+    }
+
+    None
+}
+
+/// Fast-path extraction of embedded EXIF JPEG thumbnail directly from file.
+pub fn try_extract_exif_thumbnail(source_path: &Path, target_cache_path: &Path) -> Option<PathBuf> {
+    use std::io::Read;
+    let mut file = fs::File::open(source_path).ok()?;
+    // Read up to 256KB to cover standard Exif APP1 segment
+    let mut buffer = vec![0u8; 256 * 1024];
+    let n = file.read(&mut buffer).ok()?;
+    buffer.truncate(n);
+
+    let thumb_bytes = extract_exif_thumbnail_from_bytes(&buffer)?;
+    save_raw_thumbnail(thumb_bytes, target_cache_path).ok()
+}
+
+/// Decodes WebP bytes to an RgbImage using Google's native SIMD-accelerated libwebp.
+/// If the WebP image has an alpha channel, it blends over a white background.
+#[allow(dead_code)]
+pub fn decode_webp_to_rgb(data: &[u8]) -> Result<image::RgbImage, String> {
+    let decoder = webp::Decoder::new(data);
+    let webp_image = decoder
+        .decode()
+        .ok_or_else(|| "Failed to decode WebP image via libwebp".to_string())?;
+
+    let width = webp_image.width();
+    let height = webp_image.height();
+    let raw = &*webp_image;
+
+    if width == 0 || height == 0 {
+        return Err("WebP image has zero dimensions".to_string());
+    }
+
+    if webp_image.is_alpha() {
+        rgba_to_rgb_with_white_bg(width, height, raw)
+    } else {
+        let expected_len = (width as usize) * (height as usize) * 3;
+        if raw.len() < expected_len {
+            return Err("WebP RGB buffer length mismatch".to_string());
+        }
+
+        image::RgbImage::from_raw(width, height, raw[..expected_len].to_vec())
+            .ok_or_else(|| "Failed to construct RgbImage from WebP RGB buffer".to_string())
+    }
+}
+
+/// Generates a thumbnail for a WebP file using native SIMD libwebp decoding and fast_image_resize.
+/// Uses zero-copy source wrapping and defers alpha blending until after downsizing for maximum performance.
+pub fn generate_webp_thumbnail_fast(
+    source_path: &Path,
+    target_cache_path: &Path,
+    max_size: u32,
+) -> Result<PathBuf, String> {
+    let bytes = fs::read(source_path).map_err(|e| format!("Failed to read WebP file: {}", e))?;
+    let decoder = webp::Decoder::new(&bytes);
+    let webp_image = decoder
+        .decode()
+        .ok_or_else(|| "Failed to decode WebP image via libwebp".to_string())?;
+
+    let width = webp_image.width();
+    let height = webp_image.height();
+    if width == 0 || height == 0 {
+        return Err("WebP image has zero dimensions".to_string());
+    }
+
+    let raw = &*webp_image;
+    let resized = if webp_image.is_alpha() {
+        resize_rgba_to_rgb_fast(width, height, raw, max_size)?
+    } else {
+        let (dst_w, dst_h) = calculate_thumbnail_dimensions(width, height, max_size);
+        let expected_len = (width as usize) * (height as usize) * 3;
+        if raw.len() < expected_len {
+            return Err("WebP RGB buffer too small".to_string());
+        }
+        let src_ref = fr::images::ImageRef::new(width, height, &raw[..expected_len], fr::PixelType::U8x3)
+            .map_err(|e| format!("Failed to wrap WebP RGB source: {:?}", e))?;
+        let mut dst_image = fr::images::Image::new(dst_w, dst_h, fr::PixelType::U8x3);
+        let mut resizer = fr::Resizer::new();
+        resizer
+            .resize(&src_ref, &mut dst_image, None)
+            .map_err(|e| format!("Fast WebP RGB resize failed: {:?}", e))?;
+        image::RgbImage::from_raw(dst_w, dst_h, dst_image.into_vec())
+            .ok_or_else(|| "Failed to construct RgbImage from resized buffer".to_string())?
+    };
+
+    save_image_as_thumbnail(&resized, target_cache_path)
+}
+
 pub fn generate_thumbnail(source_path: &Path, target_cache_path: &Path, max_size: u32) -> Result<PathBuf, String> {
     let img = image::open(source_path)
         .map_err(|e| format!("Failed to open image {:?}: {}", source_path, e))?;
 
-    let thumb = img.thumbnail(max_size, max_size);
-    let rgb = thumb.to_rgb8();
+    let resized = if img.color().has_alpha() {
+        let rgba = img.to_rgba8();
+        resize_rgba_to_rgb_fast(rgba.width(), rgba.height(), rgba.as_raw(), max_size)?
+    } else {
+        let rgb = img.to_rgb8();
+        resize_image_fast(&rgb, max_size)?
+    };
 
-    save_image_as_thumbnail(&rgb, target_cache_path)
+    save_image_as_thumbnail(&resized, target_cache_path)
 }
+
 
 #[cfg(windows)]
 const IID_ISHELLITEMIMAGEFACTORY: GUID = GUID {
@@ -425,6 +841,20 @@ pub fn create_folder_thumbnail(
         return Ok(first_image_path.to_path_buf());
     }
 
+    // Fast-path 1: Embedded EXIF thumbnail for JPEG
+    if ext == "jpg" || ext == "jpeg" {
+        if let Some(thumb_path) = try_extract_exif_thumbnail(first_image_path, target_cache_path) {
+            return Ok(thumb_path);
+        }
+    }
+
+    // Fast-path 1.5: High-speed native libwebp decoding for WebP
+    if ext == "webp" {
+        if let Ok(thumb_path) = generate_webp_thumbnail_fast(first_image_path, target_cache_path, size) {
+            return Ok(thumb_path);
+        }
+    }
+
     #[cfg(windows)]
     {
         if let Ok(thumb_path) = extract_shell_thumbnail(first_image_path, target_cache_path, size) {
@@ -484,6 +914,21 @@ pub fn get_or_create_thumbnail(
         let filename = compute_thumbnail_filename(p, modified, file_size, size);
         let target = cache_dir.join(filename);
 
+        // Fast-path 1: Embedded EXIF thumbnail for JPEG
+        if ext == "jpg" || ext == "jpeg" {
+            if let Some(thumb_path) = try_extract_exif_thumbnail(p, &target) {
+                return Ok(thumb_path.to_string_lossy().to_string());
+            }
+        }
+
+        // Fast-path 1.5: High-speed native libwebp decoding for WebP
+        if ext == "webp" {
+            if let Ok(thumb_path) = generate_webp_thumbnail_fast(p, &target, size) {
+                return Ok(thumb_path.to_string_lossy().to_string());
+            }
+        }
+
+        // Fast-path 2: Windows Shell thumbnail extraction
         #[cfg(windows)]
         {
             if let Ok(thumb_path) = extract_shell_thumbnail(p, &target, size) {
@@ -491,6 +936,7 @@ pub fn get_or_create_thumbnail(
             }
         }
 
+        // Fast-path 3: Pure-Rust SIMD fast resize (fast_image_resize + buffered JPEG encoder)
         match generate_thumbnail(p, &target, size) {
             Ok(thumb_path) => Ok(thumb_path.to_string_lossy().to_string()),
             Err(err) => {
@@ -500,6 +946,7 @@ pub fn get_or_create_thumbnail(
         }
     }
 }
+
 
 pub fn calculate_dir_size(dir: &Path) -> u64 {
     let mut total_bytes: u64 = 0;
@@ -538,6 +985,128 @@ pub fn clear_thumbnail_cache(app: &tauri::AppHandle) -> Result<u64, String> {
 pub fn get_thumbnail_cache_size(app: &tauri::AppHandle) -> Result<u64, String> {
     let cache_dir = get_thumbnail_cache_dir(app)?;
     Ok(calculate_dir_size(&cache_dir))
+}
+
+/// Calculates the concurrency limit based on performance mode and CPU core count.
+/// In normal mode, keeps CPU load low (1 to 3 concurrent tasks).
+/// In high-performance mode, scales up with available CPU cores (4 to 16 concurrent tasks).
+pub fn calculate_concurrency(high_performance: bool, num_cpus: usize) -> usize {
+    if high_performance {
+        num_cpus.clamp(4, 16)
+    } else {
+        (num_cpus / 4).clamp(1, 3)
+    }
+}
+
+/// Manages cancellation and generation state for background thumbnail generation tasks.
+#[derive(Debug, Default)]
+pub struct ThumbnailManager {
+    current_generation: AtomicU64,
+}
+
+impl ThumbnailManager {
+    pub fn new() -> Self {
+        Self {
+            current_generation: AtomicU64::new(0),
+        }
+    }
+
+    pub fn next_generation(&self) -> u64 {
+        self.current_generation.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    pub fn cancel(&self) {
+        self.current_generation.fetch_add(1, Ordering::SeqCst);
+    }
+
+    pub fn is_current(&self, generation: u64) -> bool {
+        self.current_generation.load(Ordering::Relaxed) == generation
+    }
+
+    #[allow(dead_code)]
+    pub fn current_generation(&self) -> u64 {
+        self.current_generation.load(Ordering::Relaxed)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ThumbnailReadyPayload {
+    pub path: String,
+    pub thumbnail_path: String,
+}
+
+pub async fn run_background_thumbnails(
+    app: tauri::AppHandle,
+    manager: Arc<ThumbnailManager>,
+    paths: Vec<String>,
+    high_performance: bool,
+    max_size: Option<u32>,
+) -> u64 {
+    let generation = manager.next_generation();
+    let num_cpus = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
+    let concurrency = calculate_concurrency(high_performance, num_cpus);
+
+    let semaphore = Arc::new(Semaphore::new(concurrency));
+    let app_handle = app.clone();
+    let manager_clone = manager.clone();
+
+    tauri::async_runtime::spawn(async move {
+        use tauri::Emitter;
+
+        for path in paths {
+            if !manager_clone.is_current(generation) {
+                break;
+            }
+
+            let permit = match semaphore.clone().acquire_owned().await {
+                Ok(p) => p,
+                Err(_) => break,
+            };
+
+            if !manager_clone.is_current(generation) {
+                drop(permit);
+                break;
+            }
+
+            tokio::task::yield_now().await;
+
+            let app_inner = app_handle.clone();
+            let path_clone = path.clone();
+            let manager_inner = manager_clone.clone();
+
+            tauri::async_runtime::spawn(async move {
+                let _permit = permit;
+                if !manager_inner.is_current(generation) {
+                    return;
+                }
+
+                let path_for_blocking = path_clone.clone();
+                let app_for_blocking = app_inner.clone();
+                let result = tauri::async_runtime::spawn_blocking(move || {
+                    get_or_create_thumbnail(&app_for_blocking, &path_for_blocking, max_size)
+                })
+                .await;
+
+                if !manager_inner.is_current(generation) {
+                    return;
+                }
+
+                if let Ok(Ok(thumb_path)) = result {
+                    let _ = app_inner.emit(
+                        "thumbnail-ready",
+                        ThumbnailReadyPayload {
+                            path: path_clone,
+                            thumbnail_path: thumb_path,
+                        },
+                    );
+                }
+            });
+        }
+    });
+
+    generation
 }
 
 #[cfg(test)]
@@ -773,6 +1342,356 @@ mod tests {
         let _ = fs::remove_file(&sample_img_path);
         let _ = fs::remove_dir(&sub_folder);
         let _ = fs::remove_dir(&empty_folder);
+        let _ = fs::remove_dir(&temp_dir);
+    }
+
+    #[test]
+    fn test_calculate_concurrency() {
+        // Normal mode: clamp(num_cpus / 4, 1, 3)
+        assert_eq!(calculate_concurrency(false, 1), 1);
+        assert_eq!(calculate_concurrency(false, 2), 1);
+        assert_eq!(calculate_concurrency(false, 4), 1);
+        assert_eq!(calculate_concurrency(false, 8), 2);
+        assert_eq!(calculate_concurrency(false, 12), 3);
+        assert_eq!(calculate_concurrency(false, 16), 3);
+        assert_eq!(calculate_concurrency(false, 64), 3);
+
+        // High performance mode: clamp(num_cpus, 4, 16)
+        assert_eq!(calculate_concurrency(true, 1), 4);
+        assert_eq!(calculate_concurrency(true, 2), 4);
+        assert_eq!(calculate_concurrency(true, 4), 4);
+        assert_eq!(calculate_concurrency(true, 8), 8);
+        assert_eq!(calculate_concurrency(true, 12), 12);
+        assert_eq!(calculate_concurrency(true, 16), 16);
+        assert_eq!(calculate_concurrency(true, 32), 16);
+    }
+
+    #[test]
+    fn test_thumbnail_manager_lifecycle() {
+        let manager = ThumbnailManager::new();
+        assert_eq!(manager.current_generation(), 0);
+
+        let g1 = manager.next_generation();
+        assert_eq!(g1, 1);
+        assert!(manager.is_current(g1));
+        assert!(!manager.is_current(0));
+
+        let g2 = manager.next_generation();
+        assert_eq!(g2, 2);
+        assert!(manager.is_current(g2));
+        assert!(!manager.is_current(g1));
+
+        manager.cancel();
+        assert!(!manager.is_current(g2));
+        assert_eq!(manager.current_generation(), 3);
+    }
+
+    #[test]
+    fn test_calculate_thumbnail_dimensions() {
+        assert_eq!(calculate_thumbnail_dimensions(0, 100, 384), (0, 0));
+        assert_eq!(calculate_thumbnail_dimensions(100, 0, 384), (0, 0));
+        assert_eq!(calculate_thumbnail_dimensions(100, 100, 0), (0, 0));
+
+        // Within bounds
+        assert_eq!(calculate_thumbnail_dimensions(200, 150, 384), (200, 150));
+
+        // Landscape
+        assert_eq!(calculate_thumbnail_dimensions(1920, 1080, 384), (384, 216));
+
+        // Portrait
+        assert_eq!(calculate_thumbnail_dimensions(1080, 1920, 384), (216, 384));
+
+        // Square
+        assert_eq!(calculate_thumbnail_dimensions(2000, 2000, 384), (384, 384));
+    }
+
+    #[test]
+    fn test_resize_image_fast() {
+        let src = image::RgbImage::new(100, 50);
+        let resized = resize_image_fast(&src, 20).expect("Fast resize should succeed");
+        assert_eq!(resized.width(), 20);
+        assert_eq!(resized.height(), 10);
+    }
+
+    #[test]
+    fn test_extract_exif_thumbnail_from_bytes() {
+        // Empty or non-jpeg
+        assert!(extract_exif_thumbnail_from_bytes(&[]).is_none());
+        assert!(extract_exif_thumbnail_from_bytes(&[0xFF, 0xD8]).is_none());
+        assert!(extract_exif_thumbnail_from_bytes(&[0x89, 0x50, 0x4E, 0x47]).is_none());
+
+        // JPEG without APP1
+        let simple_jpeg = vec![0xFF, 0xD8, 0xFF, 0xD9];
+        assert!(extract_exif_thumbnail_from_bytes(&simple_jpeg).is_none());
+
+        // Construct synthetic JPEG with valid Exif IFD1 thumbnail (Little Endian)
+        let mut data = Vec::new();
+        data.extend_from_slice(&[0xFF, 0xD8]); // SOI
+        data.extend_from_slice(&[0xFF, 0xE1]); // APP1 marker
+
+        // APP1 payload: "Exif\0\0" + TIFF header
+        let mut tiff = Vec::new();
+        // TIFF header: "II" (LE), 42 (0x002A), offset to IFD0 (8)
+        tiff.extend_from_slice(b"II");
+        tiff.extend_from_slice(&42u16.to_le_bytes());
+        tiff.extend_from_slice(&8u32.to_le_bytes()); // IFD0 offset
+
+        // IFD0: 1 entry (dummy tag), then next_ifd_offset to IFD1
+        let ifd0_offset = tiff.len();
+        assert_eq!(ifd0_offset, 8);
+        tiff.extend_from_slice(&1u16.to_le_bytes()); // 1 entry
+        // Entry: tag 0x0100 (ImageWidth), type 3 (SHORT), count 1, value 100
+        tiff.extend_from_slice(&0x0100u16.to_le_bytes());
+        tiff.extend_from_slice(&3u16.to_le_bytes());
+        tiff.extend_from_slice(&1u32.to_le_bytes());
+        tiff.extend_from_slice(&100u32.to_le_bytes());
+
+        // Next IFD offset: pointing to IFD1
+        let ifd1_offset = tiff.len() + 4;
+        tiff.extend_from_slice(&(ifd1_offset as u32).to_le_bytes());
+
+        // IFD1: 2 entries: 0x0201 (thumb offset), 0x0202 (thumb length)
+        let thumb_bytes = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0xFF, 0xD9]; // Mock mini JPEG
+        let thumb_len = thumb_bytes.len() as u32;
+
+        tiff.extend_from_slice(&2u16.to_le_bytes()); // 2 entries
+
+        // Tag 0x0201: JPEGInterchangeFormat
+        let thumb_offset = (tiff.len() + 12 * 2 + 4) as u32;
+        tiff.extend_from_slice(&0x0201u16.to_le_bytes());
+        tiff.extend_from_slice(&4u16.to_le_bytes()); // LONG
+        tiff.extend_from_slice(&1u32.to_le_bytes());
+        tiff.extend_from_slice(&thumb_offset.to_le_bytes());
+
+        // Tag 0x0202: JPEGInterchangeFormatLength
+        tiff.extend_from_slice(&0x0202u16.to_le_bytes());
+        tiff.extend_from_slice(&4u16.to_le_bytes()); // LONG
+        tiff.extend_from_slice(&1u32.to_le_bytes());
+        tiff.extend_from_slice(&thumb_len.to_le_bytes());
+
+        // Next IFD: 0
+        tiff.extend_from_slice(&0u32.to_le_bytes());
+
+        // Thumbnail payload bytes
+        assert_eq!(tiff.len(), thumb_offset as usize);
+        tiff.extend_from_slice(&thumb_bytes);
+
+        // Assemble APP1 segment
+        let mut app1_payload = Vec::new();
+        app1_payload.extend_from_slice(b"Exif\0\0");
+        app1_payload.extend_from_slice(&tiff);
+
+        let app1_len = (app1_payload.len() + 2) as u16;
+        data.extend_from_slice(&app1_len.to_be_bytes());
+        data.extend_from_slice(&app1_payload);
+        data.extend_from_slice(&[0xFF, 0xD9]); // EOI
+
+        let extracted = extract_exif_thumbnail_from_bytes(&data);
+        assert!(extracted.is_some());
+        assert_eq!(extracted.unwrap(), &thumb_bytes[..]);
+    }
+
+    #[test]
+    fn test_save_raw_and_fast_image_thumbnail() {
+        let temp_dir = std::env::temp_dir().join("iv_test_save_thumbnails");
+        let _ = fs::create_dir_all(&temp_dir);
+
+        // Test save_raw_thumbnail
+        let raw_path = temp_dir.join("test_raw.jpg");
+        let raw_bytes = b"sample_raw_bytes";
+        let res = save_raw_thumbnail(raw_bytes, &raw_path);
+        assert!(res.is_ok());
+        assert_eq!(fs::read(&raw_path).unwrap(), raw_bytes);
+
+        // Test save_image_as_thumbnail
+        let img_path = temp_dir.join("test_img.jpg");
+        let test_img = image::RgbImage::new(32, 32);
+        let save_res = save_image_as_thumbnail(&test_img, &img_path);
+        assert!(save_res.is_ok());
+        assert!(img_path.exists());
+
+        // Verify saved image can be decoded
+        let loaded = image::open(&img_path);
+        assert!(loaded.is_ok());
+        let dyn_img = loaded.unwrap();
+        assert_eq!(dyn_img.width(), 32);
+        assert_eq!(dyn_img.height(), 32);
+
+        let _ = fs::remove_file(&raw_path);
+        let _ = fs::remove_file(&img_path);
+        let _ = fs::remove_dir(&temp_dir);
+    }
+
+    #[test]
+    fn test_dynamic_image_to_rgb_with_alpha() {
+        // Create 2x1 RGBA image: pixel 0 is 50% transparent red, pixel 1 is fully transparent
+        let mut rgba = image::RgbaImage::new(2, 1);
+        rgba.put_pixel(0, 0, image::Rgba([255, 0, 0, 128]));
+        rgba.put_pixel(1, 0, image::Rgba([0, 0, 0, 0]));
+
+        let dyn_img = image::DynamicImage::ImageRgba8(rgba);
+        let rgb = dynamic_image_to_rgb(&dyn_img);
+
+        assert_eq!(rgb.width(), 2);
+        assert_eq!(rgb.height(), 1);
+
+        // Pixel 0 should blend red (255) with white (255) -> 255
+        // G and B should blend 0 with white (255) -> ~127
+        let p0 = rgb.get_pixel(0, 0);
+        assert_eq!(p0.0[0], 255);
+        assert!((p0.0[1] as i32 - 127).abs() <= 1);
+        assert!((p0.0[2] as i32 - 127).abs() <= 1);
+
+        // Pixel 1 (fully transparent) should become pure white (255, 255, 255)
+        let p1 = rgb.get_pixel(1, 0);
+        assert_eq!(p1.0, [255, 255, 255]);
+    }
+
+    #[test]
+    fn test_extract_exif_thumbnail_rotated_orientation_skipped() {
+        // Construct synthetic JPEG with Exif IFD0 Orientation = 6 (rot 90)
+        let mut data = Vec::new();
+        data.extend_from_slice(&[0xFF, 0xD8]); // SOI
+        data.extend_from_slice(&[0xFF, 0xE1]); // APP1 marker
+
+        let mut tiff = Vec::new();
+        tiff.extend_from_slice(b"II");
+        tiff.extend_from_slice(&42u16.to_le_bytes());
+        tiff.extend_from_slice(&8u32.to_le_bytes()); // IFD0 offset
+
+        // IFD0: 1 entry: Tag 0x0112 (Orientation), type 3 (SHORT), count 1, value 6
+        tiff.extend_from_slice(&1u16.to_le_bytes());
+        tiff.extend_from_slice(&0x0112u16.to_le_bytes());
+        tiff.extend_from_slice(&3u16.to_le_bytes());
+        tiff.extend_from_slice(&1u32.to_le_bytes());
+        tiff.extend_from_slice(&6u16.to_le_bytes()); // orientation = 6
+        tiff.extend_from_slice(&[0u8; 2]); // pad to 4 bytes for value offset
+
+        // Next IFD: IFD1
+        let ifd1_offset = tiff.len() + 4;
+        tiff.extend_from_slice(&(ifd1_offset as u32).to_le_bytes());
+
+        // IFD1: 2 entries: 0x0201 and 0x0202
+        let thumb_bytes = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0xFF, 0xD9];
+        let thumb_len = thumb_bytes.len() as u32;
+
+        tiff.extend_from_slice(&2u16.to_le_bytes());
+        let thumb_offset = (tiff.len() + 12 * 2 + 4) as u32;
+        tiff.extend_from_slice(&0x0201u16.to_le_bytes());
+        tiff.extend_from_slice(&4u16.to_le_bytes());
+        tiff.extend_from_slice(&1u32.to_le_bytes());
+        tiff.extend_from_slice(&thumb_offset.to_le_bytes());
+
+        tiff.extend_from_slice(&0x0202u16.to_le_bytes());
+        tiff.extend_from_slice(&4u16.to_le_bytes());
+        tiff.extend_from_slice(&1u32.to_le_bytes());
+        tiff.extend_from_slice(&thumb_len.to_le_bytes());
+
+        tiff.extend_from_slice(&0u32.to_le_bytes());
+        tiff.extend_from_slice(&thumb_bytes);
+
+        let mut app1_payload = Vec::new();
+        app1_payload.extend_from_slice(b"Exif\0\0");
+        app1_payload.extend_from_slice(&tiff);
+
+        let app1_len = (app1_payload.len() + 2) as u16;
+        data.extend_from_slice(&app1_len.to_be_bytes());
+        data.extend_from_slice(&app1_payload);
+        data.extend_from_slice(&[0xFF, 0xD9]);
+
+        // When orientation is 6, direct extraction must return None to trigger full rotation pipeline
+        let extracted = extract_exif_thumbnail_from_bytes(&data);
+        assert!(extracted.is_none());
+    }
+
+    #[test]
+    fn test_decode_webp_to_rgb_invalid() {
+        assert!(decode_webp_to_rgb(&[]).is_err());
+        assert!(decode_webp_to_rgb(b"not a webp").is_err());
+    }
+
+    #[test]
+    fn test_decode_webp_to_rgb_and_generate_webp_thumbnail_fast() {
+        let temp_dir = std::env::temp_dir().join("iv_test_webp_fast");
+        let _ = fs::create_dir_all(&temp_dir);
+
+        // Encode a synthetic 40x20 RGB WebP image
+        let test_pixels = vec![128u8; 40 * 20 * 3];
+        let encoder = webp::Encoder::from_rgb(&test_pixels, 40, 20);
+        let webp_memory = encoder.encode(80.0);
+        assert!(!webp_memory.is_empty());
+
+        // Test decode_webp_to_rgb
+        let decoded = decode_webp_to_rgb(&webp_memory);
+        assert!(decoded.is_ok());
+        let img = decoded.unwrap();
+        assert_eq!(img.width(), 40);
+        assert_eq!(img.height(), 20);
+
+        // Test generate_webp_thumbnail_fast
+        let webp_path = temp_dir.join("sample.webp");
+        fs::write(&webp_path, &*webp_memory).unwrap();
+
+        let thumb_path = temp_dir.join("sample_thumb.jpg");
+        let gen_res = generate_webp_thumbnail_fast(&webp_path, &thumb_path, 20);
+        assert!(gen_res.is_ok());
+        assert!(thumb_path.exists());
+
+        // Verify generated thumbnail
+        let loaded = image::open(&thumb_path).unwrap();
+        assert_eq!(loaded.width(), 20);
+        assert_eq!(loaded.height(), 10);
+
+        let _ = fs::remove_file(&webp_path);
+        let _ = fs::remove_file(&thumb_path);
+        let _ = fs::remove_dir(&temp_dir);
+    }
+
+    #[test]
+    fn test_blend_rgba_to_rgb() {
+        // Opaque
+        assert_eq!(blend_rgba_to_rgb(10, 20, 30, 255), (10, 20, 30));
+        // Fully transparent -> white
+        assert_eq!(blend_rgba_to_rgb(10, 20, 30, 0), (255, 255, 255));
+        // Semi-transparent
+        let (r, g, b) = blend_rgba_to_rgb(0, 0, 0, 128);
+        assert!((r as i32 - 127).abs() <= 1);
+        assert!((g as i32 - 127).abs() <= 1);
+        assert!((b as i32 - 127).abs() <= 1);
+    }
+
+    #[test]
+    fn test_generate_webp_thumbnail_fast_with_alpha() {
+        let temp_dir = std::env::temp_dir().join("iv_test_webp_alpha_fast");
+        let _ = fs::create_dir_all(&temp_dir);
+
+        // Encode a synthetic 40x20 RGBA WebP image (transparent)
+        let mut test_pixels = vec![0u8; 40 * 20 * 4];
+        for chunk in test_pixels.chunks_exact_mut(4) {
+            chunk[0] = 255; // Red
+            chunk[1] = 0;
+            chunk[2] = 0;
+            chunk[3] = 128; // 50% alpha
+        }
+
+        let encoder = webp::Encoder::from_rgba(&test_pixels, 40, 20);
+        let webp_memory = encoder.encode(80.0);
+        assert!(!webp_memory.is_empty());
+
+        let webp_path = temp_dir.join("alpha.webp");
+        fs::write(&webp_path, &*webp_memory).unwrap();
+
+        let thumb_path = temp_dir.join("alpha_thumb.jpg");
+        let gen_res = generate_webp_thumbnail_fast(&webp_path, &thumb_path, 20);
+        assert!(gen_res.is_ok());
+        assert!(thumb_path.exists());
+
+        let loaded = image::open(&thumb_path).unwrap();
+        assert_eq!(loaded.width(), 20);
+        assert_eq!(loaded.height(), 10);
+
+        let _ = fs::remove_file(&webp_path);
+        let _ = fs::remove_file(&thumb_path);
         let _ = fs::remove_dir(&temp_dir);
     }
 }

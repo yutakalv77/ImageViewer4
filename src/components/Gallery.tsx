@@ -13,14 +13,15 @@ import {
   THUMBNAIL_SIZE_STEP,
   DEFAULT_GRID_GAP,
   DEFAULT_GRID_PADDING,
-  DEFAULT_OVERSCAN_ROWS,
 } from "../constants";
+import { calculateOverscanRows } from "../utils/virtualGridUtils";
 
 interface GalleryProps {
   currentPath: string;
   displayEntries: EntryItem[];
   loading: boolean;
   thumbnailSize: number;
+  highPerformanceMode?: boolean;
   isFavorite: (path: string) => boolean;
   scrollTarget?: ScrollTarget;
   onSaveScrollPosition?: (path: string, scrollTop: number) => void;
@@ -37,6 +38,7 @@ export function Gallery({
   displayEntries,
   loading,
   thumbnailSize,
+  highPerformanceMode,
   isFavorite,
   scrollTarget,
   onSaveScrollPosition,
@@ -66,7 +68,7 @@ export function Gallery({
     estimatedItemHeight: Math.round(thumbnailSize * 1.41) + 38,
     gap: DEFAULT_GRID_GAP,
     padding: DEFAULT_GRID_PADDING,
-    overscanRows: DEFAULT_OVERSCAN_ROWS,
+    overscanRows: calculateOverscanRows(Boolean(highPerformanceMode)),
   });
 
   const {
