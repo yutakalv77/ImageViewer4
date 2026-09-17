@@ -109,4 +109,56 @@ describe('TopBar', () => {
     fireEvent.doubleClick(searchContainer);
     expect(defaultProps.onMaximize).not.toHaveBeenCalled();
   });
+
+  it('パンくずリスト行の右クリックで親へのバブリングとデフォルト挙動が抑止され何も表示されないこと', () => {
+    const parentContextMenu = vi.fn();
+    const { container } = render(
+      <div onContextMenu={parentContextMenu}>
+        <TopBar {...defaultProps} />
+      </div>
+    );
+
+    const breadcrumbsList = container.querySelector('.breadcrumbs-list')!;
+    const topBar = container.querySelector('.top-bar')!;
+
+    // パンくずリスト上の右クリック
+    const breadcrumbEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const preventDefaultSpy1 = vi.spyOn(breadcrumbEvent, 'preventDefault');
+    const stopPropagationSpy1 = vi.spyOn(breadcrumbEvent, 'stopPropagation');
+    breadcrumbsList.dispatchEvent(breadcrumbEvent);
+
+    expect(stopPropagationSpy1).toHaveBeenCalled();
+    expect(preventDefaultSpy1).toHaveBeenCalled();
+    expect(parentContextMenu).not.toHaveBeenCalled();
+
+    // TopBar 背景の右クリック
+    const topBarEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const preventDefaultSpy2 = vi.spyOn(topBarEvent, 'preventDefault');
+    const stopPropagationSpy2 = vi.spyOn(topBarEvent, 'stopPropagation');
+    topBar.dispatchEvent(topBarEvent);
+
+    expect(stopPropagationSpy2).toHaveBeenCalled();
+    expect(preventDefaultSpy2).toHaveBeenCalled();
+    expect(parentContextMenu).not.toHaveBeenCalled();
+  });
+
+  it('検索入力欄の右クリックでも親へのバブリングは抑止されること', () => {
+    const parentContextMenu = vi.fn();
+    render(
+      <div onContextMenu={parentContextMenu}>
+        <TopBar {...defaultProps} />
+      </div>
+    );
+
+    const searchInput = screen.getByPlaceholderText('検索...');
+    const searchEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const preventDefaultSpy = vi.spyOn(searchEvent, 'preventDefault');
+    const stopPropagationSpy = vi.spyOn(searchEvent, 'stopPropagation');
+    searchInput.dispatchEvent(searchEvent);
+
+    expect(stopPropagationSpy).toHaveBeenCalled();
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
+    expect(parentContextMenu).not.toHaveBeenCalled();
+  });
 });
+

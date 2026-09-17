@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { isSearchPath, getBreadcrumbs, isVirtualPath } from "../utils/pathUtils";
+import { isTargetInputOrTextarea } from "../utils/windowMenuUtils";
 import "./TopBar.css";
 
 export interface TopBarProps {
@@ -40,6 +41,14 @@ export function TopBar({
     }
   };
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (!isTargetInputOrTextarea(e.target)) {
+      e.preventDefault();
+    }
+    e.stopPropagation();
+  }, []);
+
+
   const isInSearch = isSearchPath(currentPath);
 
   return (
@@ -51,7 +60,9 @@ export function TopBar({
         onMaximize();
       }}
       onClick={(e) => e.stopPropagation()}
+      onContextMenu={handleContextMenu}
     >
+
       <div 
         className="nav-buttons-group"
         onDoubleClick={(e) => e.stopPropagation()}
