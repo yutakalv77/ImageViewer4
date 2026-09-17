@@ -67,3 +67,55 @@ describe('useSettings hook - pageNumberPosition', () => {
     );
   });
 });
+
+import { DEFAULT_HIGH_PERFORMANCE_MODE } from '../constants';
+
+describe('useSettings hook - highPerformanceMode', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (fsPlugin.exists as any).mockResolvedValue(false);
+  });
+
+  it('initializes with default false when no config exists', async () => {
+    const { result } = renderHook(() => useSettings());
+
+    await waitFor(() => {
+      expect(result.current.isLoaded).toBe(true);
+    });
+
+    expect(result.current.highPerformanceMode).toBe(DEFAULT_HIGH_PERFORMANCE_MODE);
+  });
+
+  it('loads highPerformanceMode from existing config file', async () => {
+    (fsPlugin.exists as any).mockResolvedValue(true);
+    (fsPlugin.readTextFile as any).mockResolvedValue(
+      JSON.stringify({ highPerformanceMode: true })
+    );
+
+    const { result } = renderHook(() => useSettings());
+
+    await waitFor(() => {
+      expect(result.current.isLoaded).toBe(true);
+    });
+
+    expect(result.current.highPerformanceMode).toBe(true);
+  });
+
+  it('updates highPerformanceMode and persists to config', async () => {
+    const { result } = renderHook(() => useSettings());
+
+    await waitFor(() => {
+      expect(result.current.isLoaded).toBe(true);
+    });
+
+    await act(async () => {
+      await result.current.updateHighPerformanceMode(true);
+    });
+
+    expect(result.current.highPerformanceMode).toBe(true);
+    expect(fsPlugin.writeTextFile).toHaveBeenCalledWith(
+      expect.stringContaining('config.json'),
+      expect.stringContaining('"highPerformanceMode": true')
+    );
+  });
+});

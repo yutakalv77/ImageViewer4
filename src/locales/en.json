@@ -139,6 +139,8 @@
     "page_pos_top_right": "Top Right",
     "page_pos_bottom_right": "Bottom Right",
     "page_pos_hidden": "Hidden",
+    "high_perf_label": "High Performance Mode",
+    "high_perf_desc": "When enabled, pre-generates folder thumbnails in the background using maximum CPU cores. Drastically speeds up thumbnail rendering and scrolling, but may temporarily increase CPU usage, fan noise, and battery consumption.",
     "bg_title": "Background Image Settings",
     "bg_label": "Select background image",
     "bg_opacity": "Opacity",

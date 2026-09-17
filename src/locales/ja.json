@@ -139,6 +139,8 @@
     "page_pos_top_right": "右上",
     "page_pos_bottom_right": "右下",
     "page_pos_hidden": "非表示",
+    "high_perf_label": "高負荷モード（パフォーマンス優先）",
+    "high_perf_desc": "有効にすると、CPUコアを最大限に活用してフォルダ内のサムネイルを裏で一括・先行生成します。サムネイル表示とスクロールが劇的に高速化されますが、一時的にCPU使用率やファンの回転数、バッテリー消費が高くなる場合があります。",
     "bg_title": "背景画像の設定",
     "bg_label": "背景画像を選択",
     "bg_opacity": "不透明度",

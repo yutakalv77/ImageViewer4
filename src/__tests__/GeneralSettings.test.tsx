@@ -24,6 +24,8 @@ vi.mock("react-i18next", () => ({
         'settings.page_pos_top_right': '右上',
         'settings.page_pos_bottom_right': '右下',
         'settings.page_pos_hidden': '非表示',
+        'settings.high_perf_label': '高負荷モード（パフォーマンス優先）',
+        'settings.high_perf_desc': '有効にすると、CPUコアを最大限に活用してフォルダ内のサムネイルを裏で一括・先行生成します。サムネイル表示とスクロールが劇的に高速化されますが、一時的にCPU使用率やファンの回転数、バッテリー消費が高くなる場合があります。',
         'settings.bg_title': '背景画像の設定',
         'settings.bg_label': '背景画像を選択',
         'settings.storage_change': '変更...',
@@ -46,12 +48,14 @@ describe('GeneralSettings Component', () => {
       style: 'cover' as const,
     },
     pageNumberPosition: 'bottom-center' as PageNumberPosition,
+    highPerformanceMode: false,
     onUpdateStartupFolderType: vi.fn(),
     onUpdateLanguage: vi.fn(),
     onUpdateTheme: vi.fn(),
     onUpdateBackground: vi.fn(),
     onPickBackgroundImage: vi.fn(),
     onUpdatePageNumberPosition: vi.fn(),
+    onUpdateHighPerformanceMode: vi.fn(),
   };
 
   it('renders page number position setting label and 7 options', () => {
@@ -96,5 +100,34 @@ describe('GeneralSettings Component', () => {
 
     fireEvent.change(select, { target: { value: 'hidden' } });
     expect(onUpdatePageNumberPosition).toHaveBeenCalledWith('hidden');
+  });
+
+  it('renders high performance mode checkbox and description with proper accessibility attributes', () => {
+    render(<GeneralSettings {...defaultProps} highPerformanceMode={false} />);
+
+    expect(screen.getByText('高負荷モード（パフォーマンス優先）')).toBeInTheDocument();
+    const descEl = screen.getByText(/有効にすると、CPUコアを最大限に活用してフォルダ内のサムネイルを裏で一括・先行生成します/);
+    expect(descEl).toBeInTheDocument();
+    expect(descEl).toHaveAttribute('id', 'high-perf-mode-desc');
+
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).not.toBeChecked();
+    expect(checkbox).toHaveAttribute('id', 'high-perf-mode-input');
+    expect(checkbox).toHaveAttribute('aria-describedby', 'high-perf-mode-desc');
+  });
+
+  it('calls onUpdateHighPerformanceMode when checkbox is toggled', () => {
+    const onUpdateHighPerformanceMode = vi.fn();
+    render(
+      <GeneralSettings
+        {...defaultProps}
+        highPerformanceMode={false}
+        onUpdateHighPerformanceMode={onUpdateHighPerformanceMode}
+      />
+    );
+
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
+    expect(onUpdateHighPerformanceMode).toHaveBeenCalledWith(true);
   });
 });

@@ -8,12 +8,14 @@ interface GeneralSettingsProps {
   theme: ThemeMode;
   background: BackgroundSettings;
   pageNumberPosition: PageNumberPosition;
+  highPerformanceMode: boolean;
   onUpdateStartupFolderType: (type: StartupFolderType) => void;
   onUpdateLanguage: (lang: string) => void;
   onUpdateTheme: (theme: ThemeMode) => void;
   onUpdateBackground: (updates: Partial<BackgroundSettings>) => void;
   onPickBackgroundImage: () => void;
   onUpdatePageNumberPosition: (pos: PageNumberPosition) => void;
+  onUpdateHighPerformanceMode: (enabled: boolean) => void;
 }
 
 export function GeneralSettings({
@@ -22,12 +24,14 @@ export function GeneralSettings({
   theme,
   background,
   pageNumberPosition,
+  highPerformanceMode,
   onUpdateStartupFolderType,
   onUpdateLanguage,
   onUpdateTheme,
   onUpdateBackground,
   onPickBackgroundImage,
-  onUpdatePageNumberPosition
+  onUpdatePageNumberPosition,
+  onUpdateHighPerformanceMode
 }: GeneralSettingsProps) {
   const { t } = useTranslation();
 
@@ -93,6 +97,22 @@ export function GeneralSettings({
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="settings-group" style={{ marginTop: '20px' }}>
+        <label className="checkbox-label" htmlFor="high-perf-mode-input">
+          <input 
+            id="high-perf-mode-input"
+            type="checkbox" 
+            checked={highPerformanceMode} 
+            onChange={(e) => onUpdateHighPerformanceMode(e.target.checked)} 
+            aria-describedby="high-perf-mode-desc"
+          />
+          <span style={{ fontWeight: 'bold' }}>{t('settings.high_perf_label')}</span>
+        </label>
+        <p id="high-perf-mode-desc" className="settings-hint" style={{ marginTop: '6px', lineHeight: '1.5' }}>
+          {t('settings.high_perf_desc')}
+        </p>
       </div>
 
       <div className="settings-group" style={{ marginTop: '30px', borderTop: '1px solid var(--border-main)', paddingTop: '20px' }}>

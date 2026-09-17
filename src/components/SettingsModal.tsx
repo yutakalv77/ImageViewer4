@@ -18,7 +18,8 @@ export function SettingsModal() {
     background, updateBackground, pickBackgroundImage,
     everythingEnabled, updateEverythingEnabled, everythingMaxResults, updateEverythingMaxResults,
     everythingCliPath, updateEverythingCliPath,
-    pageNumberPosition, updatePageNumberPosition
+    pageNumberPosition, updatePageNumberPosition,
+    highPerformanceMode, updateHighPerformanceMode
   } = useSettingsContext();
 
   const {
@@ -154,12 +155,14 @@ export function SettingsModal() {
                 theme={theme}
                 background={background}
                 pageNumberPosition={pageNumberPosition}
+                highPerformanceMode={highPerformanceMode}
                 onUpdateStartupFolderType={updateStartupFolderType}
                 onUpdateLanguage={updateLanguage}
                 onUpdateTheme={updateTheme}
                 onUpdateBackground={updateBackground}
                 onPickBackgroundImage={pickBackgroundImage}
                 onUpdatePageNumberPosition={updatePageNumberPosition}
+                onUpdateHighPerformanceMode={updateHighPerformanceMode}
               />
             )}
             {activeSettingsTab === 'storage' && (

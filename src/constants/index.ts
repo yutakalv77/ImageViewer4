@@ -6,3 +6,5 @@ export const THUMBNAIL_SIZE_STEP = 20;
 export const DEFAULT_GRID_GAP = 20;
 export const DEFAULT_GRID_PADDING = 20;
 export const DEFAULT_OVERSCAN_ROWS = 2;
+
+export const DEFAULT_HIGH_PERFORMANCE_MODE = false;

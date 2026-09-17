@@ -12,6 +12,7 @@ import {
   THUMBNAIL_SIZE_MIN,
   THUMBNAIL_SIZE_MAX,
   THUMBNAIL_SIZE_STEP,
+  DEFAULT_HIGH_PERFORMANCE_MODE,
 } from "../constants";
 
 export {
@@ -19,6 +20,7 @@ export {
   THUMBNAIL_SIZE_MIN,
   THUMBNAIL_SIZE_MAX,
   THUMBNAIL_SIZE_STEP,
+  DEFAULT_HIGH_PERFORMANCE_MODE,
 };
 
 export function useSettings() {
@@ -47,6 +49,7 @@ export function useSettings() {
   const [everythingCliPath, setEverythingCliPath] = useState<string>("");
   const [isMenuBarPinned, setIsMenuBarPinned] = useState<boolean>(true);
   const [pageNumberPosition, setPageNumberPosition] = useState<PageNumberPosition>(DEFAULT_PAGE_NUMBER_POSITION);
+  const [highPerformanceMode, setHighPerformanceMode] = useState<boolean>(DEFAULT_HIGH_PERFORMANCE_MODE);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const isInitialMount = useRef(true);
@@ -112,6 +115,7 @@ export function useSettings() {
         if (config.sortOrder) setSortOrder(config.sortOrder);
         if (config.isMenuBarPinned !== undefined) setIsMenuBarPinned(config.isMenuBarPinned);
         if (isPageNumberPosition(config.pageNumberPosition)) setPageNumberPosition(config.pageNumberPosition);
+        if (config.highPerformanceMode !== undefined) setHighPerformanceMode(Boolean(config.highPerformanceMode));
 
         setIsLoaded(true);
       } catch (e) {
@@ -158,6 +162,7 @@ export function useSettings() {
         everythingCliPath,
         isMenuBarPinned,
         pageNumberPosition,
+        highPerformanceMode,
         ...updates
       };
 
@@ -165,7 +170,7 @@ export function useSettings() {
     } catch (e) {
       console.error("Failed to save settings:", e);
     }
-  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, autoCalculateColors, language, theme, sortBy, sortOrder, background, everythingEnabled, everythingMaxResults, everythingCliPath, isMenuBarPinned, pageNumberPosition]);
+  }, [dataStoragePath, historyRetentionDays, startupFolderType, slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover, thumbnailSize, autoCalculateColors, language, theme, sortBy, sortOrder, background, everythingEnabled, everythingMaxResults, everythingCliPath, isMenuBarPinned, pageNumberPosition, highPerformanceMode]);
 
   // Thumbnail size sync with debounce
   useEffect(() => {
@@ -319,6 +324,11 @@ export function useSettings() {
     await saveSettings({ pageNumberPosition: pos });
   }, [saveSettings]);
 
+  const updateHighPerformanceMode = useCallback(async (enabled: boolean) => {
+    setHighPerformanceMode(enabled);
+    await saveSettings({ highPerformanceMode: enabled });
+  }, [saveSettings]);
+
   return {
     isLoaded,
     dataStoragePath,
@@ -364,6 +374,8 @@ export function useSettings() {
     updateMenuBarPinned,
     pageNumberPosition,
     updatePageNumberPosition,
+    highPerformanceMode,
+    updateHighPerformanceMode,
     pickBackgroundImage
   };
 }
