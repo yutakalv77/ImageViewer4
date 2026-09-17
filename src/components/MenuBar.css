@@ -222,3 +222,10 @@
   width: 10px;
   height: 100%;
 }
+
+.menu-shortcut {
+  margin-left: auto;
+  padding-left: 20px;
+  font-size: 0.85em;
+  opacity: 0.6;
+}

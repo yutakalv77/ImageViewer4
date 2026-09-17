@@ -32,7 +32,14 @@
     "sort_size": "サイズ順",
     "sort_type": "種類順",
     "sort_asc": "昇順",
-    "sort_desc": "降順"
+    "sort_desc": "降順",
+    "transform": "回転・反転",
+    "rotate_cw": "時計回りに90°回転",
+    "rotate_ccw": "反時計回りに90°回転",
+    "flip_h": "左右反転",
+    "flip_v": "上下反転",
+    "flip_both": "上下左右反転",
+    "reset_transform": "回転・反転をリセット"
   },
   "slide_menu": {
     "start": "スライドショー開始",

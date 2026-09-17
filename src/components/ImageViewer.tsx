@@ -16,6 +16,9 @@ import { useMagnifier } from "../hooks/useMagnifier";
 import { useZoomPan } from "../hooks/useZoomPan";
 import { useBadgeFade } from "../hooks/useBadgeFade";
 import { formatZoomPercent } from "../utils/zoomPanUtils";
+import { getTransformBadgeText } from "../utils/transformUtils";
+import { useOptionalUIContext } from "../context/UIContext";
+import { useImageTransform } from "../hooks/useImageTransform";
 import { isZipVirtualPath } from "../utils/pathUtils";
 import { isTargetEditable } from "../utils/domUtils";
 import "./ImageViewer.css";
@@ -59,6 +62,29 @@ export function ImageViewer({
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
 
+  const context = useOptionalUIContext();
+  const localTransform = useImageTransform();
+
+  const {
+    imageTransform,
+    isTransformed,
+    transformCount,
+    rotateClockwise,
+    rotateCounterClockwise,
+    toggleFlipH,
+    toggleFlipV,
+    resetTransform,
+  } = context ?? {
+    imageTransform: localTransform.transform,
+    isTransformed: localTransform.isTransformed,
+    transformCount: localTransform.transformCount,
+    rotateClockwise: localTransform.rotateClockwise,
+    rotateCounterClockwise: localTransform.rotateCounterClockwise,
+    toggleFlipH: localTransform.toggleFlipH,
+    toggleFlipV: localTransform.toggleFlipV,
+    resetTransform: localTransform.resetTransform,
+  };
+
   const magnifier = useMagnifier(overlayRef, currentIndex);
   const zoomPan = useZoomPan({
     containerRef: overlayRef,
@@ -72,6 +98,24 @@ export function ImageViewer({
     activeDurationMs: 2000,
     fadeDurationMs: 2000,
   });
+
+  const transformBadgeFade = useBadgeFade({
+    triggerKey: transformCount,
+    enabled: isTransformed && !magnifier.isMagnifierActive,
+    activeDurationMs: 2000,
+    fadeDurationMs: 2000,
+  });
+
+  // Reset transform on image page change or when viewer closes
+  useEffect(() => {
+    resetTransform();
+  }, [currentIndex, resetTransform]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetTransform();
+    }
+  }, [isOpen, resetTransform]);
 
   // Auto-close magnifier when viewer closes
   useEffect(() => {
@@ -169,6 +213,8 @@ export function ImageViewer({
           magnifier.setMagnifierActive(false);
         } else if (zoomPan.isZoomed) {
           zoomPan.resetZoom();
+        } else if (isTransformed) {
+          resetTransform();
         } else {
           onClose();
         }
@@ -207,8 +253,11 @@ export function ImageViewer({
           }
         }
       } else {
-        // Zoom & Pan shortcuts when magnifier is not active
-        if (e.key === "0" || (e.ctrlKey && e.key === "0")) {
+        // Rotate & Flip shortcuts (check Alt+0 before zoom 0)
+        if (e.altKey && e.key === "0") {
+          e.preventDefault();
+          resetTransform();
+        } else if (e.key === "0" || (e.ctrlKey && e.key === "0")) {
           e.preventDefault();
           zoomPan.resetZoom();
         } else if (e.key === "1" || (e.ctrlKey && e.key === "1")) {
@@ -220,12 +269,44 @@ export function ImageViewer({
         } else if (e.key === "-" || e.code === "NumpadSubtract") {
           e.preventDefault();
           zoomPan.zoomOut();
+        } else if (e.key === "r" || e.key === "R") {
+          e.preventDefault();
+          if (e.shiftKey) {
+            rotateCounterClockwise();
+          } else {
+            rotateClockwise();
+          }
+        } else if (e.key === "l" || e.key === "L") {
+          e.preventDefault();
+          rotateCounterClockwise();
+        } else if (e.key === "h" || e.key === "H") {
+          e.preventDefault();
+          toggleFlipH();
+        } else if (e.key === "v" || e.key === "V") {
+          e.preventDefault();
+          toggleFlipV();
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isRenameOpen, handleNext, handlePrev, readingDirection, canRename, magnifier, zoomPan, onClose]);
+  }, [
+    isOpen,
+    isRenameOpen,
+    handleNext,
+    handlePrev,
+    readingDirection,
+    canRename,
+    magnifier,
+    zoomPan,
+    onClose,
+    isTransformed,
+    rotateClockwise,
+    rotateCounterClockwise,
+    toggleFlipH,
+    toggleFlipV,
+    resetTransform,
+  ]);
 
   const spreadImages = useMemo(() => {
     return getVisibleImages(images, currentIndex, {
@@ -251,6 +332,34 @@ export function ImageViewer({
           shortcut: "F2", 
           onClick: () => setIsRenameOpen(true) 
         },
+      ] : []),
+      { separator: true },
+      {
+        label: t('view_menu.rotate_cw', { defaultValue: '時計回りに90°回転' }),
+        shortcut: "R",
+        onClick: rotateClockwise,
+      },
+      {
+        label: t('view_menu.rotate_ccw', { defaultValue: '反時計回りに90°回転' }),
+        shortcut: "Shift+R",
+        onClick: rotateCounterClockwise,
+      },
+      {
+        label: t('view_menu.flip_h', { defaultValue: '左右反転' }),
+        shortcut: "H",
+        onClick: toggleFlipH,
+      },
+      {
+        label: t('view_menu.flip_v', { defaultValue: '上下反転' }),
+        shortcut: "V",
+        onClick: toggleFlipV,
+      },
+      ...(isTransformed ? [
+        {
+          label: t('view_menu.reset_transform', { defaultValue: '回転・反転をリセット' }),
+          shortcut: "Alt+0",
+          onClick: resetTransform,
+        }
       ] : []),
       { separator: true }
     ] : []),
@@ -288,22 +397,43 @@ export function ImageViewer({
         {readingDirection === "rtl" ? "⇦" : "⇨"}
       </div>
 
-      {badgeFade.isVisible && (
-        <div
-          className={`viewer-zoom-badge fade-${badgeFade.fadeState}`}
-          data-testid="viewer-zoom-badge"
-          onMouseEnter={badgeFade.handleMouseEnter}
-          onMouseLeave={badgeFade.handleMouseLeave}
-          onClick={(e) => {
-            e.stopPropagation();
-            zoomPan.resetZoom();
-          }}
-          title={t("viewer.zoom_reset", { defaultValue: "クリックでリセット" })}
-        >
-          <span className="viewer-zoom-badge-text">{formatZoomPercent(zoomPan.scale)}</span>
-          <span className="viewer-zoom-badge-reset">✕</span>
-        </div>
-      )}
+      <div className="viewer-badges-container">
+        {badgeFade.isVisible && (
+          <div
+            className={`viewer-zoom-badge fade-${badgeFade.fadeState}`}
+            data-testid="viewer-zoom-badge"
+            onMouseEnter={badgeFade.handleMouseEnter}
+            onMouseLeave={badgeFade.handleMouseLeave}
+            onClick={(e) => {
+              e.stopPropagation();
+              zoomPan.resetZoom();
+            }}
+            title={t("viewer.zoom_reset", { defaultValue: "クリックでリセット" })}
+          >
+            <span className="viewer-zoom-badge-text">{formatZoomPercent(zoomPan.scale)}</span>
+            <span className="viewer-zoom-badge-reset">✕</span>
+          </div>
+        )}
+
+        {transformBadgeFade.isVisible && (
+          <div
+            className={`viewer-zoom-badge viewer-transform-badge fade-${transformBadgeFade.fadeState}`}
+            data-testid="viewer-transform-badge"
+            onMouseEnter={transformBadgeFade.handleMouseEnter}
+            onMouseLeave={transformBadgeFade.handleMouseLeave}
+            onClick={(e) => {
+              e.stopPropagation();
+              resetTransform();
+            }}
+            title={t("view_menu.reset_transform", { defaultValue: "回転・反転をリセット" })}
+          >
+            <span className="viewer-zoom-badge-text">
+              {getTransformBadgeText(imageTransform, t)}
+            </span>
+            <span className="viewer-zoom-badge-reset">✕</span>
+          </div>
+        )}
+      </div>
       
       <div className={`viewer-container ${viewMode === 'spread' ? 'spread-view' : ''}`}>
         <div
@@ -322,6 +452,7 @@ export function ImageViewer({
                   readingDirection={readingDirection}
                   isMagnifierActive={magnifier.isMagnifierActive}
                   isZoomed={zoomPan.isZoomed}
+                  transform={imageTransform}
                   onNext={handleNext}
                   onPrev={handlePrev}
                 />
@@ -382,6 +513,7 @@ export function ImageViewer({
         imageSrc={magnifier.activeImageSrc}
         imageRect={magnifier.activeImageRect}
         containerRect={magnifier.containerRect}
+        transform={imageTransform}
       />
     </div>
 

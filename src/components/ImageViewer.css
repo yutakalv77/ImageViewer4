@@ -218,11 +218,20 @@
   transition: none;
 }
 
-.viewer-zoom-badge {
+.viewer-badges-container {
   position: absolute;
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1001;
+  pointer-events: none;
+}
+
+.viewer-zoom-badge {
+  position: relative;
   background: rgba(18, 18, 18, 0.88);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -238,7 +247,6 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  z-index: 1001;
   user-select: none;
   transition: opacity 0.4s ease-out, background-color 0.15s, border-color 0.15s, transform 0.15s;
 }
@@ -263,7 +271,7 @@
   opacity: 1 !important;
   background: rgba(35, 35, 35, 0.95);
   border-color: rgba(255, 255, 255, 0.45);
-  transform: translateX(-50%) scale(1.04);
+  transform: scale(1.04);
 }
 
 .viewer-zoom-badge-reset {

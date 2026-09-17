@@ -85,8 +85,8 @@ vi.mock('../context/FileSystemContext', () => ({
   }),
 }));
 
-vi.mock('../context/UIContext', () => ({
-  useUIContext: () => ({
+vi.mock('../context/UIContext', () => {
+  const mockUI = {
     viewerState: { isOpen: false, currentIndex: -1 },
     setViewerState: vi.fn(),
     persistentError: null,
@@ -99,8 +99,20 @@ vi.mock('../context/UIContext', () => ({
     setIsFavoritesOpen: vi.fn(),
     isIntervalDialogOpen: false,
     setIsIntervalDialogOpen: vi.fn(),
-  }),
-}));
+    imageTransform: { rotation: 0, flipH: false, flipV: false },
+    isTransformed: false,
+    transformCount: 0,
+    rotateClockwise: vi.fn(),
+    rotateCounterClockwise: vi.fn(),
+    toggleFlipH: vi.fn(),
+    toggleFlipV: vi.fn(),
+    resetTransform: vi.fn(),
+  };
+  return {
+    useUIContext: () => mockUI,
+    useOptionalUIContext: () => mockUI,
+  };
+});
 
 describe('Fullscreen behavior', () => {
   beforeEach(() => {

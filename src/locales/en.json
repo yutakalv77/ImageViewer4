@@ -32,7 +32,14 @@
     "sort_size": "Size",
     "sort_type": "Type",
     "sort_asc": "Ascending",
-    "sort_desc": "Descending"
+    "sort_desc": "Descending",
+    "transform": "Rotate / Flip",
+    "rotate_cw": "Rotate 90° Clockwise",
+    "rotate_ccw": "Rotate 90° Counterclockwise",
+    "flip_h": "Flip Horizontal",
+    "flip_v": "Flip Vertical",
+    "flip_both": "Flip Both",
+    "reset_transform": "Reset Orientation"
   },
   "slide_menu": {
     "start": "Start Slideshow",

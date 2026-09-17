@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { ViewerState } from "../types";
+import { useImageTransform } from "../hooks/useImageTransform";
+import { ImageTransform } from "../utils/transformUtils";
 
 interface UIContextType {
   viewerState: ViewerState;
@@ -16,6 +18,14 @@ interface UIContextType {
   setPersistentError: (error: string | null) => void;
   selectedInfoPath: string | null;
   setSelectedInfoPath: (path: string | null) => void;
+  imageTransform: ImageTransform;
+  isTransformed: boolean;
+  transformCount: number;
+  rotateClockwise: () => void;
+  rotateCounterClockwise: () => void;
+  toggleFlipH: () => void;
+  toggleFlipV: () => void;
+  resetTransform: () => void;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
@@ -28,6 +38,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [activeSettingsTab, setActiveSettingsTab] = useState("general");
   const [persistentError, setPersistentError] = useState<string | null>(null);
   const [selectedInfoPath, setSelectedInfoPath] = useState<string | null>(null);
+  const transform = useImageTransform();
 
   return (
     <UIContext.Provider value={{
@@ -44,7 +55,15 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       persistentError,
       setPersistentError,
       selectedInfoPath,
-      setSelectedInfoPath
+      setSelectedInfoPath,
+      imageTransform: transform.transform,
+      isTransformed: transform.isTransformed,
+      transformCount: transform.transformCount,
+      rotateClockwise: transform.rotateClockwise,
+      rotateCounterClockwise: transform.rotateCounterClockwise,
+      toggleFlipH: transform.toggleFlipH,
+      toggleFlipV: transform.toggleFlipV,
+      resetTransform: transform.resetTransform,
     }}>
       {children}
     </UIContext.Provider>
@@ -57,4 +76,8 @@ export const useUIContext = () => {
     throw new Error("useUIContext must be used within a UIProvider");
   }
   return context;
+};
+
+export const useOptionalUIContext = () => {
+  return useContext(UIContext);
 };

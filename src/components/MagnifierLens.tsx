@@ -5,6 +5,7 @@ import {
   calculateBackgroundPosition,
   calculateHelperPosition,
 } from "../utils/magnifierUtils";
+import { ImageTransform, buildTransformStyle } from "../utils/transformUtils";
 import "./MagnifierLens.css";
 
 export const HELPER_WIDTH = 290;
@@ -18,6 +19,7 @@ export interface MagnifierLensProps {
   imageSrc: string | null;
   imageRect: RectLike | null;
   containerRect: { width: number; height: number } | null;
+  transform?: ImageTransform;
 }
 
 /**
@@ -33,6 +35,7 @@ export function MagnifierLens({
   imageSrc,
   imageRect,
   containerRect,
+  transform,
 }: MagnifierLensProps) {
   const { t } = useTranslation();
 
@@ -72,6 +75,10 @@ export function MagnifierLens({
     containerRect.height
   );
 
+  const transformStyle = transform && buildTransformStyle(transform) !== "none"
+    ? ` ${buildTransformStyle(transform)}`
+    : "";
+
   return (
     <>
       <div
@@ -91,7 +98,7 @@ export function MagnifierLens({
           style={{
             width: `${bgPos.bgWidth}px`,
             height: `${bgPos.bgHeight}px`,
-            transform: `translate(${-bgPos.bgX}px, ${-bgPos.bgY}px)`,
+            transform: `translate(${-bgPos.bgX}px, ${-bgPos.bgY}px)${transformStyle}`,
           }}
         />
         <div className="magnifier-crosshair" aria-hidden="true" />

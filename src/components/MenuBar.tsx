@@ -33,6 +33,7 @@ export function MenuBar({
     handleMenuButtonLeave,
   } = useMenuState();
   const [isSortSubmenuOpen, setIsSortSubmenuOpen] = useState(false);
+  const [isTransformSubmenuOpen, setIsTransformSubmenuOpen] = useState(false);
   const { os, toggleMaximize, minimize, close, handleDrag } = useWindow();
   
   const {
@@ -51,7 +52,9 @@ export function MenuBar({
   const openFolder = onOpenFolderDialog || fsOpenFolderDialog;
 
   const {
-    setIsFavoritesOpen, setIsIntervalDialogOpen, setIsSettingsOpen
+    setIsFavoritesOpen, setIsIntervalDialogOpen, setIsSettingsOpen,
+    viewerState, imageTransform, isTransformed,
+    rotateClockwise, rotateCounterClockwise, toggleFlipH, toggleFlipV, resetTransform
   } = useUIContext();
 
   useEffect(() => {
@@ -64,6 +67,7 @@ export function MenuBar({
   useEffect(() => {
     if (activeMenu !== "view") {
       setIsSortSubmenuOpen(false);
+      setIsTransformSubmenuOpen(false);
     }
   }, [activeMenu]);
 
@@ -183,6 +187,88 @@ export function MenuBar({
                 onClick={(e) => { if (viewMode === "spread") { e.stopPropagation(); toggleFirstPageIsCover(); } }}
               >
                 {renderCheck(firstPageIsCover)} {t('view_menu.first_page_cover')}
+              </li>
+              <li className="separator"></li>
+              <li 
+                className={`has-submenu ${isTransformSubmenuOpen ? "open" : ""}`}
+                onMouseEnter={() => setIsTransformSubmenuOpen(true)}
+                onMouseLeave={() => setIsTransformSubmenuOpen(false)}
+                onClick={(e) => { e.stopPropagation(); setIsTransformSubmenuOpen(true); }}
+              >
+                <span className="submenu-label">
+                  <span className="menu-check-placeholder"></span>
+                  {t('view_menu.transform', { defaultValue: '回転・反転' })}
+                </span>
+                <span className="submenu-arrow">▶</span>
+                <ul className="menu-dropdown submenu" onClick={(e) => e.stopPropagation()}>
+                  <li 
+                    className={!viewerState?.isOpen ? "disabled" : ""}
+                    onClick={(e) => {
+                      if (!viewerState?.isOpen) return;
+                      e.stopPropagation();
+                      rotateClockwise?.();
+                      closeMenu();
+                    }}
+                  >
+                    <span className="menu-check-placeholder"></span>
+                    {t('view_menu.rotate_cw', { defaultValue: '時計回りに90°回転' })}
+                    <span className="menu-shortcut">R</span>
+                  </li>
+                  <li 
+                    className={!viewerState?.isOpen ? "disabled" : ""}
+                    onClick={(e) => {
+                      if (!viewerState?.isOpen) return;
+                      e.stopPropagation();
+                      rotateCounterClockwise?.();
+                      closeMenu();
+                    }}
+                  >
+                    <span className="menu-check-placeholder"></span>
+                    {t('view_menu.rotate_ccw', { defaultValue: '反時計回りに90°回転' })}
+                    <span className="menu-shortcut">Shift+R</span>
+                  </li>
+                  <li className="separator"></li>
+                  <li 
+                    className={!viewerState?.isOpen ? "disabled" : ""}
+                    onClick={(e) => {
+                      if (!viewerState?.isOpen) return;
+                      e.stopPropagation();
+                      toggleFlipH?.();
+                      closeMenu();
+                    }}
+                  >
+                    {renderCheck(!!imageTransform?.flipH)}
+                    {t('view_menu.flip_h', { defaultValue: '左右反転' })}
+                    <span className="menu-shortcut">H</span>
+                  </li>
+                  <li 
+                    className={!viewerState?.isOpen ? "disabled" : ""}
+                    onClick={(e) => {
+                      if (!viewerState?.isOpen) return;
+                      e.stopPropagation();
+                      toggleFlipV?.();
+                      closeMenu();
+                    }}
+                  >
+                    {renderCheck(!!imageTransform?.flipV)}
+                    {t('view_menu.flip_v', { defaultValue: '上下反転' })}
+                    <span className="menu-shortcut">V</span>
+                  </li>
+                  <li className="separator"></li>
+                  <li 
+                    className={!viewerState?.isOpen || !isTransformed ? "disabled" : ""}
+                    onClick={(e) => {
+                      if (!viewerState?.isOpen || !isTransformed) return;
+                      e.stopPropagation();
+                      resetTransform?.();
+                      closeMenu();
+                    }}
+                  >
+                    <span className="menu-check-placeholder"></span>
+                    {t('view_menu.reset_transform', { defaultValue: '回転・反転をリセット' })}
+                    <span className="menu-shortcut">Alt+0</span>
+                  </li>
+                </ul>
               </li>
               <li className="separator"></li>
               <li onClick={(e) => { e.stopPropagation(); updateThumbnailSize(20); }}>

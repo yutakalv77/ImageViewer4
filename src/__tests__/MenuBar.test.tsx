@@ -30,6 +30,12 @@ vi.mock('react-i18next', () => ({
         'view_menu.pin_menubar': '上部バーを固定',
         'menu.pin_menubar': '上部バーを固定',
         'menu.unpin_menubar': '上部バーを自動的に隠す',
+        'view_menu.transform': '回転・反転',
+        'view_menu.rotate_cw': '時計回りに90°回転',
+        'view_menu.rotate_ccw': '反時計回りに90°回転',
+        'view_menu.flip_h': '左右反転',
+        'view_menu.flip_v': '上下反転',
+        'view_menu.reset_transform': '回転・反転をリセット',
       };
       return translations[key] || key;
     },
@@ -91,13 +97,42 @@ vi.mock('../context/FileSystemContext', () => ({
   }),
 }));
 
-vi.mock('../context/UIContext', () => ({
-  useUIContext: () => ({
+const mockRotateClockwise = vi.fn();
+const mockRotateCounterClockwise = vi.fn();
+const mockToggleFlipH = vi.fn();
+const mockToggleFlipV = vi.fn();
+const mockResetTransform = vi.fn();
+
+let mockViewerState = {
+  isOpen: true,
+  currentIndex: 0,
+};
+
+let mockImageTransform = {
+  rotation: 0,
+  flipH: false,
+  flipV: false,
+};
+
+vi.mock('../context/UIContext', () => {
+  const getUI = () => ({
     setIsFavoritesOpen: vi.fn(),
     setIsIntervalDialogOpen: vi.fn(),
     setIsSettingsOpen: vi.fn(),
-  }),
-}));
+    viewerState: mockViewerState,
+    imageTransform: mockImageTransform,
+    isTransformed: mockImageTransform.rotation !== 0 || mockImageTransform.flipH || mockImageTransform.flipV,
+    rotateClockwise: mockRotateClockwise,
+    rotateCounterClockwise: mockRotateCounterClockwise,
+    toggleFlipH: mockToggleFlipH,
+    toggleFlipV: mockToggleFlipV,
+    resetTransform: mockResetTransform,
+  });
+  return {
+    useUIContext: getUI,
+    useOptionalUIContext: getUI,
+  };
+});
 
 describe('MenuBar', () => {
   const defaultProps = {
@@ -109,6 +144,15 @@ describe('MenuBar', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockViewerState = {
+      isOpen: true,
+      currentIndex: 0,
+    };
+    mockImageTransform = {
+      rotation: 0,
+      flipH: false,
+      flipV: false,
+    };
   });
 
   it('メニューをクリックするとドロップダウンが開き、外部をクリックすると閉じる', () => {
@@ -409,5 +453,42 @@ describe('MenuBar', () => {
     // 背景領域のダブルクリックで toggleMaximize が呼ばれる
     fireEvent.doubleClick(menuBar);
     expect(mockToggleMaximize).toHaveBeenCalledTimes(1);
+  });
+
+  it('「表示」メニュー内の「回転・反転」サブメニューから時計回り・反転・リセットを実行できること', () => {
+    render(<MenuBar {...defaultProps} />);
+
+    // 「表示」メニューを開く
+    fireEvent.click(screen.getByText('表示'));
+
+    // 「回転・反転」サブメニュー項目が存在することを確認
+    const transformSubmenu = screen.getByText('回転・反転');
+    expect(transformSubmenu).toBeInTheDocument();
+
+    // サブメニューを展開
+    fireEvent.mouseEnter(transformSubmenu.closest('li')!);
+
+    // 時計回りに90°回転をクリック
+    const rotateCwItem = screen.getByText('時計回りに90°回転');
+    fireEvent.click(rotateCwItem);
+    expect(mockRotateClockwise).toHaveBeenCalledTimes(1);
+
+    // 再度表示メニューを開いて反時計回り
+    fireEvent.click(screen.getByText('表示'));
+    fireEvent.mouseEnter(screen.getByText('回転・反転').closest('li')!);
+    fireEvent.click(screen.getByText('反時計回りに90°回転'));
+    expect(mockRotateCounterClockwise).toHaveBeenCalledTimes(1);
+
+    // 左右反転
+    fireEvent.click(screen.getByText('表示'));
+    fireEvent.mouseEnter(screen.getByText('回転・反転').closest('li')!);
+    fireEvent.click(screen.getByText('左右反転'));
+    expect(mockToggleFlipH).toHaveBeenCalledTimes(1);
+
+    // 上下反転
+    fireEvent.click(screen.getByText('表示'));
+    fireEvent.mouseEnter(screen.getByText('回転・反転').closest('li')!);
+    fireEvent.click(screen.getByText('上下反転'));
+    expect(mockToggleFlipV).toHaveBeenCalledTimes(1);
   });
 });

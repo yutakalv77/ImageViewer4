@@ -168,4 +168,26 @@ describe('ViewerImageItem', () => {
     expect(onNext).not.toHaveBeenCalled();
     expect(onPrev).not.toHaveBeenCalled();
   });
+
+  it('transform が指定された場合にスタイルが適用されること', () => {
+    vi.spyOn(useImageSourceModule, 'useImageSource').mockReturnValue({
+      src: 'asset://localhost/test.jpg',
+      isLoading: false,
+      error: null,
+    });
+
+    render(
+      <ViewerImageItem
+        image={dummyImage}
+        readingDirection="ltr"
+        transform={{ rotation: 90, flipH: true, flipV: false }}
+        onNext={onNext}
+        onPrev={onPrev}
+      />
+    );
+
+    const img = screen.getByRole('img');
+    expect(img.style.transform).toContain('rotate(90deg)');
+    expect(img.style.transform).toContain('scaleX(-1)');
+  });
 });

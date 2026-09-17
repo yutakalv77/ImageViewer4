@@ -1,12 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { EntryItem } from "../types";
 import { useImageSource } from "../hooks/useImageSource";
+import {
+  ImageTransform,
+  buildTransformStyle,
+  calculateRotatedFitScale,
+} from "../utils/transformUtils";
 
 interface ViewerImageItemProps {
   image: EntryItem;
   readingDirection: "rtl" | "ltr";
   isMagnifierActive?: boolean;
   isZoomed?: boolean;
+  transform?: ImageTransform;
   onNext: () => void;
   onPrev: () => void;
 }
@@ -20,6 +26,7 @@ export function ViewerImageItem({
   readingDirection,
   isMagnifierActive = false,
   isZoomed = false,
+  transform,
   onNext,
   onPrev,
 }: ViewerImageItemProps) {
@@ -27,10 +34,44 @@ export function ViewerImageItem({
   const [loadFailed, setLoadFailed] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+
   // 画像パスが変わったら失敗フラグをリセット
   useEffect(() => {
     setLoadFailed(false);
   }, [image.path]);
+
+  const updateFitScale = useCallback(() => {
+    if (!transform || (transform.rotation !== 90 && transform.rotation !== 270)) {
+      setFitScale(1);
+      return;
+    }
+    const wrapper = wrapperRef.current;
+    const img = imgRef.current;
+    if (!wrapper || !img) return;
+
+    const natW = img.naturalWidth || img.clientWidth;
+    const natH = img.naturalHeight || img.clientHeight;
+    const scale = calculateRotatedFitScale(
+      wrapper.clientWidth,
+      wrapper.clientHeight,
+      natW,
+      natH,
+      transform.rotation
+    );
+    setFitScale(scale);
+  }, [transform]);
+
+  useEffect(() => {
+    updateFitScale();
+  }, [updateFitScale, src]);
+
+  useEffect(() => {
+    window.addEventListener("resize", updateFitScale);
+    return () => window.removeEventListener("resize", updateFitScale);
+  }, [updateFitScale]);
 
   const hasError = !!error || loadFailed;
 
@@ -60,8 +101,12 @@ export function ViewerImageItem({
     [isMagnifierActive, readingDirection, onNext, onPrev]
   );
 
+  const transformStyle = transform
+    ? buildTransformStyle(transform, fitScale)
+    : "none";
+
   return (
-    <div className="viewer-image-wrapper">
+    <div ref={wrapperRef} className="viewer-image-wrapper">
       {hasError ? (
         <div className="viewer-image-error" onClick={(e) => e.stopPropagation()}>
           <div className="error-icon">⚠️</div>
@@ -73,10 +118,13 @@ export function ViewerImageItem({
         </div>
       ) : src ? (
         <img
+          ref={imgRef}
           key={`${image.path}-${retryCount}`}
           src={src}
           alt={image.name}
           className={`viewer-image ${isLoading ? "is-loading" : ""}`}
+          style={{ transform: transformStyle }}
+          onLoad={updateFitScale}
           onError={() => setLoadFailed(true)}
           onClick={handleClick}
         />
