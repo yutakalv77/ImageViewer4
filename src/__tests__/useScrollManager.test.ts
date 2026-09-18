@@ -71,6 +71,7 @@ describe("useScrollManager", () => {
       expect(targetScroll).toBe(600);
     });
     expect(result.current.scrollTarget.scrollTop).toBe(600);
+    expect(result.current.scrollTarget.targetEntryPath).toBe("C:/photos/album1");
 
     // Case 2: Parent folder has no saved scroll position -> should be 0 (top)
     act(() => {
@@ -78,6 +79,17 @@ describe("useScrollManager", () => {
       expect(targetScroll).toBe(0);
     });
     expect(result.current.scrollTarget.scrollTop).toBe(0);
+    expect(result.current.scrollTarget.targetEntryPath).toBe("C:/photos");
+  });
+
+  it("1階層上の親ディレクトリへ通常オープン（パンくずリスト等）で遷移した場合でも targetEntryPath が設定されること", () => {
+    const { result } = renderHook(() => useScrollManager());
+
+    act(() => {
+      result.current.prepareScrollForNavigation("C:/Photos", "C:/Photos/Trip2024", "open");
+    });
+
+    expect(result.current.scrollTarget.targetEntryPath).toBe("C:/Photos/Trip2024");
   });
 
   it("should reset scroll position to 0 if a folder is opened anew even if previously saved", () => {

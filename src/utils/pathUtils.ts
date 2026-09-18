@@ -159,6 +159,45 @@ export function getParentPath(path: string): string | null {
   return parent !== path ? parent : null;
 }
 
+/**
+ * Checks if parentPath is the direct parent of childPath.
+ * Takes path separators, casing, and ZIP virtual paths into account.
+ */
+export function isParentOf(
+  parentPath: string | null | undefined,
+  childPath: string | null | undefined
+): boolean {
+  if (!parentPath || !childPath) return false;
+  const expectedParent = getParentPath(childPath);
+  if (!expectedParent) return false;
+
+  const normExpected = normalizeSeparators(expectedParent).toLowerCase().replace(/\/+$/, "");
+  const normParent = normalizeSeparators(parentPath).toLowerCase().replace(/\/+$/, "");
+
+  // ドライブレター直下（例: "c:" と "c:/"）の統一
+  const cleanExpected = /^[a-z]:$/i.test(normExpected) ? `${normExpected}/` : normExpected;
+  const cleanParent = /^[a-z]:$/i.test(normParent) ? `${normParent}/` : normParent;
+
+  return cleanExpected === cleanParent;
+}
+
+/**
+ * Finds the index of an entry in entries matching targetPath.
+ * Normalizes separators, trailing slashes, and casing.
+ */
+export function findEntryIndexByPath(
+  entries: EntryItem[] | undefined | null,
+  targetPath: string | null | undefined
+): number {
+  if (!entries || entries.length === 0 || !targetPath) return -1;
+  const normTarget = normalizeSeparators(targetPath).toLowerCase().replace(/\/+$/, "");
+
+  return entries.findIndex((entry) => {
+    const normEntry = normalizeSeparators(entry.path).toLowerCase().replace(/\/+$/, "");
+    return normEntry === normTarget;
+  });
+}
+
 export function getPathParts(path: string): string[] {
   if (isVirtualPath(path)) return [path];
   const separator = path.includes("\\") ? "\\" : "/";

@@ -15,7 +15,7 @@ import {
   DEFAULT_GRID_PADDING,
 } from "../constants";
 import { calculateOverscanRows } from "../utils/virtualGridUtils";
-import { isZipVirtualPath, parseZipPath } from "../utils/pathUtils";
+import { isZipVirtualPath, parseZipPath, findEntryIndexByPath } from "../utils/pathUtils";
 
 
 interface GalleryProps {
@@ -130,10 +130,11 @@ export function Gallery({
 
     const navId = scrollTarget?.id ?? 0;
     const targetScrollTop = scrollTarget?.scrollTop ?? 0;
+    const targetEntryPath = scrollTarget?.targetEntryPath;
 
     if (loading) {
       isRestoringRef.current = true;
-      if (targetScrollTop === 0) {
+      if (targetScrollTop === 0 && !targetEntryPath) {
         container.scrollTop = 0;
       }
       return;
@@ -166,6 +167,26 @@ export function Gallery({
       }
       const el = mainContentRef.current;
 
+      // 1階層上へ遷移した場合、元のフォルダを選択＆スクロール
+      if (targetEntryPath) {
+        const targetIndex = findEntryIndexByPath(displayEntries, targetEntryPath);
+        if (targetIndex !== -1) {
+          setSelectedIndex(targetIndex);
+          if (el.clientHeight > 0 || attempts >= maxAttempts) {
+            scrollToIndex(targetIndex);
+            finalizeScroll();
+            return;
+          } else {
+            attempts++;
+            rafId = requestAnimationFrame(applyScroll);
+            return;
+          }
+        }
+      } else {
+        // 通常のナビゲーション（新規オープンなど）では以前の選択をリセット
+        setSelectedIndex(-1);
+      }
+
       if (targetScrollTop <= 0) {
         el.scrollTop = 0;
         finalizeScroll();
@@ -188,7 +209,16 @@ export function Gallery({
       cancelAnimationFrame(rafId);
       isRestoringRef.current = false;
     };
-  }, [currentPath, loading, displayEntries, scrollTarget?.id, scrollTarget?.scrollTop]);
+  }, [
+    currentPath,
+    loading,
+    displayEntries,
+    scrollTarget?.id,
+    scrollTarget?.scrollTop,
+    scrollTarget?.targetEntryPath,
+    scrollToIndex,
+    setSelectedIndex,
+  ]);
 
   // Ctrl + Mouse Wheel resizing
   useEffect(() => {

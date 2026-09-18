@@ -153,5 +153,40 @@ describe("Gallery component with virtual grid", () => {
 
     expect(onDeleteEntry).toHaveBeenCalledWith("C:/photos/image_0.jpg");
   });
+
+  it("1階層上に遷移した場合（scrollTarget.targetEntryPath 指定時）、該当フォルダが選択状態になること", async () => {
+    const entries: EntryItem[] = [
+      { name: "folderA", path: "C:/photos/folderA", is_dir: true, thumbnail_path: null },
+      { name: "folderB", path: "C:/photos/folderB", is_dir: true, thumbnail_path: null },
+      { name: "folderC", path: "C:/photos/folderC", is_dir: true, thumbnail_path: null },
+    ];
+
+    // folderB から親へ戻った想定
+    const scrollTarget = {
+      path: "C:/photos",
+      scrollTop: 0,
+      id: 1,
+      targetEntryPath: "C:/photos/folderB",
+    };
+
+    const { container } = render(
+      <Gallery
+        {...defaultProps}
+        displayEntries={entries}
+        scrollTarget={scrollTarget}
+      />
+    );
+
+    // requestAnimationFrame の実行を待つ
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+
+    const cards = container.querySelectorAll(".entry-card");
+    expect(cards[0].classList.contains("selected")).toBe(false);
+    expect(cards[1].classList.contains("selected")).toBe(true);
+    expect(cards[2].classList.contains("selected")).toBe(false);
+  });
 });
 

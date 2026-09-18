@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { NavigationType } from "../types";
-import { normalizeSeparators, isVirtualPath } from "../utils/pathUtils";
+import { normalizeSeparators, isVirtualPath, isParentOf } from "../utils/pathUtils";
 
 export interface ScrollTarget {
   path: string;
   scrollTop: number;
   id: number;
+  targetEntryPath?: string;
 }
 
 /**
@@ -47,13 +48,16 @@ export function useScrollManager() {
   const prepareScrollForNavigation = useCallback((
     targetPath: string,
     currentPath: string,
-    navType: NavigationType = "open"
+    navType: NavigationType = "open",
+    explicitTargetEntryPath?: string
   ) => {
     if (!targetPath) return 0;
     const targetKey = getKey(targetPath);
     const currentKey = currentPath ? getKey(currentPath) : "";
 
     let nextScrollTop = 0;
+    let targetEntryPath: string | undefined = explicitTargetEntryPath;
+
     if (targetKey === currentKey) {
       // 同じパスへのリロード（リネーム等）：現在の位置を維持
       nextScrollTop = scrollPositionsRef.current.get(targetKey) ?? 0;
@@ -69,10 +73,16 @@ export function useScrollManager() {
       nextScrollTop = scrollPositionsRef.current.get(targetKey) ?? 0;
     }
 
+    // 1階層上への遷移（navType === "up" または targetPath が currentPath の親ディレクトリ）の場合、元のフォルダを選択対象とする
+    if (!targetEntryPath && currentPath && (navType === "up" || isParentOf(targetPath, currentPath))) {
+      targetEntryPath = currentPath;
+    }
+
     setScrollTarget(prev => ({
       path: targetPath,
       scrollTop: nextScrollTop,
-      id: prev.id + 1
+      id: prev.id + 1,
+      targetEntryPath,
     }));
 
     return nextScrollTop;

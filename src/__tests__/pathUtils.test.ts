@@ -9,6 +9,8 @@ import {
   parseZipPath,
   makeZipPath,
   getParentPath,
+  isParentOf,
+  findEntryIndexByPath,
 } from '../utils/pathUtils';
 
 describe('pathUtils - ZIP path utilities', () => {
@@ -69,6 +71,52 @@ describe('pathUtils - getParentPath', () => {
     expect(getParentPath('C:\\comics\\vol1.zip::page01.jpg')).toBe('C:\\comics\\vol1.zip');
     // ZIPルート -> 親ディレクトリ
     expect(getParentPath('C:\\comics\\vol1.zip')).toBe('C:\\comics');
+  });
+});
+
+describe('pathUtils - isParentOf', () => {
+  it('通常パスで1階層上の親ディレクトリであることを正しく判定すること', () => {
+    expect(isParentOf('C:/Photos', 'C:\\Photos\\Trip')).toBe(true);
+    expect(isParentOf('C:\\Photos', 'C:/Photos/Trip')).toBe(true);
+    expect(isParentOf('C:/', 'C:\\Photos')).toBe(true);
+    expect(isParentOf('C:', 'C:\\Photos')).toBe(true);
+  });
+
+  it('2階層以上下、同一パス、無関係のパスでは false を返すこと', () => {
+    expect(isParentOf('C:/Photos', 'C:/Photos/2024/Trip')).toBe(false);
+    expect(isParentOf('C:/Photos', 'C:/Photos')).toBe(false);
+    expect(isParentOf('C:/Photos', 'C:/Other/Trip')).toBe(false);
+    expect(isParentOf('', 'C:/Photos/Trip')).toBe(false);
+    expect(isParentOf(null, 'C:/Photos/Trip')).toBe(false);
+    expect(isParentOf('C:/Photos', null)).toBe(false);
+  });
+
+  it('ZIP仮想パスの親ディレクトリ関係を正しく判定すること', () => {
+    expect(isParentOf('C:/test.zip::folder', 'C:\\test.zip::folder/sub')).toBe(true);
+    expect(isParentOf('C:/test.zip', 'C:\\test.zip::folder')).toBe(true);
+    expect(isParentOf('C:/', 'C:\\test.zip')).toBe(true);
+  });
+});
+
+describe('pathUtils - findEntryIndexByPath', () => {
+  const dummyEntries = [
+    { name: 'Trip2023', path: 'C:/Photos/Trip2023', is_dir: true, thumbnail_path: null },
+    { name: 'Trip2024', path: 'C:\\Photos\\Trip2024', is_dir: true, thumbnail_path: null },
+    { name: 'photo.jpg', path: 'C:/Photos/photo.jpg', is_dir: false, thumbnail_path: null },
+  ];
+
+  it('パス（区切り文字・大文字小文字差異を含む）に合致するエントリのインデックスを返すこと', () => {
+    expect(findEntryIndexByPath(dummyEntries, 'C:/Photos/Trip2024')).toBe(1);
+    expect(findEntryIndexByPath(dummyEntries, 'c:\\photos\\trip2024\\')).toBe(1);
+    expect(findEntryIndexByPath(dummyEntries, 'C:/Photos/Trip2023')).toBe(0);
+    expect(findEntryIndexByPath(dummyEntries, 'C:/Photos/photo.jpg')).toBe(2);
+  });
+
+  it('合致しない場合や空配列の場合は -1 を返すこと', () => {
+    expect(findEntryIndexByPath(dummyEntries, 'C:/Photos/NonExistent')).toBe(-1);
+    expect(findEntryIndexByPath([], 'C:/Photos/Trip2024')).toBe(-1);
+    expect(findEntryIndexByPath(dummyEntries, '')).toBe(-1);
+    expect(findEntryIndexByPath(null, 'C:/Photos/Trip2024')).toBe(-1);
   });
 });
 
