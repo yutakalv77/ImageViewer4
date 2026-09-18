@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
 import { DOUBLE_CLICK_DELAY_MS } from "../utils/zoomPanUtils";
-
-const WHEEL_COOLDOWN = 400; // ms
-const WHEEL_THRESHOLD = 30;
+import {
+  evaluateWheelNavigation,
+  normalizeWheelDeltaY,
+  WheelNavigationState,
+} from "../utils/viewerUtils";
 
 export interface UseViewerOverlayEventsOptions {
   isMagnifierActive: boolean;
@@ -44,7 +46,11 @@ export function useViewerOverlayEvents({
   magnifier,
   zoomPan,
 }: UseViewerOverlayEventsOptions): UseViewerOverlayEventsReturn {
-  const lastWheelTime = useRef(0);
+  const wheelStateRef = useRef<WheelNavigationState>({
+    lastWheelTime: 0,
+    accumulatedDelta: 0,
+    lastInputTime: 0,
+  });
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup pending overlay click timer on unmount
@@ -59,15 +65,19 @@ export function useViewerOverlayEvents({
   const handleBaseWheel = useCallback(
     (e: React.WheelEvent) => {
       const now = Date.now();
-      if (now - lastWheelTime.current < WHEEL_COOLDOWN) return;
-      if (Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
+      const deltaY = normalizeWheelDeltaY(e);
+      const { direction, nextState } = evaluateWheelNavigation(
+        deltaY,
+        now,
+        wheelStateRef.current
+      );
+      wheelStateRef.current = nextState;
 
-      if (e.deltaY > 0) {
+      if (direction === "next") {
         onNext();
-      } else {
+      } else if (direction === "prev") {
         onPrev();
       }
-      lastWheelTime.current = now;
     },
     [onNext, onPrev]
   );

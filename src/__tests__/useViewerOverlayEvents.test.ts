@@ -138,4 +138,39 @@ describe("useViewerOverlayEvents", () => {
     });
     expect(opts.onPrev).toHaveBeenCalledTimes(1);
   });
+
+  it("高速ホイール操作時、60ms以上の間隔で連続して onNext が呼ばれること（キーボード並みの高速切り替え）", () => {
+    const opts = createDefaultOptions();
+    const { result } = renderHook(() => useViewerOverlayEvents(opts));
+
+    const fakeWheel = { deltaY: 100 } as React.WheelEvent<HTMLDivElement>;
+
+    // 1回目の操作
+    act(() => {
+      result.current.handleWheel(fakeWheel);
+    });
+    expect(opts.onNext).toHaveBeenCalledTimes(1);
+
+    // クールダウン未満（30ms）では追加入力は無視される
+    act(() => {
+      vi.advanceTimersByTime(30);
+      result.current.handleWheel(fakeWheel);
+    });
+    expect(opts.onNext).toHaveBeenCalledTimes(1);
+
+    // クールダウン経過（さらに 40ms 経過、合計 70ms）で次の遷移が即座に発火
+    act(() => {
+      vi.advanceTimersByTime(40);
+      result.current.handleWheel(fakeWheel);
+    });
+    expect(opts.onNext).toHaveBeenCalledTimes(2);
+
+    // さらに 70ms 経過で3回目の遷移が発火
+    act(() => {
+      vi.advanceTimersByTime(70);
+      result.current.handleWheel(fakeWheel);
+    });
+    expect(opts.onNext).toHaveBeenCalledTimes(3);
+  });
 });
+

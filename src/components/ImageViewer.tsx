@@ -24,6 +24,7 @@ import { isZipVirtualPath } from "../utils/pathUtils";
 import { createViewerContextMenuItems } from "../utils/viewerContextMenu";
 import { useViewerShortcuts } from "../hooks/useViewerShortcuts";
 import { useViewerOverlayEvents } from "../hooks/useViewerOverlayEvents";
+import { useImagePreload } from "../hooks/useImagePreload";
 import "./ImageViewer.css";
 
 interface ImageViewerProps {
@@ -105,6 +106,9 @@ export function ImageViewer({
     activeDurationMs: 2000,
     fadeDurationMs: 2000,
   });
+
+  // Preload adjacent images in background to maximize wheel/keyboard flip rendering speed
+  useImagePreload(images, currentIndex, isOpen);
 
   // Reset transform on image page change or when viewer closes
   useEffect(() => {
