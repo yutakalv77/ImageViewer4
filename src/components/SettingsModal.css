@@ -68,7 +68,10 @@
 }
 
 .settings-header {
-  padding: 15px 20px;
+  height: 32px;
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 0 0 0 12px;
   border-bottom: 1px solid var(--border-dim);
   display: flex;
   justify-content: space-between;
@@ -77,20 +80,33 @@
 
 .settings-header h2 {
   margin: 0;
-  font-size: 1.1em;
+  font-size: var(--font-size-base, 12px);
+  font-weight: 500;
   color: var(--text-main);
+  user-select: none;
 }
 
 .close-button {
+  width: 45px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: var(--text-dim);
-  font-size: 1.5em;
   cursor: pointer;
+  transition: background 0.1s, color 0.1s;
 }
 
 .close-button:hover {
-  color: var(--text-main);
+  background: #e81123;
+  color: white;
+}
+
+.close-button:active {
+  background: #bf0f1d;
+  color: white;
 }
 
 .settings-body {
@@ -110,7 +126,7 @@
   padding: 10px 20px;
   cursor: pointer;
   color: var(--text-dim);
-  font-size: 0.9em;
+  font-size: var(--font-size-base, 12px);
 }
 
 .settings-menu-item:hover {
@@ -132,7 +148,7 @@
 
 .settings-section h3 {
   margin-top: 0;
-  font-size: 1em;
+  font-size: var(--font-size-md, 13px);
   border-bottom: 1px solid var(--border-main);
   padding-bottom: 10px;
   margin-bottom: 20px;
@@ -144,7 +160,7 @@
 
 .settings-group label {
   display: block;
-  font-size: 0.85em;
+  font-size: var(--font-size-sm, 11px);
   color: var(--text-dim);
   margin-bottom: 8px;
 }
@@ -161,7 +177,7 @@
   color: var(--text-main);
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 0.9em;
+  font-size: var(--font-size-base, 12px);
 }
 
 .settings-button {
@@ -171,7 +187,7 @@
   padding: 6px 15px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.85em;
+  font-size: var(--font-size-base, 12px);
 }
 
 .settings-button:hover {
@@ -192,7 +208,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9em;
+  font-size: var(--font-size-base, 12px);
   padding: 5px 0;
 }
 
@@ -220,20 +236,6 @@
   color: var(--text-dim);
 }
 
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.checkbox-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
 .settings-input {
   width: 100%;
   background: var(--bg-input);
@@ -241,5 +243,5 @@
   color: var(--text-main);
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 0.9em;
+  font-size: var(--font-size-base, 12px);
 }

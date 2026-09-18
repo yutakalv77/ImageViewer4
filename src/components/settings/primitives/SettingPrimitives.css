@@ -7,9 +7,13 @@
   margin-bottom: 28px;
 }
 
+.setting-section:last-child {
+  margin-bottom: 0;
+}
+
 .setting-section-title {
   margin: 0 0 8px 0;
-  font-size: 1.05em;
+  font-size: var(--font-size-md, 13px);
   font-weight: 600;
   color: var(--text-main);
   padding-bottom: 8px;
@@ -18,7 +22,7 @@
 
 .setting-section-description {
   margin: 0 0 16px 0;
-  font-size: 0.85em;
+  font-size: var(--font-size-sm, 11px);
   color: var(--text-dim);
   line-height: 1.4;
 }
@@ -51,7 +55,7 @@
 
 .setting-row-label {
   display: block;
-  font-size: 0.9em;
+  font-size: var(--font-size-base, 12px);
   font-weight: 500;
   color: var(--text-main);
   user-select: none;
@@ -59,7 +63,7 @@
 
 .setting-row-description {
   margin: 4px 0 0 0;
-  font-size: 0.8em;
+  font-size: var(--font-size-sm, 11px);
   color: var(--text-dim);
   line-height: 1.4;
 }
@@ -126,7 +130,7 @@
   color: var(--text-main);
   padding: 6px 12px;
   border-radius: 4px;
-  font-size: 0.85em;
+  font-size: var(--font-size-base, 12px);
   cursor: pointer;
   outline: none;
   transition: border-color 0.15s ease;
@@ -182,7 +186,7 @@
 }
 
 .setting-slider-value {
-  font-size: 0.85em;
+  font-size: var(--font-size-sm, 11px);
   font-weight: 500;
   color: var(--text-main);
   min-width: 48px;
@@ -204,6 +208,6 @@
 }
 
 .setting-number-unit {
-  font-size: 0.85em;
+  font-size: var(--font-size-sm, 11px);
   color: var(--text-dim);
 }

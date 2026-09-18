@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../utils/formatUtils";
 import { useThumbnailCache } from "../../hooks/useThumbnailCache";
+import { SettingSection, SettingRow, SettingPathInput } from "./primitives";
 
 interface StorageSettingsProps {
   dataStoragePath: string;
@@ -9,45 +10,41 @@ interface StorageSettingsProps {
 
 export function StorageSettings({
   dataStoragePath,
-  onChangeStoragePath
+  onChangeStoragePath,
 }: StorageSettingsProps) {
   const { t } = useTranslation();
   const { cacheSize, isClearing, clearCache } = useThumbnailCache();
 
   return (
-    <div className="settings-section">
-      <h3>{t('settings.storage_title')}</h3>
-      <div className="settings-group">
-        <label>{t('settings.storage_label')}</label>
-        <div className="path-input-group">
-          <input type="text" value={dataStoragePath} readOnly />
-          <button className="settings-button" onClick={onChangeStoragePath}>{t('settings.storage_change')}</button>
-        </div>
-        <p style={{fontSize: '0.8em', color: 'var(--text-dim)', marginTop: '10px'}}>
-          {t('settings.storage_hint')}
-        </p>
-      </div>
+    <SettingSection title={t("settings.storage_title")}>
+      <SettingPathInput
+        label={t("settings.storage_label")}
+        description={t("settings.storage_hint")}
+        value={dataStoragePath}
+        browseLabel={t("settings.storage_change")}
+        onBrowse={onChangeStoragePath}
+      />
 
-      <div className="settings-group" style={{ marginTop: '30px', borderTop: '1px solid var(--border-main)', paddingTop: '20px' }}>
-        <label>{t('settings.cache_title')}</label>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
-          <div>
-            <span style={{ fontSize: '0.9em', color: 'var(--text-dim)' }}>
-              {t('settings.cache_size_label')}:{" "}
-            </span>
-            <span style={{ fontWeight: 'bold', marginLeft: '5px' }}>
-              {cacheSize === null ? t('settings.cache_size_loading') : formatBytes(cacheSize)}
-            </span>
-          </div>
-          <button 
-            className="settings-button" 
-            onClick={clearCache}
-            disabled={isClearing}
-          >
-            {t('settings.cache_clear_button')}
-          </button>
-        </div>
-      </div>
-    </div>
+      <SettingRow
+        label={t("settings.cache_title")}
+        description={
+          <>
+            <span>{t("settings.cache_size_label")}: </span>
+            <strong style={{ marginLeft: "4px", color: "var(--text-main)" }}>
+              {cacheSize === null ? t("settings.cache_size_loading") : formatBytes(cacheSize)}
+            </strong>
+          </>
+        }
+      >
+        <button
+          type="button"
+          className="settings-button"
+          onClick={clearCache}
+          disabled={isClearing}
+        >
+          {t("settings.cache_clear_button")}
+        </button>
+      </SettingRow>
+    </SettingSection>
   );
 }

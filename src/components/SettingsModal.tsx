@@ -44,7 +44,9 @@ export function SettingsModal() {
             onMouseDown={(e) => e.stopPropagation()}
             aria-label="Close"
           >
-            &times;
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <path d="M0 0l10 10M10 0L0 10" stroke="currentColor" strokeWidth="1.2" fill="none" />
+            </svg>
           </button>
         </div>
 

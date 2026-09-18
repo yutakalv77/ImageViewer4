@@ -49,7 +49,7 @@
 .info-row label {
   width: 140px;
   text-align: right;
-  font-size: 0.8em;
+  font-size: var(--font-size-base, 12px);
   color: var(--text-dim);
   flex-shrink: 0;
 }
@@ -61,7 +61,7 @@
   color: var(--text-main);
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.8em;
+  font-size: var(--font-size-base, 12px);
   height: 24px;
 }
 
@@ -80,7 +80,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.8em;
+    font-size: var(--font-size-base, 12px);
     color: var(--text-main) !important;
     width: auto !important;
     white-space: nowrap;

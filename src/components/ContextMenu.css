@@ -16,7 +16,7 @@
   padding: 6px 16px;
   color: var(--text-menu);
   cursor: pointer;
-  font-size: 0.85em;
+  font-size: var(--font-size-base, 12px);
   white-space: nowrap;
   user-select: none;
 }
@@ -40,7 +40,7 @@
 
 .context-menu-shortcut {
   margin-left: 20px;
-  font-size: 0.85em;
+  font-size: var(--font-size-sm, 11px);
   color: var(--text-dim, #888);
 }
 

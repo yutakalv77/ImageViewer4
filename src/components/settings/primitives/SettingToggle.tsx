@@ -5,6 +5,7 @@ import "./SettingPrimitives.css";
 export interface SettingToggleProps {
   label: string;
   description?: string;
+  descriptionId?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
@@ -17,6 +18,7 @@ export interface SettingToggleProps {
 export function SettingToggle({
   label,
   description,
+  descriptionId,
   checked,
   onChange,
   disabled = false,
@@ -24,7 +26,7 @@ export function SettingToggle({
 }: SettingToggleProps) {
   const autoId = useId();
   const toggleId = id || `setting-toggle-${autoId}`;
-  const descId = description ? `${toggleId}-desc` : undefined;
+  const descId = descriptionId || (description ? `${toggleId}-desc` : undefined);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (disabled) return;
