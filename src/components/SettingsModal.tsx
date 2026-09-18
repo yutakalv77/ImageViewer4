@@ -1,206 +1,90 @@
-import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { StorageSettings } from "./settings/StorageSettings";
-import { HistorySettings } from "./settings/HistorySettings";
-import { GeneralSettings } from "./settings/GeneralSettings";
-import { EverythingSettings } from "./settings/EverythingSettings";
-import { useSettingsContext } from "../context/SettingsContext";
 import { useUIContext } from "../context/UIContext";
+import { SETTINGS_TABS, getSettingsTabById, getDefaultSettingsTab } from "./settings/settingsRegistry";
+import { useDraggableModal } from "../hooks/useDraggableModal";
 import "./SettingsModal.css";
 
 export function SettingsModal() {
   const { t } = useTranslation();
-  
   const {
-    dataStoragePath, changeStoragePath, historyRetentionDays, updateHistoryRetention,
-    startupFolderType, updateStartupFolderType,
-    language, updateLanguage, theme, updateTheme, 
-    background, updateBackground, pickBackgroundImage,
-    everythingEnabled, updateEverythingEnabled, everythingMaxResults, updateEverythingMaxResults,
-    everythingCliPath, updateEverythingCliPath,
-    pageNumberPosition, updatePageNumberPosition,
-    highPerformanceMode, updateHighPerformanceMode,
-    confirmDelete, updateConfirmDelete
-  } = useSettingsContext();
-
-  const {
-    isSettingsOpen, setIsSettingsOpen, activeSettingsTab, setActiveSettingsTab
+    isSettingsOpen,
+    setIsSettingsOpen,
+    activeSettingsTab,
+    setActiveSettingsTab,
   } = useUIContext();
 
-  const onClose = () => setIsSettingsOpen(false);
-  const onTabChange = (tab: string) => setActiveSettingsTab(tab);
-
-  // Position and Size State
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [size, setSize] = useState({ w: 700, h: 500 });
-  const [isInitialized, setIsInitialized] = useState(false);
-  
-  const isDragging = useRef(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-  
-  const isResizing = useRef<string | null>(null);
-  const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
-
-  // Reset position to center when opened
-  useEffect(() => {
-    if (isSettingsOpen && !isInitialized) {
-      const x = (window.innerWidth - size.w) / 2;
-      const y = (window.innerHeight - size.h) / 2;
-      setPos({ x, y });
-      setIsInitialized(true);
-    }
-    if (!isSettingsOpen) {
-      setIsInitialized(false);
-    }
-  }, [isSettingsOpen, isInitialized, size.w, size.h]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    isDragging.current = true;
-    dragStart.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-  };
-
-  const handleResizeStart = (e: React.MouseEvent, dir: string) => {
-    e.stopPropagation();
-    isResizing.current = dir;
-    resizeStart.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h };
-  };
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging.current) {
-      setPos({
-        x: e.clientX - dragStart.current.x,
-        y: e.clientY - dragStart.current.y
-      });
-    } else if (isResizing.current) {
-      const dx = e.clientX - resizeStart.current.x;
-      const dy = e.clientY - resizeStart.current.y;
-      
-      setSize(prev => {
-        const next = { ...prev };
-        if (isResizing.current?.includes('e')) next.w = Math.max(400, resizeStart.current.w + dx);
-        if (isResizing.current?.includes('s')) next.h = Math.max(300, resizeStart.current.h + dy);
-        return next;
-      });
-    }
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    isDragging.current = false;
-    isResizing.current = null;
-  }, []);
-
-  useEffect(() => {
-    if (isSettingsOpen) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isSettingsOpen, handleMouseMove, handleMouseUp]);
+  const { pos, size, handleMouseDown, handleResizeStart } = useDraggableModal({
+    isOpen: isSettingsOpen,
+  });
 
   if (!isSettingsOpen) return null;
 
+  const onClose = () => setIsSettingsOpen(false);
+  const currentTab = getSettingsTabById(activeSettingsTab) ?? getDefaultSettingsTab();
+  const ActiveComponent = currentTab.Component;
+
   return (
     <div className="settings-window-overlay">
-      <div 
-        className="settings-modal draggable-window" 
-        style={{ 
-          left: `${pos.x}px`, 
-          top: `${pos.y}px`, 
-          width: `${size.w}px`, 
+      <div
+        className="settings-modal draggable-window"
+        style={{
+          left: `${pos.x}px`,
+          top: `${pos.y}px`,
+          width: `${size.w}px`,
           height: `${size.h}px`,
-          position: 'fixed',
-          margin: 0
+          position: "fixed",
+          margin: 0,
         }}
       >
         <div className="settings-header window-title-bar" onMouseDown={handleMouseDown}>
-          <h2>{t('settings.title')}</h2>
-          <button className="close-button" onClick={onClose}>&times;</button>
+          <h2>{t("settings.title")}</h2>
+          <button
+            className="close-button"
+            onClick={onClose}
+            onMouseDown={(e) => e.stopPropagation()}
+            aria-label="Close"
+          >
+            &times;
+          </button>
         </div>
-        
-        <div className="settings-body">
-          <div className="settings-sidebar">
-            <div 
-              className={`settings-menu-item ${activeSettingsTab === 'general' ? 'active' : ''}`}
-              onClick={() => onTabChange('general')}
-            >
-              {t('settings.tab_general')}
-            </div>
-            <div 
-              className={`settings-menu-item ${activeSettingsTab === 'storage' ? 'active' : ''}`}
-              onClick={() => onTabChange('storage')}
-            >
-              {t('settings.tab_storage')}
-            </div>
-            <div 
-              className={`settings-menu-item ${activeSettingsTab === 'history' ? 'active' : ''}`}
-              onClick={() => onTabChange('history')}
-            >
-              {t('settings.tab_history')}
-            </div>
-            <div 
-              className={`settings-menu-item ${activeSettingsTab === 'everything' ? 'active' : ''}`}
-              onClick={() => onTabChange('everything')}
-            >
-              {t('settings.tab_everything')}
-            </div>
-          </div>
 
-          <div className="settings-content">
-            {activeSettingsTab === 'general' && (
-              <GeneralSettings 
-                startupFolderType={startupFolderType}
-                language={language}
-                theme={theme}
-                background={background}
-                pageNumberPosition={pageNumberPosition}
-                highPerformanceMode={highPerformanceMode}
-                confirmDelete={confirmDelete}
-                onUpdateStartupFolderType={updateStartupFolderType}
-                onUpdateLanguage={updateLanguage}
-                onUpdateTheme={updateTheme}
-                onUpdateBackground={updateBackground}
-                onPickBackgroundImage={pickBackgroundImage}
-                onUpdatePageNumberPosition={updatePageNumberPosition}
-                onUpdateHighPerformanceMode={updateHighPerformanceMode}
-                onUpdateConfirmDelete={updateConfirmDelete}
-              />
-            )}
-            {activeSettingsTab === 'storage' && (
-              <StorageSettings 
-                dataStoragePath={dataStoragePath}
-                onChangeStoragePath={changeStoragePath}
-              />
-            )}
-            {activeSettingsTab === 'history' && (
-              <HistorySettings 
-                historyRetentionDays={historyRetentionDays}
-                onUpdateHistoryRetention={updateHistoryRetention}
-              />
-            )}
-            {activeSettingsTab === 'everything' && (
-              <EverythingSettings 
-                everythingEnabled={everythingEnabled}
-                everythingMaxResults={everythingMaxResults}
-                everythingCliPath={everythingCliPath}
-                onUpdateEnabled={updateEverythingEnabled}
-                onUpdateMaxResults={updateEverythingMaxResults}
-                onUpdateCliPath={updateEverythingCliPath}
-              />
-            )}
-          </div>
+        <div className="settings-body">
+          <nav className="settings-sidebar" aria-label="Settings categories">
+            {SETTINGS_TABS.map((tab) => (
+              <div
+                key={tab.id}
+                role="button"
+                tabIndex={0}
+                className={`settings-menu-item ${currentTab.id === tab.id ? "active" : ""}`}
+                onClick={() => setActiveSettingsTab(tab.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setActiveSettingsTab(tab.id);
+                  }
+                }}
+              >
+                {tab.icon && <span className="settings-menu-icon">{tab.icon}</span>}
+                {t(tab.labelKey)}
+              </div>
+            ))}
+          </nav>
+
+          <main className="settings-content">
+            <ActiveComponent />
+          </main>
         </div>
 
         <div className="settings-footer">
-          <button className="settings-button primary" onClick={onClose}>{t('common.close')}</button>
+          <button className="settings-button primary" onClick={onClose}>
+            {t("common.close")}
+          </button>
         </div>
 
         {/* Window Resize Handles */}
-        <div className="win-resize-handle e" onMouseDown={(e) => handleResizeStart(e, 'e')}></div>
-        <div className="win-resize-handle s" onMouseDown={(e) => handleResizeStart(e, 's')}></div>
-        <div className="win-resize-handle se" onMouseDown={(e) => handleResizeStart(e, 'se')}></div>
+        <div className="win-resize-handle e" onMouseDown={(e) => handleResizeStart(e, "e")}></div>
+        <div className="win-resize-handle s" onMouseDown={(e) => handleResizeStart(e, "s")}></div>
+        <div className="win-resize-handle se" onMouseDown={(e) => handleResizeStart(e, "se")}></div>
       </div>
     </div>
   );
