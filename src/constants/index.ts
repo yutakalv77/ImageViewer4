@@ -11,3 +11,4 @@ export const HIGH_PERF_OVERSCAN_ROWS = 8;
 export const DEFAULT_HIGH_PERFORMANCE_MODE = false;
 export const DEFAULT_CONFIRM_DELETE = true;
 
+export const APP_NAME = "FolioSpire";

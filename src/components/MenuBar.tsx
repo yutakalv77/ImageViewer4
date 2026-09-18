@@ -7,6 +7,8 @@ import { useFileSystemContext } from "../context/FileSystemContext";
 import { useUIContext } from "../context/UIContext";
 import { WindowControls } from "./WindowControls";
 import { useMenuState } from "../hooks/useMenuState";
+import { APP_NAME } from "../constants";
+import appIcon from "../assets/img/icon-symbol.png";
 import "./MenuBar.css";
 
 interface MenuBarProps {
@@ -96,6 +98,11 @@ export function MenuBar({
         className="menu-items-container"
         onDoubleClick={(e) => e.stopPropagation()}
       >
+        <div className="app-menu-brand-container" aria-label={APP_NAME}>
+          <img src={appIcon} alt="" className="app-menu-icon" />
+          <span className="app-menu-title">{t('app_name', { defaultValue: APP_NAME })}</span>
+        </div>
+
         {/* 1. ファイル */}
         <div className="menu-item" onMouseDown={(e) => e.stopPropagation()}>
           <button 

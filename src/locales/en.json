@@ -1,4 +1,5 @@
 {
+  "app_name": "FolioSpire",
   "menu": {
     "file": "File(F)",
     "view": "View(V)",

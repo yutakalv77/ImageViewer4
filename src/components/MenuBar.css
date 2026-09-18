@@ -18,7 +18,35 @@
 
 .menu-items-container {
   display: flex;
-  padding-left: 5px;
+  align-items: center;
+  padding-left: 0;
+}
+
+.app-menu-icon-container,
+.app-menu-brand-container {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px 0 8px;
+  height: var(--menubar-height);
+  user-select: none;
+  pointer-events: none;
+}
+
+.app-menu-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  flex-shrink: 0;
+}
+
+.app-menu-title {
+  font-size: var(--font-size-base, 12px);
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 .menu-item {
