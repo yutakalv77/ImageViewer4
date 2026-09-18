@@ -6,7 +6,7 @@ import {
   getVisibleImages,
   formatViewerInfo,
   getPostDeleteNavigation,
-  DEFAULT_PAGE_NUMBER_POSITION
+  DEFAULT_PAGE_NUMBER_POSITION,
 } from "../utils/viewerUtils";
 import { EntryItem, PageNumberPosition } from "../types";
 import { ContextMenu } from "./ContextMenu";
@@ -21,12 +21,10 @@ import { getTransformBadgeText } from "../utils/transformUtils";
 import { useOptionalUIContext } from "../context/UIContext";
 import { useImageTransform } from "../hooks/useImageTransform";
 import { isZipVirtualPath } from "../utils/pathUtils";
-import { isTargetEditable } from "../utils/domUtils";
+import { createViewerContextMenuItems } from "../utils/viewerContextMenu";
+import { useViewerShortcuts } from "../hooks/useViewerShortcuts";
+import { useViewerOverlayEvents } from "../hooks/useViewerOverlayEvents";
 import "./ImageViewer.css";
-
-// Navigation Constants
-const WHEEL_COOLDOWN = 400; // ms
-const WHEEL_THRESHOLD = 30;
 
 interface ImageViewerProps {
   isOpen: boolean;
@@ -44,7 +42,7 @@ interface ImageViewerProps {
   onDeleteImage?: (path: string) => Promise<boolean>;
 }
 
-export function ImageViewer({ 
+export function ImageViewer({
   isOpen,
   currentIndex,
   images,
@@ -57,12 +55,11 @@ export function ImageViewer({
   onShowInfo,
   onManualInteraction,
   onRenameImage,
-  onDeleteImage
+  onDeleteImage,
 }: ImageViewerProps) {
   const { t } = useTranslation();
-  const lastWheelTime = useRef(0);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
 
   const context = useOptionalUIContext();
@@ -120,6 +117,20 @@ export function ImageViewer({
     }
   }, [isOpen, resetTransform]);
 
+  // Register zoom controls to UIContext
+  useEffect(() => {
+    if (context?.registerZoomControls && isOpen) {
+      context.registerZoomControls({
+        zoomActualSize: zoomPan.toggleActualSize,
+        zoomFit: zoomPan.resetZoom,
+        isZoomed: zoomPan.isZoomed,
+      });
+      return () => {
+        context.registerZoomControls(null);
+      };
+    }
+  }, [context, isOpen, zoomPan.toggleActualSize, zoomPan.resetZoom, zoomPan.isZoomed]);
+
   // Auto-close magnifier when viewer closes
   useEffect(() => {
     if (!isOpen) {
@@ -157,30 +168,6 @@ export function ImageViewer({
     onNavigate(getPrevIndex(currentIndex, { viewMode, firstPageIsCover, totalImages: images.length }));
   }, [currentIndex, images, viewMode, firstPageIsCover, onNavigate, onManualInteraction]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    const now = Date.now();
-    if (now - lastWheelTime.current < WHEEL_COOLDOWN) return;
-    if (Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
-
-    if (e.deltaY > 0) {
-      handleNext();
-    } else {
-      handlePrev();
-    }
-    lastWheelTime.current = now;
-  }, [handleNext, handlePrev]);
-
-  const handleCombinedWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
-    if (magnifier.handleWheel(e)) return;
-    if (zoomPan.handleWheel(e)) return;
-    handleWheel(e);
-  }, [magnifier, zoomPan, handleWheel]);
-
-  const handleCombinedMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    magnifier.handleMouseMove(e);
-    zoomPan.handleMouseMove(e);
-  }, [magnifier, zoomPan]);
-
   const currentItem = images && images.length > 0 && currentIndex >= 0
     ? images[Math.max(0, Math.min(currentIndex, images.length - 1))]
     : null;
@@ -209,134 +196,44 @@ export function ImageViewer({
     }
   }, [canDelete, currentItem, onDeleteImage, images.length, currentIndex, onClose, onNavigate, resetTransform, zoomPan]);
 
-  useEffect(() => {
-    if (!isOpen || isRenameOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isTargetEditable(e.target)) return;
-
-      const isRtl = readingDirection === "rtl";
-      const nextKey = isRtl ? "ArrowLeft" : "ArrowRight";
-      const prevKey = isRtl ? "ArrowRight" : "ArrowLeft";
-
-      if (e.key === nextKey || e.key === " ") {
-        e.preventDefault();
-        handleNext();
-      } else if (e.key === prevKey) {
-        e.preventDefault();
-        handlePrev();
-      } else if (e.key === "F2" && canRename) {
-        e.preventDefault();
-        setIsRenameOpen(true);
-      } else if (e.key === "Delete" && canDelete) {
-        e.preventDefault();
-        handleDelete();
-      } else if (e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        magnifier.toggleMagnifier();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        if (magnifier.isMagnifierActive) {
-          magnifier.setMagnifierActive(false);
-        } else if (zoomPan.isZoomed) {
-          zoomPan.resetZoom();
-        } else if (isTransformed) {
-          resetTransform();
-        } else {
-          onClose();
-        }
-      } else if (magnifier.isMagnifierActive) {
-        const isNumpadAdd = e.code === "NumpadAdd";
-        const isNumpadSubtract = e.code === "NumpadSubtract";
-        const isMinusKey = e.code === "Minus" || e.key === "-";
-        const isPlusKey = e.key === "+" || (!e.shiftKey && e.key === "=");
-
-        if (e.ctrlKey) {
-          if (isPlusKey || isNumpadAdd) {
-            e.preventDefault();
-            magnifier.zoomIn();
-          } else if (isMinusKey || isNumpadSubtract) {
-            e.preventDefault();
-            magnifier.zoomOut();
-          }
-        } else if (e.shiftKey) {
-          if (isNumpadAdd || e.code === "Equal" || e.key === "*" || e.code === "BracketRight") {
-            e.preventDefault();
-            magnifier.increaseLensSize();
-          } else if (isMinusKey || isNumpadSubtract || e.key === "_" || (e.code === "Minus" && e.key === "=")) {
-            e.preventDefault();
-            magnifier.decreaseLensSize();
-          } else if (isPlusKey) {
-            e.preventDefault();
-            magnifier.zoomIn();
-          }
-        } else {
-          if (isPlusKey || isNumpadAdd) {
-            e.preventDefault();
-            magnifier.zoomIn();
-          } else if (isMinusKey || isNumpadSubtract) {
-            e.preventDefault();
-            magnifier.zoomOut();
-          }
-        }
-      } else {
-        // Rotate & Flip shortcuts (check Alt+0 before zoom 0)
-        if (e.altKey && e.key === "0") {
-          e.preventDefault();
-          resetTransform();
-        } else if (e.key === "0" || (e.ctrlKey && e.key === "0")) {
-          e.preventDefault();
-          zoomPan.resetZoom();
-        } else if (e.key === "1" || (e.ctrlKey && e.key === "1")) {
-          e.preventDefault();
-          zoomPan.setActualSize();
-        } else if (e.key === "+" || (!e.shiftKey && e.key === "=") || e.code === "NumpadAdd") {
-          e.preventDefault();
-          zoomPan.zoomIn();
-        } else if (e.key === "-" || e.code === "NumpadSubtract") {
-          e.preventDefault();
-          zoomPan.zoomOut();
-        } else if (e.key === "r" || e.key === "R") {
-          e.preventDefault();
-          if (e.shiftKey) {
-            rotateCounterClockwise();
-          } else {
-            rotateClockwise();
-          }
-        } else if (e.key === "l" || e.key === "L") {
-          e.preventDefault();
-          rotateCounterClockwise();
-        } else if (e.key === "h" || e.key === "H") {
-          e.preventDefault();
-          toggleFlipH();
-        } else if (e.key === "v" || e.key === "V") {
-          e.preventDefault();
-          toggleFlipV();
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
+  // Register keyboard shortcuts
+  useViewerShortcuts({
     isOpen,
     isRenameOpen,
-    handleNext,
-    handlePrev,
     readingDirection,
     canRename,
     canDelete,
-    handleDelete,
+    actions: {
+      handleNext,
+      handlePrev,
+      onOpenRename: () => setIsRenameOpen(true),
+      onDelete: handleDelete,
+      onClose,
+      magnifier,
+      zoomPan,
+      transform: {
+        isTransformed,
+        resetTransform,
+        rotateClockwise,
+        rotateCounterClockwise,
+        toggleFlipH,
+        toggleFlipV,
+      },
+    },
+  });
+
+  // Manage overlay mouse and wheel events
+  const overlayEvents = useViewerOverlayEvents({
+    isMagnifierActive: magnifier.isMagnifierActive,
+    isZoomed: zoomPan.isZoomed,
+    hasDragged: zoomPan.hasDragged,
+    clearHasDragged: zoomPan.clearHasDragged,
+    onClose,
+    onNext: handleNext,
+    onPrev: handlePrev,
     magnifier,
     zoomPan,
-    onClose,
-    isTransformed,
-    rotateClockwise,
-    rotateCounterClockwise,
-    toggleFlipH,
-    toggleFlipV,
-    resetTransform,
-  ]);
+  });
 
   const spreadImages = useMemo(() => {
     return getVisibleImages(images, currentIndex, {
@@ -348,89 +245,44 @@ export function ImageViewer({
 
   if (!isOpen || !images || images.length === 0 || currentIndex < 0) return null;
 
-  const menuItems = [
-    ...(currentItem ? [
-      { label: t('context_menu.show_info'), onClick: () => onShowInfo(currentItem.path) },
-      { 
-        label: t('context_menu.magnifier', { defaultValue: '拡大鏡' }), 
-        shortcut: "Z", 
-        onClick: () => magnifier.toggleMagnifier() 
-      },
-      ...(canRename ? [
-        { 
-          label: t('context_menu.rename', { defaultValue: '名前を変更' }), 
-          shortcut: "F2", 
-          onClick: () => setIsRenameOpen(true) 
-        },
-      ] : []),
-      ...(canDelete ? [
-        { 
-          label: t('context_menu.trash', { defaultValue: 'ごみ箱へ移動' }), 
-          shortcut: "Delete", 
-          onClick: handleDelete 
-        },
-      ] : []),
-      { separator: true },
-      {
-        label: t('view_menu.rotate_cw', { defaultValue: '時計回りに90°回転' }),
-        shortcut: "R",
-        onClick: rotateClockwise,
-      },
-      {
-        label: t('view_menu.rotate_ccw', { defaultValue: '反時計回りに90°回転' }),
-        shortcut: "Shift+R",
-        onClick: rotateCounterClockwise,
-      },
-      {
-        label: t('view_menu.flip_h', { defaultValue: '左右反転' }),
-        shortcut: "H",
-        onClick: toggleFlipH,
-      },
-      {
-        label: t('view_menu.flip_v', { defaultValue: '上下反転' }),
-        shortcut: "V",
-        onClick: toggleFlipV,
-      },
-      ...(isTransformed ? [
-        {
-          label: t('view_menu.reset_transform', { defaultValue: '回転・反転をリセット' }),
-          shortcut: "Alt+0",
-          onClick: resetTransform,
-        }
-      ] : []),
-      { separator: true }
-    ] : []),
-    { label: t('common.close'), onClick: onClose },
-  ];
-
+  const menuItems = createViewerContextMenuItems({
+    currentItem,
+    t,
+    canRename,
+    canDelete,
+    isZoomed: zoomPan.isZoomed,
+    isTransformed,
+    onShowInfo,
+    onToggleMagnifier: () => magnifier.toggleMagnifier(),
+    onOpenRename: () => setIsRenameOpen(true),
+    onDelete: handleDelete,
+    onActualSize: () => zoomPan.toggleActualSize(),
+    onResetZoom: () => zoomPan.resetZoom(),
+    onRotateCw: rotateClockwise,
+    onRotateCcw: rotateCounterClockwise,
+    onFlipH: toggleFlipH,
+    onFlipV: toggleFlipV,
+    onResetTransform: resetTransform,
+    onClose,
+  });
 
   return (
-    <div 
+    <div
       ref={overlayRef}
-      className={`viewer-overlay page-pos-${pageNumberPosition} ${magnifier.isMagnifierActive ? 'magnifier-mode' : ''} ${zoomPan.isZoomed ? 'is-zoomed' : ''} ${zoomPan.isDragging ? 'is-dragging' : ''}`} 
-      onClick={() => {
-        if (magnifier.isMagnifierActive) return;
-        if (zoomPan.hasDragged) {
-          zoomPan.clearHasDragged();
-          return;
-        }
-        if (zoomPan.isZoomed) {
-          return;
-        }
-        onClose();
-      }}
+      className={`viewer-overlay page-pos-${pageNumberPosition} ${magnifier.isMagnifierActive ? "magnifier-mode" : ""} ${zoomPan.isZoomed ? "is-zoomed" : ""} ${zoomPan.isDragging ? "is-dragging" : ""}`}
+      onClick={overlayEvents.handleOverlayClick}
       onMouseDown={zoomPan.handleMouseDown}
-      onMouseMove={handleCombinedMouseMove}
+      onMouseMove={overlayEvents.handleMouseMove}
       onMouseUp={zoomPan.handleMouseUp}
-      onDoubleClick={zoomPan.handleDoubleClick}
-      onWheel={handleCombinedWheel}
+      onDoubleClick={overlayEvents.handleOverlayDoubleClick}
+      onWheel={overlayEvents.handleWheel}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
         setContextMenu({ x: e.clientX, y: e.clientY });
       }}
     >
-      <div className="direction-indicator" title={t('common.reading_direction')}>
+      <div className="direction-indicator" title={t("common.reading_direction")}>
         {readingDirection === "rtl" ? "⇦" : "⇨"}
       </div>
 
@@ -471,8 +323,8 @@ export function ImageViewer({
           </div>
         )}
       </div>
-      
-      <div className={`viewer-container ${viewMode === 'spread' ? 'spread-view' : ''}`}>
+
+      <div className={`viewer-container ${viewMode === "spread" ? "spread-view" : ""}`}>
         <div
           className={`viewer-zoom-layer ${zoomPan.isDragging ? "is-dragging" : ""}`}
           style={{
@@ -492,6 +344,7 @@ export function ImageViewer({
                   transform={imageTransform}
                   onNext={handleNext}
                   onPrev={handlePrev}
+                  onDoubleClick={zoomPan.handleDoubleClick}
                 />
               );
             })
@@ -500,17 +353,16 @@ export function ImageViewer({
               <div className="error-icon">🖼️</div>
               <div className="error-text">表示できる画像がありません</div>
               <button className="error-retry-btn" onClick={onClose}>
-                {t('common.close')}
+                {t("common.close")}
               </button>
             </div>
           )}
         </div>
       </div>
 
-      
       {currentItem && pageNumberPosition !== "hidden" && (
-        <div 
-          className={`viewer-info pos-${pageNumberPosition}`} 
+        <div
+          className={`viewer-info pos-${pageNumberPosition}`}
           onClick={(e) => e.stopPropagation()}
         >
           {formatViewerInfo(t, {
@@ -523,11 +375,11 @@ export function ImageViewer({
       )}
 
       {contextMenu && (
-        <ContextMenu 
-          x={contextMenu.x} 
-          y={contextMenu.y} 
-          items={menuItems} 
-          onClose={() => setContextMenu(null)} 
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={menuItems}
+          onClose={() => setContextMenu(null)}
         />
       )}
 
@@ -553,6 +405,5 @@ export function ImageViewer({
         transform={imageTransform}
       />
     </div>
-
   );
 }

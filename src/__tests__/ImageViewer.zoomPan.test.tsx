@@ -14,6 +14,12 @@ vi.mock('react-i18next', () => ({
       if (key === 'slideshow.viewer_info_single' && params) {
         return `${params.page} / ${params.total} - ${params.name}`;
       }
+      if (key === 'context_menu.actual_size') {
+        return '実際のサイズ（100%）';
+      }
+      if (key === 'context_menu.fit_to_window') {
+        return 'ウィンドウに合わせる';
+      }
       return key;
     },
   }),
@@ -122,4 +128,67 @@ describe('ImageViewer Pan and Zoom Support', () => {
       vi.useRealTimers();
     }
   });
+
+  it('1キー押下で実際のサイズ（等倍）にズームし、再度1キー押下でリセットされること（トグル）', () => {
+    const { container } = render(<ImageViewer {...defaultProps} />);
+
+    // 1キーで等倍ズーム
+    fireEvent.keyDown(window, { key: '1' });
+    expect(container.querySelector('.viewer-zoom-badge')).not.toBeNull();
+
+    // もう一度1キーでリセット
+    fireEvent.keyDown(window, { key: '1' });
+    expect(container.querySelector('.viewer-zoom-badge')).toBeNull();
+  });
+
+  it('右クリックメニューから「実際のサイズ（100%）」と「ウィンドウに合わせる」が実行できること', () => {
+    const { container } = render(<ImageViewer {...defaultProps} />);
+    const overlay = container.querySelector('.viewer-overlay')!;
+
+    // 右クリック
+    fireEvent.contextMenu(overlay, { clientX: 200, clientY: 200 });
+
+    // 「実際のサイズ（100%）」をクリック
+    const actualSizeItem = screen.getByText('実際のサイズ（100%）');
+    expect(actualSizeItem).toBeInTheDocument();
+    fireEvent.click(actualSizeItem);
+
+    // ズームされる
+    expect(container.querySelector('.viewer-zoom-badge')).not.toBeNull();
+
+    // 再度右クリックして「ウィンドウに合わせる」をクリック
+    fireEvent.contextMenu(overlay, { clientX: 200, clientY: 200 });
+    const fitItem = screen.getByText('ウィンドウに合わせる');
+    expect(fitItem).toBeInTheDocument();
+    fireEvent.click(fitItem);
+
+    // リセットされる
+    expect(container.querySelector('.viewer-zoom-badge')).toBeNull();
+  });
+
+  it('画像上をダブルクリックした時にページ送り（onNavigate）が呼ばれず、ズームが実行されること', () => {
+    vi.useFakeTimers();
+    try {
+      const onNavigate = vi.fn();
+      const { container } = render(<ImageViewer {...defaultProps} onNavigate={onNavigate} />);
+      const img = container.querySelector('img.viewer-image')!;
+
+      // 画像上でダブルクリック
+      fireEvent.click(img, { clientX: 500, clientY: 400 });
+      fireEvent.doubleClick(img, { clientX: 500, clientY: 400 });
+
+      // ズームされる
+      expect(container.querySelector('.viewer-zoom-badge')).not.toBeNull();
+
+      // ディレイ時間が経過してもページ送りは呼ばれない
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(onNavigate).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
+
+

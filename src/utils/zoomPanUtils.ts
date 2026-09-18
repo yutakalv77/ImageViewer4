@@ -8,6 +8,7 @@ export const FIT_ZOOM_SCALE = 1.0;
 export const WHEEL_ZOOM_SPEED = 0.0015;
 export const KEYBOARD_ZOOM_FACTOR = 1.25;
 export const DRAG_THRESHOLD_PX = 5;
+export const DOUBLE_CLICK_DELAY_MS = 220;
 
 export interface Point {
   x: number;
@@ -150,4 +151,23 @@ export function isDragThresholdExceeded(
  */
 export function formatZoomPercent(scale: number): string {
   return `${Math.round(scale * 100)}%`;
+}
+
+/**
+ * Calculates scale factor for natural pixel size (actual size / 100%).
+ * If naturalWidth > clientWidth, returns naturalWidth / clientWidth clamped to range.
+ * Otherwise, falls back to fallbackScale (e.g. 2.0).
+ */
+export function calculateActualSizeScale(
+  naturalWidth: number,
+  clientWidth: number,
+  fallbackScale: number = 2.0
+): number {
+  if (naturalWidth > 0 && clientWidth > 0) {
+    const ratio = naturalWidth / clientWidth;
+    if (ratio > 1.05) {
+      return clampScale(ratio);
+    }
+  }
+  return fallbackScale;
 }

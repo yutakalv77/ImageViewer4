@@ -54,7 +54,8 @@ export function MenuBar({
   const {
     setIsFavoritesOpen, setIsIntervalDialogOpen, setIsSettingsOpen,
     viewerState, imageTransform, isTransformed,
-    rotateClockwise, rotateCounterClockwise, toggleFlipH, toggleFlipV, resetTransform
+    rotateClockwise, rotateCounterClockwise, toggleFlipH, toggleFlipV, resetTransform,
+    zoomActualSize, zoomFit, zoomControls
   } = useUIContext();
 
   useEffect(() => {
@@ -269,6 +270,33 @@ export function MenuBar({
                     <span className="menu-shortcut">Alt+0</span>
                   </li>
                 </ul>
+              </li>
+              <li className="separator"></li>
+              <li 
+                className={!viewerState?.isOpen ? "disabled" : ""}
+                onClick={(e) => {
+                  if (!viewerState?.isOpen) return;
+                  e.stopPropagation();
+                  zoomActualSize?.();
+                  closeMenu();
+                }}
+              >
+                <span className="menu-check-placeholder"></span>
+                {t('view_menu.actual_size', { defaultValue: '実際のサイズ（100%）' })}
+                <span className="menu-shortcut">1</span>
+              </li>
+              <li 
+                className={!viewerState?.isOpen || !zoomControls?.isZoomed ? "disabled" : ""}
+                onClick={(e) => {
+                  if (!viewerState?.isOpen || !zoomControls?.isZoomed) return;
+                  e.stopPropagation();
+                  zoomFit?.();
+                  closeMenu();
+                }}
+              >
+                <span className="menu-check-placeholder"></span>
+                {t('view_menu.fit_to_window', { defaultValue: 'ウィンドウに合わせる' })}
+                <span className="menu-shortcut">0</span>
               </li>
               <li className="separator"></li>
               <li onClick={(e) => { e.stopPropagation(); updateThumbnailSize(20); }}>

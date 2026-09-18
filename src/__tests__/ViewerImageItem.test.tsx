@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ViewerImageItem } from '../components/ViewerImageItem';
 import * as useImageSourceModule from '../hooks/useImageSource';
 import { EntryItem } from '../types';
@@ -41,73 +41,145 @@ describe('ViewerImageItem', () => {
     expect(img).toHaveAttribute('alt', 'test.jpg');
   });
 
-  it('LTRで右側クリック時に onNext が呼ばれること', () => {
-    vi.spyOn(useImageSourceModule, 'useImageSource').mockReturnValue({
-      src: 'asset://localhost/test.jpg',
-      isLoading: false,
-      error: null,
-    });
+  it('LTRで右側クリック時に遅延後に onNext が呼ばれること', () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(useImageSourceModule, 'useImageSource').mockReturnValue({
+        src: 'asset://localhost/test.jpg',
+        isLoading: false,
+        error: null,
+      });
 
-    render(
-      <ViewerImageItem
-        image={dummyImage}
-        readingDirection="ltr"
-        onNext={onNext}
-        onPrev={onPrev}
-      />
-    );
+      render(
+        <ViewerImageItem
+          image={dummyImage}
+          readingDirection="ltr"
+          onNext={onNext}
+          onPrev={onPrev}
+        />
+      );
 
-    const img = screen.getByRole('img');
-    // BoundingClientRect をモック
-    vi.spyOn(img, 'getBoundingClientRect').mockReturnValue({
-      left: 0,
-      top: 0,
-      width: 200,
-      height: 200,
-      right: 200,
-      bottom: 200,
-      x: 0,
-      y: 0,
-      toJSON: () => {},
-    });
+      const img = screen.getByRole('img');
+      vi.spyOn(img, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 200,
+        right: 200,
+        bottom: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => {},
+      });
 
-    fireEvent.click(img, { clientX: 150 });
-    expect(onNext).toHaveBeenCalledTimes(1);
-    expect(onPrev).not.toHaveBeenCalled();
+      fireEvent.click(img, { clientX: 150 });
+      // クリック直後はタイマー待ちのためまだ呼ばれない
+      expect(onNext).not.toHaveBeenCalled();
+
+      // タイマーを進めると呼ばれる
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+      expect(onNext).toHaveBeenCalledTimes(1);
+      expect(onPrev).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('RTLで右側クリック時に onPrev が呼ばれること', () => {
-    vi.spyOn(useImageSourceModule, 'useImageSource').mockReturnValue({
-      src: 'asset://localhost/test.jpg',
-      isLoading: false,
-      error: null,
-    });
+  it('RTLで右側クリック時に遅延後に onPrev が呼ばれること', () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(useImageSourceModule, 'useImageSource').mockReturnValue({
+        src: 'asset://localhost/test.jpg',
+        isLoading: false,
+        error: null,
+      });
 
-    render(
-      <ViewerImageItem
-        image={dummyImage}
-        readingDirection="rtl"
-        onNext={onNext}
-        onPrev={onPrev}
-      />
-    );
+      render(
+        <ViewerImageItem
+          image={dummyImage}
+          readingDirection="rtl"
+          onNext={onNext}
+          onPrev={onPrev}
+        />
+      );
 
-    const img = screen.getByRole('img');
-    vi.spyOn(img, 'getBoundingClientRect').mockReturnValue({
-      left: 0,
-      top: 0,
-      width: 200,
-      height: 200,
-      right: 200,
-      bottom: 200,
-      x: 0,
-      y: 0,
-      toJSON: () => {},
-    });
+      const img = screen.getByRole('img');
+      vi.spyOn(img, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 200,
+        right: 200,
+        bottom: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => {},
+      });
 
-    fireEvent.click(img, { clientX: 150 });
-    expect(onPrev).toHaveBeenCalledTimes(1);
-    expect(onNext).not.toHaveBeenCalled();
+      fireEvent.click(img, { clientX: 150 });
+      expect(onPrev).not.toHaveBeenCalled();
+
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+      expect(onPrev).toHaveBeenCalledTimes(1);
+      expect(onNext).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ダブルクリック時はクリックタイマーがキャンセルされ、ページ送りは呼ばれず onDoubleClick が呼ばれること', () => {
+    vi.useFakeTimers();
+    try {
+      const onDoubleClick = vi.fn();
+      vi.spyOn(useImageSourceModule, 'useImageSource').mockReturnValue({
+        src: 'asset://localhost/test.jpg',
+        isLoading: false,
+        error: null,
+      });
+
+      render(
+        <ViewerImageItem
+          image={dummyImage}
+          readingDirection="ltr"
+          onNext={onNext}
+          onPrev={onPrev}
+          onDoubleClick={onDoubleClick}
+        />
+      );
+
+      const img = screen.getByRole('img');
+      vi.spyOn(img, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 200,
+        right: 200,
+        bottom: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => {},
+      });
+
+      // 1回目のクリック
+      fireEvent.click(img, { clientX: 150 });
+
+      // ダブルクリック
+      fireEvent.doubleClick(img, { clientX: 150 });
+      expect(onDoubleClick).toHaveBeenCalledTimes(1);
+
+      // 時間が経過しても onNext / onPrev は呼ばれない
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(onNext).not.toHaveBeenCalled();
+      expect(onPrev).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('エラー時にエラーUIが表示され、再試行ボタンを押せること', () => {

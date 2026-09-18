@@ -39,7 +39,9 @@
     "flip_h": "左右反転",
     "flip_v": "上下反転",
     "flip_both": "上下左右反転",
-    "reset_transform": "回転・反転をリセット"
+    "reset_transform": "回転・反転をリセット",
+    "actual_size": "実際のサイズ（100%）",
+    "fit_to_window": "ウィンドウに合わせる"
   },
   "slide_menu": {
     "start": "スライドショー開始",
@@ -83,7 +85,9 @@
     "trash": "ごみ箱へ移動",
     "magnifier": "拡大鏡",
     "set_bg": "背景に設定する",
-    "show_info": "情報の表示..."
+    "show_info": "情報の表示...",
+    "actual_size": "実際のサイズ（100%）",
+    "fit_to_window": "ウィンドウに合わせる"
   },
   "magnifier": {
     "zoom_help": "ズーム倍率変更：Ctrl+ホイールまたは+/-キー",

@@ -74,6 +74,9 @@ vi.mock('../context/UIContext', () => {
     toggleFlipH: vi.fn(),
     toggleFlipV: vi.fn(),
     resetTransform: vi.fn(),
+    zoomActualSize: vi.fn(),
+    zoomFit: vi.fn(),
+    zoomControls: null,
   });
   return {
     useUIContext: getUI,

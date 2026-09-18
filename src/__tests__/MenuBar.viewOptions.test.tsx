@@ -60,6 +60,8 @@ const mockRotateCounterClockwise = vi.fn();
 const mockToggleFlipH = vi.fn();
 const mockToggleFlipV = vi.fn();
 const mockResetTransform = vi.fn();
+const mockZoomActualSize = vi.fn();
+const mockZoomFit = vi.fn();
 
 let mockViewerState = {
   isOpen: true,
@@ -70,6 +72,10 @@ let mockImageTransform = {
   rotation: 0,
   flipH: false,
   flipV: false,
+};
+
+let mockZoomControls: { isZoomed: boolean } | null = {
+  isZoomed: true,
 };
 
 vi.mock('../context/UIContext', () => {
@@ -85,6 +91,9 @@ vi.mock('../context/UIContext', () => {
     toggleFlipH: mockToggleFlipH,
     toggleFlipV: mockToggleFlipV,
     resetTransform: mockResetTransform,
+    zoomActualSize: mockZoomActualSize,
+    zoomFit: mockZoomFit,
+    zoomControls: mockZoomControls,
   });
   return {
     useUIContext: getUI,
@@ -105,6 +114,9 @@ describe('MenuBar View Options & Transform Submenu', () => {
       rotation: 0,
       flipH: false,
       flipV: false,
+    };
+    mockZoomControls = {
+      isZoomed: true,
     };
   });
 
@@ -176,4 +188,25 @@ describe('MenuBar View Options & Transform Submenu', () => {
     fireEvent.click(screen.getByText('上下反転'));
     expect(mockToggleFlipV).toHaveBeenCalledTimes(1);
   });
+
+  it('「表示」メニュー内の「実際のサイズ（100%）」と「ウィンドウに合わせる」が実行できること', () => {
+    render(<MenuBar {...defaultProps} />);
+
+    // 「表示」メニューを開く
+    fireEvent.click(screen.getByText('表示'));
+
+    // 「実際のサイズ（100%）」をクリック
+    const actualSizeItem = screen.getByText('実際のサイズ（100%）');
+    expect(actualSizeItem).toBeInTheDocument();
+    fireEvent.click(actualSizeItem);
+    expect(mockZoomActualSize).toHaveBeenCalledTimes(1);
+
+    // 再度「表示」メニューを開いて「ウィンドウに合わせる」をクリック
+    fireEvent.click(screen.getByText('表示'));
+    const fitItem = screen.getByText('ウィンドウに合わせる');
+    expect(fitItem).toBeInTheDocument();
+    fireEvent.click(fitItem);
+    expect(mockZoomFit).toHaveBeenCalledTimes(1);
+  });
 });
+

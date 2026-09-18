@@ -31,6 +31,8 @@ export const menuTranslations: Record<string, string> = {
   'view_menu.flip_h': '左右反転',
   'view_menu.flip_v': '上下反転',
   'view_menu.reset_transform': '回転・反転をリセット',
+  'view_menu.actual_size': '実際のサイズ（100%）',
+  'view_menu.fit_to_window': 'ウィンドウに合わせる',
 };
 
 export const createDefaultMenuBarProps = (overrides?: Record<string, any>) => ({

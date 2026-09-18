@@ -7,6 +7,7 @@ import {
   calculateStepZoom,
   isDragThresholdExceeded,
   formatZoomPercent,
+  calculateActualSizeScale,
   MIN_ZOOM_SCALE,
   MAX_ZOOM_SCALE,
 } from "../utils/zoomPanUtils";
@@ -126,4 +127,26 @@ describe("zoomPanUtils", () => {
       expect(formatZoomPercent(2.345)).toBe("235%");
     });
   });
+
+  describe("calculateActualSizeScale", () => {
+    it("naturalWidthがclientWidthより大きい場合、比率をスケールとして返すこと", () => {
+      // 3840 / 1920 = 2.0
+      expect(calculateActualSizeScale(3840, 1920)).toBe(2.0);
+      // 3000 / 1000 = 3.0
+      expect(calculateActualSizeScale(3000, 1000)).toBe(3.0);
+    });
+
+    it("naturalWidthがclientWidth以下の場合はフォールバック倍率を返すこと", () => {
+      // 800 <= 1000: fallback 2.0
+      expect(calculateActualSizeScale(800, 1000)).toBe(2.0);
+      // fallback指定
+      expect(calculateActualSizeScale(800, 1000, 1.5)).toBe(1.5);
+    });
+
+    it("無効な寸法（0以下）の場合はフォールバック倍率を返すこと", () => {
+      expect(calculateActualSizeScale(0, 1000)).toBe(2.0);
+      expect(calculateActualSizeScale(1000, 0)).toBe(2.0);
+    });
+  });
 });
+

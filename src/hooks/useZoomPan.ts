@@ -7,7 +7,7 @@ import {
   calculateStepZoom,
   calculateZoomOffset,
   clampOffset,
-  clampScale,
+  calculateActualSizeScale,
   isDragThresholdExceeded,
 } from "../utils/zoomPanUtils";
 
@@ -26,7 +26,8 @@ export interface UseZoomPanReturn {
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
-  setActualSize: () => void;
+  setActualSize: (centerPos?: Point, targetImgEl?: HTMLImageElement | null) => void;
+  toggleActualSize: (centerPos?: Point, targetImgEl?: HTMLImageElement | null) => void;
   handleWheel: (e: React.WheelEvent<HTMLDivElement>) => boolean;
   handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   handleMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -97,23 +98,58 @@ export function useZoomPan({
     setOffset(result.offset);
   }, [enabled, scale, offset, getContainerSize]);
 
-  const setActualSize = useCallback(() => {
-    if (!enabled) return;
-    const container = containerRef.current;
-    if (!container) return;
+  const getActualScale = useCallback(
+    (targetImgEl?: HTMLImageElement | null): number => {
+      if (targetImgEl && targetImgEl.naturalWidth > 0 && targetImgEl.clientWidth > 0) {
+        return calculateActualSizeScale(targetImgEl.naturalWidth, targetImgEl.clientWidth, 2.0);
+      }
+      const container = containerRef.current;
+      if (!container) return 2.0;
+      const imgEl = container.querySelector<HTMLImageElement>("img.viewer-image");
+      if (imgEl) {
+        return calculateActualSizeScale(imgEl.naturalWidth, imgEl.clientWidth, 2.0);
+      }
+      return 2.0;
+    },
+    [containerRef]
+  );
 
-    const imgEl = container.querySelector<HTMLImageElement>("img.viewer-image");
-    if (imgEl && imgEl.naturalWidth > 0 && imgEl.clientWidth > 0) {
-      // Scale ratio to make the image 100% natural pixel size
-      const targetScale = clampScale(imgEl.naturalWidth / imgEl.clientWidth);
-      setScale(targetScale);
-      setOffset({ x: 0, y: 0 });
-    } else {
-      // Fallback: 2.0x
-      setScale(2.0);
-      setOffset({ x: 0, y: 0 });
-    }
-  }, [enabled, containerRef]);
+  const setActualSize = useCallback(
+    (centerPos?: Point, targetImgEl?: HTMLImageElement | null) => {
+      if (!enabled) return;
+      const container = containerRef.current;
+      if (!container) return;
+
+      const targetScale = getActualScale(targetImgEl);
+      const containerSize = getContainerSize();
+
+      if (centerPos) {
+        const newOffset = clampOffset(
+          calculateZoomOffset(scale, targetScale, offset, centerPos),
+          targetScale,
+          containerSize
+        );
+        setScale(targetScale);
+        setOffset(newOffset);
+      } else {
+        setScale(targetScale);
+        setOffset({ x: 0, y: 0 });
+      }
+    },
+    [enabled, containerRef, getActualScale, getContainerSize, scale, offset]
+  );
+
+  const toggleActualSize = useCallback(
+    (centerPos?: Point, targetImgEl?: HTMLImageElement | null) => {
+      if (!enabled) return;
+      if (scale > 1.05) {
+        resetZoom();
+      } else {
+        setActualSize(centerPos, targetImgEl);
+      }
+    },
+    [enabled, scale, resetZoom, setActualSize]
+  );
 
   // Wheel zoom with Ctrl key
   const handleWheel = useCallback(
@@ -204,7 +240,7 @@ export function useZoomPan({
         // Reset to fit
         resetZoom();
       } else {
-        // Zoom in to 2.0x centered on click position
+        // Zoom in to actual size (100% natural pixels) centered on click position
         const container = containerRef.current;
         const containerSize = getContainerSize();
         const rect = container
@@ -216,18 +252,11 @@ export function useZoomPan({
           y: e.clientY - rect.top - containerSize.height / 2,
         };
 
-        const targetScale = 2.0;
-        const newOffset = clampOffset(
-          calculateZoomOffset(scale, targetScale, offset, cursorRelCenter),
-          targetScale,
-          containerSize
-        );
-
-        setScale(targetScale);
-        setOffset(newOffset);
+        const targetImg = (e.target as HTMLElement | null)?.closest?.("img.viewer-image") as HTMLImageElement | null;
+        setActualSize(cursorRelCenter, targetImg);
       }
     },
-    [enabled, scale, offset, containerRef, getContainerSize, resetZoom]
+    [enabled, scale, containerRef, getContainerSize, resetZoom, setActualSize]
   );
 
   const clearHasDragged = useCallback(() => {
@@ -245,6 +274,7 @@ export function useZoomPan({
     zoomOut,
     resetZoom,
     setActualSize,
+    toggleActualSize,
     handleWheel,
     handleMouseDown,
     handleMouseMove,

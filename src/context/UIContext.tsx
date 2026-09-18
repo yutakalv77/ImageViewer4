@@ -1,7 +1,13 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 import { ViewerState } from "../types";
 import { useImageTransform } from "../hooks/useImageTransform";
 import { ImageTransform } from "../utils/transformUtils";
+
+export interface ZoomControls {
+  zoomActualSize: () => void;
+  zoomFit: () => void;
+  isZoomed: boolean;
+}
 
 interface UIContextType {
   viewerState: ViewerState;
@@ -26,6 +32,10 @@ interface UIContextType {
   toggleFlipH: () => void;
   toggleFlipV: () => void;
   resetTransform: () => void;
+  zoomControls: ZoomControls | null;
+  registerZoomControls: (controls: ZoomControls | null) => void;
+  zoomActualSize: () => void;
+  zoomFit: () => void;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
@@ -39,6 +49,19 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [persistentError, setPersistentError] = useState<string | null>(null);
   const [selectedInfoPath, setSelectedInfoPath] = useState<string | null>(null);
   const transform = useImageTransform();
+  const [zoomControls, setZoomControls] = useState<ZoomControls | null>(null);
+
+  const registerZoomControls = useCallback((controls: ZoomControls | null) => {
+    setZoomControls(controls);
+  }, []);
+
+  const zoomActualSize = useCallback(() => {
+    zoomControls?.zoomActualSize();
+  }, [zoomControls]);
+
+  const zoomFit = useCallback(() => {
+    zoomControls?.zoomFit();
+  }, [zoomControls]);
 
   return (
     <UIContext.Provider value={{
@@ -64,6 +87,10 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       toggleFlipH: transform.toggleFlipH,
       toggleFlipV: transform.toggleFlipV,
       resetTransform: transform.resetTransform,
+      zoomControls,
+      registerZoomControls,
+      zoomActualSize,
+      zoomFit,
     }}>
       {children}
     </UIContext.Provider>

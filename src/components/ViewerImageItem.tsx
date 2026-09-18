@@ -6,6 +6,7 @@ import {
   buildTransformStyle,
   calculateRotatedFitScale,
 } from "../utils/transformUtils";
+import { DOUBLE_CLICK_DELAY_MS } from "../utils/zoomPanUtils";
 
 interface ViewerImageItemProps {
   image: EntryItem;
@@ -15,6 +16,7 @@ interface ViewerImageItemProps {
   transform?: ImageTransform;
   onNext: () => void;
   onPrev: () => void;
+  onDoubleClick?: (e: React.MouseEvent<HTMLImageElement>) => void;
 }
 
 /**
@@ -29,6 +31,7 @@ export function ViewerImageItem({
   transform,
   onNext,
   onPrev,
+  onDoubleClick,
 }: ViewerImageItemProps) {
   const { src, isLoading, error } = useImageSource(image.path);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -37,11 +40,25 @@ export function ViewerImageItem({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [fitScale, setFitScale] = useState(1);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 画像パスが変わったら失敗フラグをリセット
+  // 画像パスが変わったら失敗フラグと保留中のクリックタイマーをリセット
   useEffect(() => {
     setLoadFailed(false);
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
   }, [image.path]);
+
+  // コンポーネント破棄時にタイマーをクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+    };
+  }, []);
 
   const updateFitScale = useCallback(() => {
     if (!transform || (transform.rotation !== 90 && transform.rotation !== 270)) {
@@ -89,16 +106,35 @@ export function ViewerImageItem({
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const isRtl = readingDirection === "rtl";
+      const isRight = x > rect.width / 2;
 
-      if (x > rect.width / 2) {
-        // 右側クリック
-        isRtl ? onPrev() : onNext();
-      } else {
-        // 左側クリック
-        isRtl ? onNext() : onPrev();
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
       }
+
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        if (isRight) {
+          isRtl ? onPrev() : onNext();
+        } else {
+          isRtl ? onNext() : onPrev();
+        }
+      }, DOUBLE_CLICK_DELAY_MS);
     },
-    [isMagnifierActive, readingDirection, onNext, onPrev]
+    [isMagnifierActive, isZoomed, readingDirection, onNext, onPrev]
+  );
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent<HTMLImageElement>) => {
+      e.stopPropagation();
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      onDoubleClick?.(e);
+    },
+    [onDoubleClick]
   );
 
   const transformStyle = transform
@@ -127,6 +163,7 @@ export function ViewerImageItem({
           onLoad={updateFitScale}
           onError={() => setLoadFailed(true)}
           onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
         />
       ) : null}
     </div>

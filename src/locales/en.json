@@ -39,7 +39,9 @@
     "flip_h": "Flip Horizontal",
     "flip_v": "Flip Vertical",
     "flip_both": "Flip Both",
-    "reset_transform": "Reset Orientation"
+    "reset_transform": "Reset Orientation",
+    "actual_size": "Actual Size (100%)",
+    "fit_to_window": "Fit to Window"
   },
   "slide_menu": {
     "start": "Start Slideshow",
@@ -83,7 +85,9 @@
     "trash": "Move to Recycle Bin",
     "magnifier": "Magnifier",
     "set_bg": "Set as Background",
-    "show_info": "Show Info..."
+    "show_info": "Show Info...",
+    "actual_size": "Actual Size (100%)",
+    "fit_to_window": "Fit to Window"
   },
   "magnifier": {
     "zoom_help": "Zoom: Ctrl+Wheel or +/-",

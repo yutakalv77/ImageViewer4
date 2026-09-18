@@ -145,4 +145,63 @@ describe("useZoomPan", () => {
     });
     expect(result.current.isDragging).toBe(false);
   });
+
+  it("画像要素がある場合、naturalWidth/clientWidthに基づいた等倍スケールでズームしトグルできること", () => {
+    const containerRef = createMockContainer();
+    const img = document.createElement("img");
+    img.className = "viewer-image";
+    Object.defineProperty(img, "naturalWidth", { value: 3000 });
+    Object.defineProperty(img, "clientWidth", { value: 1000 });
+    containerRef.current.appendChild(img);
+
+    const { result } = renderHook(() => useZoomPan({ containerRef }));
+
+    // 3000 / 1000 = 3.0x に等倍ズーム
+    act(() => {
+      result.current.toggleActualSize();
+    });
+    expect(result.current.scale).toBe(3.0);
+    expect(result.current.isZoomed).toBe(true);
+
+    // もう一度呼ぶとリセットされる（トグル）
+    act(() => {
+      result.current.toggleActualSize();
+    });
+    expect(result.current.scale).toBe(1.0);
+    expect(result.current.isZoomed).toBe(false);
+  });
+
+  it("複数画像が存在する場合、クリックされた対象画像（targetImgEl）の等倍スケールでズームすること", () => {
+    const containerRef = createMockContainer();
+    const img1 = document.createElement("img");
+    img1.className = "viewer-image";
+    Object.defineProperty(img1, "naturalWidth", { value: 2000 });
+    Object.defineProperty(img1, "clientWidth", { value: 1000 }); // 2.0x
+
+    const img2 = document.createElement("img");
+    img2.className = "viewer-image";
+    Object.defineProperty(img2, "naturalWidth", { value: 4000 });
+    Object.defineProperty(img2, "clientWidth", { value: 1000 }); // 4.0x
+
+    containerRef.current.appendChild(img1);
+    containerRef.current.appendChild(img2);
+
+    const { result } = renderHook(() => useZoomPan({ containerRef }));
+
+    // img2 のダブルクリックをシミュレート
+    const mockEvent = {
+      button: 0,
+      clientX: 500,
+      clientY: 400,
+      target: img2,
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as any;
+
+    act(() => {
+      result.current.handleDoubleClick(mockEvent);
+    });
+    expect(result.current.scale).toBe(4.0);
+  });
 });
+
