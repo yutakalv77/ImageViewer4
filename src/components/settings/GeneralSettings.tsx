@@ -9,6 +9,7 @@ interface GeneralSettingsProps {
   background: BackgroundSettings;
   pageNumberPosition: PageNumberPosition;
   highPerformanceMode: boolean;
+  confirmDelete: boolean;
   onUpdateStartupFolderType: (type: StartupFolderType) => void;
   onUpdateLanguage: (lang: string) => void;
   onUpdateTheme: (theme: ThemeMode) => void;
@@ -16,6 +17,7 @@ interface GeneralSettingsProps {
   onPickBackgroundImage: () => void;
   onUpdatePageNumberPosition: (pos: PageNumberPosition) => void;
   onUpdateHighPerformanceMode: (enabled: boolean) => void;
+  onUpdateConfirmDelete: (enabled: boolean) => void;
 }
 
 export function GeneralSettings({
@@ -25,13 +27,15 @@ export function GeneralSettings({
   background,
   pageNumberPosition,
   highPerformanceMode,
+  confirmDelete,
   onUpdateStartupFolderType,
   onUpdateLanguage,
   onUpdateTheme,
   onUpdateBackground,
   onPickBackgroundImage,
   onUpdatePageNumberPosition,
-  onUpdateHighPerformanceMode
+  onUpdateHighPerformanceMode,
+  onUpdateConfirmDelete
 }: GeneralSettingsProps) {
   const { t } = useTranslation();
 
@@ -114,6 +118,23 @@ export function GeneralSettings({
           {t('settings.high_perf_desc')}
         </p>
       </div>
+
+      <div className="settings-group" style={{ marginTop: '20px' }}>
+        <label className="checkbox-label" htmlFor="confirm-delete-input">
+          <input 
+            id="confirm-delete-input"
+            type="checkbox" 
+            checked={confirmDelete} 
+            onChange={(e) => onUpdateConfirmDelete(e.target.checked)} 
+            aria-describedby="confirm-delete-desc"
+          />
+          <span style={{ fontWeight: 'bold' }}>{t('settings.confirm_delete_label')}</span>
+        </label>
+        <p id="confirm-delete-desc" className="settings-hint" style={{ marginTop: '6px', lineHeight: '1.5' }}>
+          {t('settings.confirm_delete_desc')}
+        </p>
+      </div>
+
 
       <div className="settings-group" style={{ marginTop: '30px', borderTop: '1px solid var(--border-main)', paddingTop: '20px' }}>
         <label>{t('settings.bg_title')}</label>

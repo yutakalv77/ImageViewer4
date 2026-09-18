@@ -170,3 +170,28 @@ export function formatViewerInfo(
     total: totalImages,
   });
 }
+
+export interface PostDeleteNavigationResult {
+  shouldClose: boolean;
+  nextIndex: number;
+}
+
+/**
+ * Calculates the next viewer state after an image has been deleted.
+ * If 1 or fewer images were present before deletion, the viewer should close.
+ * If the deleted image was at the end of the list, move to the preceding image.
+ * Otherwise, retain the same index (which now refers to the next image).
+ */
+export function getPostDeleteNavigation(
+  currentIndex: number,
+  totalCount: number
+): PostDeleteNavigationResult {
+  if (totalCount <= 1) {
+    return { shouldClose: true, nextIndex: -1 };
+  }
+  if (currentIndex >= totalCount - 1) {
+    return { shouldClose: false, nextIndex: totalCount - 2 };
+  }
+  return { shouldClose: false, nextIndex: currentIndex };
+}
+

@@ -6,7 +6,6 @@ import { message } from "@tauri-apps/plugin-dialog";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useSlideshow } from "./hooks/useSlideshow";
 import { useAppEvents } from "./hooks/useAppEvents";
-import { useFileOperations } from "./hooks/useFileOperations";
 import { useBackgroundThumbnails } from "./hooks/useBackgroundThumbnails";
 import { AppHeader } from "./components/AppHeader";
 import { MenuBar } from "./components/MenuBar";
@@ -46,7 +45,7 @@ function App() {
     currentPath, images, loading, error, loadDirectory, everythingSearch, searchFolders,
     history, recordHistory, isHistoryLoaded, displayEntries, isFavorite, toggleFavorite,
     canGoBack, canGoForward, goBack, goForward, goUp, openFolderDialog,
-    scrollTarget, saveScrollPosition
+    scrollTarget, saveScrollPosition, renameEntry, trashEntry
   } = useFileSystemContext();
 
   const {
@@ -54,7 +53,7 @@ function App() {
     everythingMaxResults, everythingCliPath, background,
     slideInterval, slideLoop, viewMode, readingDirection, firstPageIsCover,
     thumbnailSize, updateThumbnailSize, updateBackground, updateViewMode,
-    isMenuBarPinned, pageNumberPosition, highPerformanceMode
+    isMenuBarPinned, pageNumberPosition, highPerformanceMode, confirmDelete
   } = useSettingsContext();
 
   const {
@@ -66,7 +65,6 @@ function App() {
 
   const [isStarted, setIsStarted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { renameEntry } = useFileOperations(loadDirectory);
 
   // Background thumbnail generation for current directory entries
   useBackgroundThumbnails({
@@ -325,7 +323,9 @@ function App() {
           onRenameEntry={async (oldPath, newName) => {
             await renameEntry(oldPath, newName, currentPath);
           }}
-
+          onDeleteEntry={async (path) => {
+            return await trashEntry(path, currentPath, { confirmDelete });
+          }}
           onToggleFavorite={toggleFavorite}
           onUpdateBackground={updateBackground}
           onShowInfo={setSelectedInfoPath}
@@ -348,6 +348,9 @@ function App() {
           onManualInteraction={stopTimer}
           onRenameImage={async (oldPath, newName) => {
             await renameEntry(oldPath, newName, currentPath);
+          }}
+          onDeleteImage={async (path) => {
+            return await trashEntry(path, currentPath, { confirmDelete });
           }}
         />
 

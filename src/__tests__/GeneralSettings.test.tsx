@@ -26,6 +26,8 @@ vi.mock("react-i18next", () => ({
         'settings.page_pos_hidden': '非表示',
         'settings.high_perf_label': '高負荷モード（パフォーマンス優先）',
         'settings.high_perf_desc': '有効にすると、CPUコアを最大限に活用してフォルダ内のサムネイルを裏で一括・先行生成します。サムネイル表示とスクロールが劇的に高速化されますが、一時的にCPU使用率やファンの回転数、バッテリー消費が高くなる場合があります。',
+        'settings.confirm_delete_label': '削除時に確認ダイアログを表示',
+        'settings.confirm_delete_desc': 'ファイルを Windows のごみ箱へ移動する前に確認メッセージを表示します。',
         'settings.bg_title': '背景画像の設定',
         'settings.bg_label': '背景画像を選択',
         'settings.storage_change': '変更...',
@@ -49,6 +51,7 @@ describe('GeneralSettings Component', () => {
     },
     pageNumberPosition: 'bottom-center' as PageNumberPosition,
     highPerformanceMode: false,
+    confirmDelete: true,
     onUpdateStartupFolderType: vi.fn(),
     onUpdateLanguage: vi.fn(),
     onUpdateTheme: vi.fn(),
@@ -56,6 +59,7 @@ describe('GeneralSettings Component', () => {
     onPickBackgroundImage: vi.fn(),
     onUpdatePageNumberPosition: vi.fn(),
     onUpdateHighPerformanceMode: vi.fn(),
+    onUpdateConfirmDelete: vi.fn(),
   };
 
   it('renders page number position setting label and 7 options', () => {
@@ -110,7 +114,8 @@ describe('GeneralSettings Component', () => {
     expect(descEl).toBeInTheDocument();
     expect(descEl).toHaveAttribute('id', 'high-perf-mode-desc');
 
-    const checkbox = screen.getByRole('checkbox');
+    const checkbox = document.getElementById('high-perf-mode-input') as HTMLInputElement;
+    expect(checkbox).toBeInTheDocument();
     expect(checkbox).not.toBeChecked();
     expect(checkbox).toHaveAttribute('id', 'high-perf-mode-input');
     expect(checkbox).toHaveAttribute('aria-describedby', 'high-perf-mode-desc');
@@ -126,8 +131,38 @@ describe('GeneralSettings Component', () => {
       />
     );
 
-    const checkbox = screen.getByRole('checkbox');
+    const checkbox = document.getElementById('high-perf-mode-input') as HTMLInputElement;
     fireEvent.click(checkbox);
     expect(onUpdateHighPerformanceMode).toHaveBeenCalledWith(true);
+  });
+
+  it('renders confirm delete checkbox and description with proper accessibility attributes', () => {
+    render(<GeneralSettings {...defaultProps} confirmDelete={true} />);
+
+    expect(screen.getByText('削除時に確認ダイアログを表示')).toBeInTheDocument();
+    const descEl = screen.getByText('ファイルを Windows のごみ箱へ移動する前に確認メッセージを表示します。');
+    expect(descEl).toBeInTheDocument();
+    expect(descEl).toHaveAttribute('id', 'confirm-delete-desc');
+
+    const checkbox = document.getElementById('confirm-delete-input') as HTMLInputElement;
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toHaveAttribute('id', 'confirm-delete-input');
+    expect(checkbox).toHaveAttribute('aria-describedby', 'confirm-delete-desc');
+  });
+
+  it('calls onUpdateConfirmDelete when checkbox is toggled', () => {
+    const onUpdateConfirmDelete = vi.fn();
+    render(
+      <GeneralSettings
+        {...defaultProps}
+        confirmDelete={true}
+        onUpdateConfirmDelete={onUpdateConfirmDelete}
+      />
+    );
+
+    const checkbox = document.getElementById('confirm-delete-input') as HTMLInputElement;
+    fireEvent.click(checkbox);
+    expect(onUpdateConfirmDelete).toHaveBeenCalledWith(false);
   });
 });

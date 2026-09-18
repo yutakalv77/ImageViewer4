@@ -21,6 +21,7 @@ type FileSystemContextType = ReturnType<typeof useFileSystem> & {
   displayEntries: EntryItem[];
   images: EntryItem[];
   renameEntry: (oldPath: string, newName: string, currentPath: string) => Promise<string>;
+  trashEntry: (path: string, currentPath: string, options?: { confirmDelete?: boolean }) => Promise<boolean>;
 
   openFolderDialog: () => Promise<void>;
 };
@@ -32,7 +33,16 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const fs = useFileSystem();
   const { history, recordHistory, isLoaded: isHistoryLoaded } = useHistory(dataStoragePath, historyRetentionDays);
   const { favorites, isFavorite, toggleFavorite, updateAllFavorites } = useFavorites(dataStoragePath);
-  const { renameEntry } = useFileOperations(fs.loadDirectory);
+  const { renameEntry, trashEntry } = useFileOperations(fs.loadDirectory);
+
+  const handleTrashEntry = useCallback(async (path: string, currentPath: string, options?: { confirmDelete?: boolean }) => {
+    const success = await trashEntry(path, currentPath, options);
+    if (success && isFavorite(path)) {
+      toggleFavorite(path);
+    }
+    return success;
+  }, [trashEntry, isFavorite, toggleFavorite]);
+
 
   const { t } = useTranslation();
   const openFolderDialog = useCallback(async () => {
@@ -72,6 +82,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     displayEntries,
     images,
     renameEntry,
+    trashEntry: handleTrashEntry,
     openFolderDialog
   };
 

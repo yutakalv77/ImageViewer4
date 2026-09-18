@@ -7,6 +7,7 @@ import {
   isPageNumberPosition,
   getVisibleImages,
   formatViewerInfo,
+  getPostDeleteNavigation,
 } from '../utils/viewerUtils';
 import { EntryItem } from '../types';
 
@@ -191,4 +192,42 @@ describe('viewerUtils', () => {
       expect(result).toBe('Page: 3 / 10');
     });
   });
+
+  describe('getPostDeleteNavigation', () => {
+    it('残り枚数が1枚以下（0枚または1枚）の時、shouldClose: true を返すこと', () => {
+      expect(getPostDeleteNavigation(0, 1)).toEqual({
+        shouldClose: true,
+        nextIndex: -1,
+      });
+      expect(getPostDeleteNavigation(0, 0)).toEqual({
+        shouldClose: true,
+        nextIndex: -1,
+      });
+    });
+
+    it('末尾の画像を削除した時、前の画像のインデックスを返すこと', () => {
+      // 5枚中インデックス4（最後の画像）を削除した場合 -> 新インデックスは 3
+      expect(getPostDeleteNavigation(4, 5)).toEqual({
+        shouldClose: false,
+        nextIndex: 3,
+      });
+    });
+
+    it('途中の画像を削除した時、同一インデックス（次の画像が繰り上がる）を返すこと', () => {
+      // 5枚中インデックス1（2枚目）を削除した場合 -> 次の画像がインデックス1になる
+      expect(getPostDeleteNavigation(1, 5)).toEqual({
+        shouldClose: false,
+        nextIndex: 1,
+      });
+    });
+
+    it('先頭の画像を削除した時、インデックス0を返すこと', () => {
+      // 5枚中インデックス0を削除した場合 -> 次の画像がインデックス0になる
+      expect(getPostDeleteNavigation(0, 5)).toEqual({
+        shouldClose: false,
+        nextIndex: 0,
+      });
+    });
+  });
 });
+

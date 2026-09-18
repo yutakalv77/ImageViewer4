@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isValidFileName, getNameAndExtension, getRenamedPath } from "../utils/fileUtils";
+import { isValidFileName, getNameAndExtension, getRenamedPath, getEntryNameFromPath, canTrashEntry } from "../utils/fileUtils";
 
 describe("fileUtils - isValidFileName", () => {
   it("有効なファイル名を判定すること", () => {
@@ -80,3 +80,40 @@ describe("fileUtils - getRenamedPath", () => {
     );
   });
 });
+
+describe("fileUtils - getEntryNameFromPath", () => {
+  it("Windowsパスからファイル名・フォルダ名を正しく取得すること", () => {
+    expect(getEntryNameFromPath("C:\\Users\\Photos\\test.jpg")).toBe("test.jpg");
+    expect(getEntryNameFromPath("C:\\Users\\Photos\\subfolder\\")).toBe("subfolder");
+    expect(getEntryNameFromPath("C:\\Users\\Photos\\subfolder")).toBe("subfolder");
+  });
+
+  it("POSIXパスからファイル名・フォルダ名を正しく取得すること", () => {
+    expect(getEntryNameFromPath("/home/photos/test.png")).toBe("test.png");
+    expect(getEntryNameFromPath("/home/photos/subfolder/")).toBe("subfolder");
+  });
+
+  it("単一のファイル名のみの場合その文字列を返すこと", () => {
+    expect(getEntryNameFromPath("image.webp")).toBe("image.webp");
+  });
+});
+
+describe("fileUtils - canTrashEntry", () => {
+  it("通常ファイル・フォルダは削除可能と判定すること", () => {
+    expect(canTrashEntry("C:\\Users\\Photos\\test.jpg")).toBe(true);
+    expect(canTrashEntry("C:\\Users\\Photos\\archive.zip")).toBe(true);
+    expect(canTrashEntry("/home/photos/test.png")).toBe(true);
+  });
+
+  it("空文字やnull/undefinedは削除不可と判定すること", () => {
+    expect(canTrashEntry("")).toBe(false);
+    expect(canTrashEntry(null)).toBe(false);
+    expect(canTrashEntry(undefined)).toBe(false);
+  });
+
+  it("ZIP内の仮想パスは削除不可と判定すること", () => {
+    expect(canTrashEntry("C:\\archive.zip::image.jpg")).toBe(false);
+    expect(canTrashEntry("C:\\archive.zip::folder/sub.png")).toBe(false);
+  });
+});
+

@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import { message } from "@tauri-apps/plugin-dialog";
-import { getRenamedPath, isValidFileName } from "../utils/fileUtils";
+import { message, confirm } from "@tauri-apps/plugin-dialog";
+import { getRenamedPath, isValidFileName, getEntryNameFromPath, canTrashEntry } from "../utils/fileUtils";
 
 export function useFileOperations(loadDirectory: (path: string, skipHistory?: boolean) => Promise<void>) {
   const { t } = useTranslation();
@@ -36,8 +36,49 @@ export function useFileOperations(loadDirectory: (path: string, skipHistory?: bo
     }
   }, [loadDirectory, t]);
 
+  const trashEntry = useCallback(async (
+    path: string,
+    currentPath: string,
+    options?: { confirmDelete?: boolean }
+  ): Promise<boolean> => {
+    if (!canTrashEntry(path)) {
+      return false;
+    }
+
+    const shouldConfirm = options?.confirmDelete ?? true;
+    if (shouldConfirm) {
+      const fileName = getEntryNameFromPath(path);
+      const isConfirmed = await confirm(
+        t('common.confirm_delete_message', { name: fileName, defaultValue: `'${fileName}' をごみ箱へ移動しますか？` }),
+        {
+          title: t('common.confirm_delete_title', { defaultValue: 'ごみ箱へ移動' }),
+          kind: 'warning',
+        }
+      );
+      if (!isConfirmed) {
+        return false;
+      }
+    }
+
+    try {
+      await invoke("trash_entry", { path });
+      await loadDirectory(currentPath, true);
+      return true;
+    } catch (err: any) {
+      console.error("Failed to move to trash:", err);
+      const errMsg = err?.message || String(err);
+      await message(errMsg, {
+        title: t('common.error_delete', { defaultValue: '削除に失敗しました' }),
+        kind: 'error',
+      });
+      return false;
+    }
+  }, [loadDirectory, t]);
+
   return {
-    renameEntry
+    renameEntry,
+    trashEntry,
   };
 }
+
 

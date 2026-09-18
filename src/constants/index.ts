@@ -9,3 +9,5 @@ export const DEFAULT_OVERSCAN_ROWS = 2;
 export const HIGH_PERF_OVERSCAN_ROWS = 8;
 
 export const DEFAULT_HIGH_PERFORMANCE_MODE = false;
+export const DEFAULT_CONFIRM_DELETE = true;
+

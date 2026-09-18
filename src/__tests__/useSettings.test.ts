@@ -119,3 +119,57 @@ describe('useSettings hook - highPerformanceMode', () => {
     );
   });
 });
+
+import { DEFAULT_CONFIRM_DELETE } from '../constants';
+
+describe('useSettings hook - confirmDelete', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (fsPlugin.exists as any).mockResolvedValue(false);
+  });
+
+  it('initializes with default true when no config exists', async () => {
+    const { result } = renderHook(() => useSettings());
+
+    await waitFor(() => {
+      expect(result.current.isLoaded).toBe(true);
+    });
+
+    expect(result.current.confirmDelete).toBe(DEFAULT_CONFIRM_DELETE);
+    expect(result.current.confirmDelete).toBe(true);
+  });
+
+  it('loads confirmDelete from existing config file', async () => {
+    (fsPlugin.exists as any).mockResolvedValue(true);
+    (fsPlugin.readTextFile as any).mockResolvedValue(
+      JSON.stringify({ confirmDelete: false })
+    );
+
+    const { result } = renderHook(() => useSettings());
+
+    await waitFor(() => {
+      expect(result.current.isLoaded).toBe(true);
+    });
+
+    expect(result.current.confirmDelete).toBe(false);
+  });
+
+  it('updates confirmDelete and persists to config', async () => {
+    const { result } = renderHook(() => useSettings());
+
+    await waitFor(() => {
+      expect(result.current.isLoaded).toBe(true);
+    });
+
+    await act(async () => {
+      await result.current.updateConfirmDelete(false);
+    });
+
+    expect(result.current.confirmDelete).toBe(false);
+    expect(fsPlugin.writeTextFile).toHaveBeenCalledWith(
+      expect.stringContaining('config.json'),
+      expect.stringContaining('"confirmDelete": false')
+    );
+  });
+});
+

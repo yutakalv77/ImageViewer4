@@ -8,7 +8,7 @@ import {
   buildTransformStyle,
   getTransformBadgeText,
   ImageTransform,
-} from "./transformUtils";
+} from "../utils/transformUtils";
 
 describe("transformUtils", () => {
   describe("getNextRotation", () => {

@@ -5,6 +5,7 @@ import {
   getPrevIndex,
   getVisibleImages,
   formatViewerInfo,
+  getPostDeleteNavigation,
   DEFAULT_PAGE_NUMBER_POSITION
 } from "../utils/viewerUtils";
 import { EntryItem, PageNumberPosition } from "../types";
@@ -40,6 +41,7 @@ interface ImageViewerProps {
   onShowInfo: (path: string) => void;
   onManualInteraction: () => void;
   onRenameImage?: (oldPath: string, newName: string) => Promise<void>;
+  onDeleteImage?: (path: string) => Promise<boolean>;
 }
 
 export function ImageViewer({ 
@@ -54,7 +56,8 @@ export function ImageViewer({
   onNavigate,
   onShowInfo,
   onManualInteraction,
-  onRenameImage
+  onRenameImage,
+  onDeleteImage
 }: ImageViewerProps) {
   const { t } = useTranslation();
   const lastWheelTime = useRef(0);
@@ -183,6 +186,28 @@ export function ImageViewer({
     : null;
 
   const canRename = !!onRenameImage && !!currentItem && !isZipVirtualPath(currentItem.path);
+  const canDelete = !!onDeleteImage && !!currentItem && !isZipVirtualPath(currentItem.path);
+
+  const handleDelete = useCallback(async () => {
+    if (!canDelete || !currentItem || !onDeleteImage) return;
+    setContextMenu(null);
+    const pathToDelete = currentItem.path;
+    const currentTotal = images.length;
+    const currentIdx = currentIndex;
+
+    const success = await onDeleteImage(pathToDelete);
+    if (!success) return;
+
+    resetTransform();
+    zoomPan.resetZoom();
+
+    const navResult = getPostDeleteNavigation(currentIdx, currentTotal);
+    if (navResult.shouldClose) {
+      onClose();
+    } else {
+      onNavigate(navResult.nextIndex);
+    }
+  }, [canDelete, currentItem, onDeleteImage, images.length, currentIndex, onClose, onNavigate, resetTransform, zoomPan]);
 
   useEffect(() => {
     if (!isOpen || isRenameOpen) return;
@@ -203,6 +228,9 @@ export function ImageViewer({
       } else if (e.key === "F2" && canRename) {
         e.preventDefault();
         setIsRenameOpen(true);
+      } else if (e.key === "Delete" && canDelete) {
+        e.preventDefault();
+        handleDelete();
       } else if (e.key.toLowerCase() === "z") {
         e.preventDefault();
         magnifier.toggleMagnifier();
@@ -297,6 +325,8 @@ export function ImageViewer({
     handlePrev,
     readingDirection,
     canRename,
+    canDelete,
+    handleDelete,
     magnifier,
     zoomPan,
     onClose,
@@ -331,6 +361,13 @@ export function ImageViewer({
           label: t('context_menu.rename', { defaultValue: '名前を変更' }), 
           shortcut: "F2", 
           onClick: () => setIsRenameOpen(true) 
+        },
+      ] : []),
+      ...(canDelete ? [
+        { 
+          label: t('context_menu.trash', { defaultValue: 'ごみ箱へ移動' }), 
+          shortcut: "Delete", 
+          onClick: handleDelete 
         },
       ] : []),
       { separator: true },

@@ -1,0 +1,42 @@
+import { vi } from 'vitest';
+
+export const menuTranslations: Record<string, string> = {
+  'menu.file': 'ファイル',
+  'menu.view': '表示',
+  'menu.slide': 'スライド',
+  'menu.favorites': 'お気に入り',
+  'menu.history': '履歴',
+  'menu.settings': '設定',
+  'menu.help': 'ヘルプ',
+  'file_menu.open_folder': 'フォルダを開く',
+  'file_menu.reveal_in_explorer': 'エクスプローラーで表示',
+  'file_menu.exit': '終了',
+  'view_menu.single': '単ページ表示',
+  'view_menu.spread': '見開き表示',
+  'view_menu.sort_by': '表示順',
+  'view_menu.sort_name': '名前順',
+  'view_menu.sort_created': '作成日付順',
+  'view_menu.sort_modified': '更新日付順',
+  'view_menu.sort_size': 'サイズ順',
+  'view_menu.sort_type': '種類順',
+  'view_menu.sort_asc': '昇順',
+  'view_menu.sort_desc': '降順',
+  'slide_menu.start': '開始',
+  'view_menu.pin_menubar': '上部バーを固定',
+  'menu.pin_menubar': '上部バーを固定',
+  'menu.unpin_menubar': '上部バーを自動的に隠す',
+  'view_menu.transform': '回転・反転',
+  'view_menu.rotate_cw': '時計回りに90°回転',
+  'view_menu.rotate_ccw': '反時計回りに90°回転',
+  'view_menu.flip_h': '左右反転',
+  'view_menu.flip_v': '上下反転',
+  'view_menu.reset_transform': '回転・反転をリセット',
+};
+
+export const createDefaultMenuBarProps = (overrides?: Record<string, any>) => ({
+  onStartSlideshow: vi.fn(),
+  onRevealCurrentPath: vi.fn(),
+  onLoadDirectory: vi.fn(),
+  onOpenFolderDialog: vi.fn(),
+  ...overrides,
+});

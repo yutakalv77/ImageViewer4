@@ -29,6 +29,7 @@ interface GalleryProps {
   onSaveScrollPosition?: (path: string, scrollTop: number) => void;
   onEntryClick: (entry: EntryItem) => void;
   onRenameEntry: (oldPath: string, newName: string) => Promise<string | void>;
+  onDeleteEntry?: (path: string) => Promise<boolean | void>;
 
   onToggleFavorite: (path: string) => void;
   onUpdateBackground: (updates: { path: string }) => void;
@@ -47,6 +48,7 @@ export function Gallery({
   onSaveScrollPosition,
   onEntryClick,
   onRenameEntry,
+  onDeleteEntry,
   onToggleFavorite,
   onUpdateBackground,
   onShowInfo,
@@ -56,6 +58,12 @@ export function Gallery({
   const mainContentRef = useRef<HTMLDivElement>(null);
   const isRestoringRef = useRef(false);
   const lastRestoredNavIdRef = useRef<number>(-1);
+
+  const handleDelete = useCallback(async (path: string) => {
+    if (!onDeleteEntry || isZipVirtualPath(path)) return;
+    setContextMenu(null);
+    await onDeleteEntry(path);
+  }, [onDeleteEntry]);
   
   const {
     startIndex,
@@ -84,6 +92,7 @@ export function Gallery({
   } = useGalleryNavigation(displayEntries, onEntryClick, {
     columns,
     scrollToIndex,
+    onDelete: (entry) => handleDelete(entry.path),
   });
 
   const visibleEntries = useMemo(() => {
@@ -256,6 +265,9 @@ export function Gallery({
     ...(!isZipVirtual ? [
       { separator: true },
       { label: t('context_menu.rename'), shortcut: "F2", onClick: () => setEditingIndex(contextMenu.index) },
+      ...(onDeleteEntry ? [
+        { label: t('context_menu.trash', { defaultValue: 'ごみ箱へ移動' }), shortcut: "Delete", onClick: () => handleDelete(contextMenu.entry.path) }
+      ] : []),
     ] : []),
 
   ] : [];

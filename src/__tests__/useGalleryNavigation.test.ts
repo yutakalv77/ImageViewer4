@@ -120,4 +120,37 @@ describe("useGalleryNavigation hook", () => {
 
     expect(onEntryClick).not.toHaveBeenCalled();
   });
+
+  it("Deleteキー押下で選択中のアイテムがあれば onDelete が呼ばれること", () => {
+    const onEntryClick = vi.fn();
+    const onDelete = vi.fn();
+    const { result } = renderHook(() =>
+      useGalleryNavigation(dummyEntries, onEntryClick, { columns: 3, onDelete })
+    );
+
+    act(() => {
+      result.current.setSelectedIndex(1);
+    });
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
+    });
+
+    expect(onDelete).toHaveBeenCalledWith(dummyEntries[1]);
+  });
+
+  it("未選択時（selectedIndex === -1）にDeleteキーを押しても onDelete が呼ばれないこと", () => {
+    const onEntryClick = vi.fn();
+    const onDelete = vi.fn();
+    renderHook(() =>
+      useGalleryNavigation(dummyEntries, onEntryClick, { columns: 3, onDelete })
+    );
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
+    });
+
+    expect(onDelete).not.toHaveBeenCalled();
+  });
 });
+

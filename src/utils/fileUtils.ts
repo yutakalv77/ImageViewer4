@@ -1,6 +1,9 @@
+import { isZipVirtualPath } from "./pathUtils";
+
 /**
  * Utility functions for file operations and name manipulation
  */
+
 
 // Characters prohibited in Windows file/folder names
 const INVALID_FILENAME_CHARS_REGEX = /[\\/:*?"<>|]/;
@@ -46,3 +49,21 @@ export function getRenamedPath(oldPath: string, newName: string): string {
   parts.pop(); // Remove old file name
   return [...parts, newName].join(separator);
 }
+
+/**
+ * Returns the file or folder name from a path.
+ */
+export function getEntryNameFromPath(path: string): string {
+  const parts = path.split(/[/\\]/).filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1] : path;
+}
+
+/**
+ * Checks whether an entry at path can be moved to trash.
+ * ZIP virtual entries cannot be trashed.
+ */
+export function canTrashEntry(path: string | null | undefined): boolean {
+  if (!path) return false;
+  return !isZipVirtualPath(path);
+}
+

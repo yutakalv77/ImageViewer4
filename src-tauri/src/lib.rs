@@ -588,6 +588,19 @@ fn rename_entry(old_path: String, new_path: String) -> Result<(), String> {
     fs::rename(old_path, new_path).map_err(|e| e.to_string())
 }
 
+pub(crate) fn trash_item(path: &Path) -> Result<(), String> {
+    if !path.exists() {
+        return Err(format!("File or directory does not exist: {}", path.display()));
+    }
+    trash::delete(path).map_err(|e| format!("Failed to move to trash: {}", e))
+}
+
+#[tauri::command]
+fn trash_entry(path: String) -> Result<(), String> {
+    trash_item(Path::new(&path))
+}
+
+
 #[tauri::command]
 async fn get_thumbnail(
     app: tauri::AppHandle,
@@ -680,6 +693,7 @@ pub fn run() {
             get_image_info,
             search_folders, 
             rename_entry,
+            trash_entry,
             search_everything,
             check_everything_running,
             get_thumbnail,
@@ -692,3 +706,38 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn test_trash_item_non_existent() {
+        let non_existent = Path::new("C:\\path\\does_not_exist_12345_test.xyz");
+        let result = trash_item(non_existent);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("does not exist"));
+    }
+
+    #[test]
+    fn test_trash_item_success() {
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join(format!(
+            "image_viewer_trash_test_{}.tmp",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        {
+            let mut file = fs::File::create(&test_file).expect("Failed to create temp file");
+            file.write_all(b"test trash item").expect("Failed to write temp file");
+        }
+        assert!(test_file.exists());
+        let result = trash_item(&test_file);
+        assert!(result.is_ok(), "Failed to move file to trash: {:?}", result);
+        assert!(!test_file.exists(), "File should no longer exist at original path");
+    }
+}
+

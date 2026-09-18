@@ -14,6 +14,7 @@ vi.mock("react-i18next", () => ({
         "context_menu.fav_add": "お気に入りに追加",
         "context_menu.fav_remove": "お気に入りから削除",
         "context_menu.rename": "名前の変更",
+        "context_menu.trash": "ごみ箱へ移動",
       };
       return translations[key] || key;
     },
@@ -105,4 +106,52 @@ describe("Gallery component with virtual grid", () => {
     const firstCard = screen.getByText("image_0.jpg");
     expect(firstCard).toBeInTheDocument();
   });
+
+  it("右クリックメニューからごみ箱へ移動を選択すると onDeleteEntry が呼ばれること", async () => {
+    const entries = createMockEntries(5);
+    const onDeleteEntry = vi.fn();
+
+    render(
+      <Gallery
+        {...defaultProps}
+        displayEntries={entries}
+        onDeleteEntry={onDeleteEntry}
+      />
+    );
+
+    const firstCard = screen.getByText("image_0.jpg");
+    fireEvent.contextMenu(firstCard);
+
+    const trashMenuItem = screen.getByText("ごみ箱へ移動");
+    expect(trashMenuItem).toBeInTheDocument();
+
+    fireEvent.click(trashMenuItem);
+    expect(onDeleteEntry).toHaveBeenCalledWith("C:/photos/image_0.jpg");
+  });
+
+  it("エントリ選択中にDeleteキーを押すと onDeleteEntry が呼ばれること", async () => {
+    const entries = createMockEntries(5);
+    const onDeleteEntry = vi.fn();
+
+    render(
+      <Gallery
+        {...defaultProps}
+        displayEntries={entries}
+        onDeleteEntry={onDeleteEntry}
+      />
+    );
+
+    // ArrowRightで先頭アイテムを選択
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+    });
+
+    // Deleteキーを押下
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
+    });
+
+    expect(onDeleteEntry).toHaveBeenCalledWith("C:/photos/image_0.jpg");
+  });
 });
+

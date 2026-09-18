@@ -5,6 +5,7 @@ import { isTargetEditable } from "../utils/domUtils";
 export interface UseGalleryNavigationOptions {
   columns?: number;
   scrollToIndex?: (index: number) => void;
+  onDelete?: (entry: EntryItem) => void;
 }
 
 export function useGalleryNavigation(
@@ -68,6 +69,12 @@ export function useGalleryNavigation(
         setEditingIndex(targetIdx);
       }
       return;
+    } else if (e.key === "Delete") {
+      e.preventDefault();
+      if (selectedIndex >= 0 && selectedIndex < entries.length && entries[selectedIndex]) {
+        options?.onDelete?.(entries[selectedIndex]);
+      }
+      return;
     } else {
 
       return;
@@ -77,7 +84,7 @@ export function useGalleryNavigation(
       e.preventDefault();
       setSelectedIndex(nextIndex);
     }
-  }, [entries, selectedIndex, editingIndex, onEntryClick, options?.columns]);
+  }, [entries, selectedIndex, editingIndex, onEntryClick, options?.columns, options?.onDelete]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
