@@ -1,16 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { EverythingSettings } from "../../components/settings/EverythingSettings";
-import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
-
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
-}));
-
-vi.mock("@tauri-apps/plugin-dialog", () => ({
-  open: vi.fn(),
-}));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -35,29 +25,23 @@ vi.mock("react-i18next", () => ({
 }));
 
 describe("EverythingSettings Component", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (invoke as any).mockResolvedValue(true);
-  });
-
   const defaultProps = {
     everythingEnabled: true,
     everythingMaxResults: 100,
     everythingCliPath: "C:/tools/es.exe",
+    isRunning: true,
     onUpdateEnabled: vi.fn(),
     onUpdateMaxResults: vi.fn(),
     onUpdateCliPath: vi.fn(),
+    onPickCliPath: vi.fn(),
   };
 
-  it("タイトル、サービス状態、各設定項目が正しく描画されること", async () => {
+  it("タイトル、サービス状態、各設定項目が正しく描画されること", () => {
     render(<EverythingSettings {...defaultProps} />);
 
     expect(screen.getByText("Everything 検索連携")).toBeInTheDocument();
     expect(screen.getByText("サービス状態")).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(screen.getByText("実行中")).toBeInTheDocument();
-    });
+    expect(screen.getByText("実行中")).toBeInTheDocument();
 
     const toggle = screen.getByRole("switch", { name: "Everything検索を有効にする" });
     expect(toggle).toHaveAttribute("aria-checked", "true");
@@ -68,13 +52,14 @@ describe("EverythingSettings Component", () => {
     expect(screen.getByDisplayValue("C:/tools/es.exe")).toBeInTheDocument();
   });
 
-  it("トグル操作でonUpdateEnabledが呼ばれること", async () => {
+  it("isRunningがfalseの場合は停止中が表示されること", () => {
+    render(<EverythingSettings {...defaultProps} isRunning={false} />);
+    expect(screen.getByText("停止中")).toBeInTheDocument();
+  });
+
+  it("トグル操作でonUpdateEnabledが呼ばれること", () => {
     const handleUpdateEnabled = vi.fn();
     render(<EverythingSettings {...defaultProps} onUpdateEnabled={handleUpdateEnabled} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("実行中")).toBeInTheDocument();
-    });
 
     const toggle = screen.getByRole("switch", { name: "Everything検索を有効にする" });
     fireEvent.click(toggle);
@@ -82,13 +67,9 @@ describe("EverythingSettings Component", () => {
     expect(handleUpdateEnabled).toHaveBeenCalledWith(false);
   });
 
-  it("最大取得件数を変更したときにonUpdateMaxResultsが呼ばれること", async () => {
+  it("最大取得件数を変更したときにonUpdateMaxResultsが呼ばれること", () => {
     const handleUpdateMaxResults = vi.fn();
     render(<EverythingSettings {...defaultProps} onUpdateMaxResults={handleUpdateMaxResults} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("実行中")).toBeInTheDocument();
-    });
 
     const limitInput = screen.getByRole("spinbutton", { name: "最大取得件数" });
     fireEvent.change(limitInput, { target: { value: "200" } });
@@ -96,32 +77,19 @@ describe("EverythingSettings Component", () => {
     expect(handleUpdateMaxResults).toHaveBeenCalledWith(200);
   });
 
-  it("参照ボタンをクリックしてファイルを選択したときにonUpdateCliPathが呼ばれること", async () => {
-    const handleUpdateCliPath = vi.fn();
-    (open as any).mockResolvedValue("D:/apps/es.exe");
-
-    render(<EverythingSettings {...defaultProps} onUpdateCliPath={handleUpdateCliPath} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("実行中")).toBeInTheDocument();
-    });
+  it("参照ボタンをクリックしたときにonPickCliPathが呼ばれること", () => {
+    const handlePickCli = vi.fn();
+    render(<EverythingSettings {...defaultProps} onPickCliPath={handlePickCli} />);
 
     const browseBtn = screen.getByRole("button", { name: "参照..." });
     fireEvent.click(browseBtn);
 
-    await waitFor(() => {
-      expect(open).toHaveBeenCalled();
-      expect(handleUpdateCliPath).toHaveBeenCalledWith("D:/apps/es.exe");
-    });
+    expect(handlePickCli).toHaveBeenCalledTimes(1);
   });
 
-  it("リセットボタンをクリックしたときにonUpdateCliPathが空文字で呼ばれること", async () => {
+  it("リセットボタンをクリックしたときにonUpdateCliPathが空文字で呼ばれること", () => {
     const handleUpdateCliPath = vi.fn();
     render(<EverythingSettings {...defaultProps} onUpdateCliPath={handleUpdateCliPath} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("実行中")).toBeInTheDocument();
-    });
 
     const resetBtn = screen.getByRole("button", { name: "リセット" });
     fireEvent.click(resetBtn);

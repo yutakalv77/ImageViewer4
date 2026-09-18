@@ -5,3 +5,4 @@ export * from "./SettingSelect";
 export * from "./SettingPathInput";
 export * from "./SettingSlider";
 export * from "./SettingNumberInput";
+export * from "./SettingButton";

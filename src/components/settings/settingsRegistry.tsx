@@ -1,5 +1,7 @@
 import type { ReactNode, ComponentType } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettingsContext } from "../../context/SettingsContext";
+import { useEverythingStatus } from "../../hooks/useEverythingStatus";
 import { GeneralSettings } from "./GeneralSettings";
 import { StorageSettings } from "./StorageSettings";
 import { HistorySettings } from "./HistorySettings";
@@ -77,20 +79,31 @@ export function HistoryTabPanel() {
  * Everything検索設定タブのパネルコンポーネント
  */
 export function EverythingTabPanel() {
+  const { t } = useTranslation();
   const {
     everythingEnabled, updateEverythingEnabled,
     everythingMaxResults, updateEverythingMaxResults,
     everythingCliPath, updateEverythingCliPath,
   } = useSettingsContext();
+  const { isRunning, pickCliPath } = useEverythingStatus();
+
+  const handlePickCli = async () => {
+    const selected = await pickCliPath(t("settings.everything_cli_dialog_title"));
+    if (selected) {
+      updateEverythingCliPath(selected);
+    }
+  };
 
   return (
     <EverythingSettings
       everythingEnabled={everythingEnabled}
       everythingMaxResults={everythingMaxResults}
       everythingCliPath={everythingCliPath}
+      isRunning={isRunning}
       onUpdateEnabled={updateEverythingEnabled}
       onUpdateMaxResults={updateEverythingMaxResults}
       onUpdateCliPath={updateEverythingCliPath}
+      onPickCliPath={handlePickCli}
     />
   );
 }

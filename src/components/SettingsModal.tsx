@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useUIContext } from "../context/UIContext";
 import { SETTINGS_TABS, getSettingsTabById, getDefaultSettingsTab } from "./settings/settingsRegistry";
+import { SettingButton } from "./settings/primitives";
 import { useDraggableModal } from "../hooks/useDraggableModal";
 import "./SettingsModal.css";
 
@@ -78,9 +79,9 @@ export function SettingsModal() {
         </div>
 
         <div className="settings-footer">
-          <button className="settings-button primary" onClick={onClose}>
+          <SettingButton variant="primary" onClick={onClose}>
             {t("common.close")}
-          </button>
+          </SettingButton>
         </div>
 
         {/* Window Resize Handles */}

@@ -211,3 +211,48 @@
   font-size: var(--font-size-sm, 11px);
   color: var(--text-dim);
 }
+
+/* --- Setting Button --- */
+.settings-button {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-main);
+  color: var(--text-main);
+  padding: 6px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-base, 12px);
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.settings-button:hover:not(:disabled) {
+  background: var(--border-main);
+}
+
+.settings-button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.settings-button.primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.settings-button.danger {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+.settings-button.danger:hover:not(:disabled) {
+  background: #c82333;
+  border-color: #bd2130;
+}
+
+.settings-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

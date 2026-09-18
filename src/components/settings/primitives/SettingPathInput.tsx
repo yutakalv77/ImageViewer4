@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { SettingRow } from "./SettingRow";
+import { SettingButton } from "./SettingButton";
 import "./SettingPrimitives.css";
 
 export interface SettingPathInputProps {
@@ -55,23 +56,19 @@ export function SettingPathInput({
           disabled={disabled}
           aria-describedby={descId}
         />
-        <button
-          type="button"
-          className="settings-button"
+        <SettingButton
           onClick={onBrowse}
           disabled={disabled}
         >
           {browseLabel}
-        </button>
+        </SettingButton>
         {onReset && (
-          <button
-            type="button"
-            className="settings-button"
+          <SettingButton
             onClick={onReset}
             disabled={disabled || !value}
           >
             {resetLabel}
-          </button>
+          </SettingButton>
         )}
       </div>
     </SettingRow>

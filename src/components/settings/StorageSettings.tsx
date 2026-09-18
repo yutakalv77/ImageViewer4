@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "../../utils/formatUtils";
 import { useThumbnailCache } from "../../hooks/useThumbnailCache";
-import { SettingSection, SettingRow, SettingPathInput } from "./primitives";
+import { SettingSection, SettingRow, SettingPathInput, SettingButton } from "./primitives";
 
 interface StorageSettingsProps {
   dataStoragePath: string;
@@ -36,14 +36,12 @@ export function StorageSettings({
           </>
         }
       >
-        <button
-          type="button"
-          className="settings-button"
+        <SettingButton
           onClick={clearCache}
           disabled={isClearing}
         >
           {t("settings.cache_clear_button")}
-        </button>
+        </SettingButton>
       </SettingRow>
     </SettingSection>
   );
