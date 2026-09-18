@@ -3,9 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { EntryItem, DirectoryResult, NavigationType } from "../types";
 import { 
   isVirtualPath, isSearchPath, getSearchQuery, 
-  isEverythingSearchPath, VIRTUAL_PATH_SEARCH_PREFIX, VIRTUAL_PATH_EVERYTHING_PREFIX,
+  isEverythingSearchPath,
   getParentPath
 } from "../utils/pathUtils";
+import { useFileSearch } from "./useFileSearch";
 import { useNavigationHistory } from "./useNavigationHistory";
 import { useScrollManager } from "./useScrollManager";
 
@@ -90,17 +91,12 @@ export function useFileSystem() {
     }
   }, [currentPath, history, prepareScrollForNavigation, updateStateIfLatest]);
 
-  const searchFolders = useCallback(async (rootPath: string, query: string) => {
-    if (!rootPath) return;
-    const searchPath = VIRTUAL_PATH_SEARCH_PREFIX + query;
-    lastPhysicalPathRef.current = rootPath;
-    await loadDirectory(searchPath);
-  }, [loadDirectory]);
-
-  const everythingSearch = useCallback(async (query: string, maxResults: number, cliPath: string) => {
-    const searchPath = VIRTUAL_PATH_EVERYTHING_PREFIX + query;
-    await loadDirectory(searchPath, false, maxResults, cliPath);
-  }, [loadDirectory]);
+  const fileSearch = useFileSearch({
+    loadDirectory,
+    onSetLastPhysicalPath: (p) => {
+      lastPhysicalPathRef.current = p;
+    },
+  });
 
   const goBack = useCallback(() => {
     const previous = history.popBack(currentPath);
@@ -132,8 +128,8 @@ export function useFileSystem() {
     canGoBack: history.canGoBack,
     canGoForward: history.canGoForward,
     loadDirectory,
-    searchFolders,
-    everythingSearch,
+    searchFolders: fileSearch.searchFolders,
+    everythingSearch: fileSearch.everythingSearch,
     goUp,
     goBack,
     goForward,
@@ -141,5 +137,9 @@ export function useFileSystem() {
     scrollTarget,
     saveScrollPosition,
     getSavedScrollPosition,
+    searchScope: fileSearch.searchScope,
+    setSearchScope: fileSearch.setSearchScope,
+    toggleSearchScope: fileSearch.toggleSearchScope,
+    executeSearch: fileSearch.executeSearch,
   };
 }

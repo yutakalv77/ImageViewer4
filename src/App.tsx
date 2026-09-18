@@ -19,7 +19,7 @@ import { SlideIntervalModal } from "./components/SlideIntervalModal";
 import { ResizeHandles } from "./components/ResizeHandles";
 import { AppBackground } from "./components/AppBackground";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { EntryItem } from "./types";
+import { EntryItem, SearchScope } from "./types";
 import { isVirtualPath } from "./utils/pathUtils";
 import { isTargetEditable } from "./utils/domUtils";
 import { useTranslation } from "react-i18next";
@@ -42,10 +42,11 @@ function App() {
   } = useWindowSystemMenu();
   
   const {
-    currentPath, images, loading, error, loadDirectory, everythingSearch, searchFolders,
+    currentPath, images, loading, error, loadDirectory,
     history, recordHistory, isHistoryLoaded, displayEntries, isFavorite, toggleFavorite,
     canGoBack, canGoForward, goBack, goForward, goUp, openFolderDialog,
-    scrollTarget, saveScrollPosition, renameEntry, trashEntry
+    scrollTarget, saveScrollPosition, renameEntry, trashEntry,
+    searchScope, toggleSearchScope, executeSearch
   } = useFileSystemContext();
 
   const {
@@ -212,25 +213,24 @@ function App() {
     }
   }, [currentPath]);
 
-  const fallbackSearch = useCallback((query: string) => {
-    if (currentPath && !isVirtualPath(currentPath)) {
-      searchFolders(currentPath, query);
-    } else if (history.length > 0) {
-      searchFolders(history[0].path, query);
-    }
-  }, [currentPath, history, searchFolders]);
-
-  const handleSearch = useCallback(async (query: string) => {
+  const handleSearch = useCallback(async (query: string, scope?: SearchScope) => {
     if (viewerState.isOpen) closeViewer();
 
-    if (everythingEnabled) {
-      try {
+    const targetScope = scope ?? searchScope;
+    await executeSearch({
+      query,
+      scope: targetScope,
+      currentPath,
+      historyFallbackPath: history.length > 0 ? history[0].path : undefined,
+      everythingEnabled,
+      everythingMaxResults,
+      everythingCliPath,
+      checkEverythingRunning: async () => {
         const isRunning: boolean = await invoke("check_everything_running");
         if (!isRunning) throw new Error(t('settings.everything_status_stopped'));
-        
-        await everythingSearch(query, everythingMaxResults, everythingCliPath);
-        setPersistentError(null);
-      } catch (err: any) {
+        return true;
+      },
+      onEverythingError: async (err: any) => {
         console.error("Everything search failed:", err);
         const errMsg = err.message || err.toString();
         setPersistentError(errMsg);
@@ -238,12 +238,13 @@ function App() {
           title: t('settings.everything_error_title'),
           kind: 'error' 
         });
-        fallbackSearch(query);
-      }
-    } else {
-      fallbackSearch(query);
-    }
-  }, [viewerState.isOpen, closeViewer, everythingEnabled, everythingMaxResults, everythingCliPath, everythingSearch, t, setPersistentError, fallbackSearch]);
+      },
+    });
+  }, [
+    viewerState.isOpen, closeViewer, searchScope, executeSearch,
+    currentPath, history, everythingEnabled, everythingMaxResults,
+    everythingCliPath, t, setPersistentError
+  ]);
 
   const handleEntryClick = useCallback((entry: EntryItem) => {
     if (!entry) return;
@@ -295,6 +296,9 @@ function App() {
             onSearch={handleSearch}
             onDrag={handleDrag}
             onMaximize={toggleMaximize}
+            everythingEnabled={everythingEnabled}
+            searchScope={searchScope}
+            onToggleSearchScope={toggleSearchScope}
           />
         </AppHeader>
       )}

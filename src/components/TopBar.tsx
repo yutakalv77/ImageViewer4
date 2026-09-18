@@ -2,7 +2,54 @@ import { useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { isSearchPath, getBreadcrumbs, isVirtualPath } from "../utils/pathUtils";
 import { isTargetInputOrTextarea } from "../utils/windowMenuUtils";
+import { SearchScope } from "../types";
+import {
+  determineSearchScope,
+  getSearchPlaceholder,
+  getSearchScopeTooltip,
+  toggleSearchScope as toggleScopeUtil,
+} from "../utils/searchUtils";
 import "./TopBar.css";
+
+function FolderIcon({ className, size = 14 }: { className?: string; size?: number }) {
+  return (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      data-testid="search-folder-icon"
+    >
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function GlobeIcon({ className, size = 14 }: { className?: string; size?: number }) {
+  return (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      data-testid="search-globe-icon"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
 
 export interface TopBarProps {
   currentPath: string;
@@ -12,9 +59,12 @@ export interface TopBarProps {
   onGoForward: () => void;
   onGoUp: () => void;
   onLoadDirectory: (path: string) => void;
-  onSearch: (query: string) => void;
+  onSearch: (query: string, scope?: SearchScope) => void;
   onDrag: (e: React.MouseEvent) => void;
   onMaximize: () => void;
+  everythingEnabled?: boolean;
+  searchScope?: SearchScope;
+  onToggleSearchScope?: () => void;
 }
 
 export function TopBar({ 
@@ -27,16 +77,33 @@ export function TopBar({
   onLoadDirectory,
   onSearch,
   onDrag,
-  onMaximize
+  onMaximize,
+  everythingEnabled = false,
+  searchScope: externalScope,
+  onToggleSearchScope: externalToggleScope,
 }: TopBarProps) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [internalScope, setInternalScope] = useState<SearchScope>("folder");
+
+  const currentScope = externalScope ?? internalScope;
+  const toggleScope = useCallback(() => {
+    if (externalToggleScope) {
+      externalToggleScope();
+    } else {
+      setInternalScope((prev) => toggleScopeUtil(prev));
+    }
+  }, [externalToggleScope]);
 
   const breadcrumbs = useMemo(() => getBreadcrumbs(currentPath, t), [currentPath, t]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && searchQuery.trim()) {
-      onSearch(searchQuery.trim());
+      const targetScope = determineSearchScope({
+        isShiftKey: e.shiftKey,
+        activeScope: currentScope,
+      });
+      onSearch(searchQuery.trim(), targetScope);
       setSearchQuery("");
     }
   };
@@ -47,7 +114,6 @@ export function TopBar({
     }
     e.stopPropagation();
   }, []);
-
 
   const isInSearch = isSearchPath(currentPath);
 
@@ -62,7 +128,6 @@ export function TopBar({
       onClick={(e) => e.stopPropagation()}
       onContextMenu={handleContextMenu}
     >
-
       <div 
         className="nav-buttons-group"
         onDoubleClick={(e) => e.stopPropagation()}
@@ -139,21 +204,39 @@ export function TopBar({
       </div>
 
       <div 
-        className="search-container" 
+        className={`search-container ${everythingEnabled ? "has-scope-btn" : ""}`} 
         onMouseDown={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
       >
+        {everythingEnabled ? (
+          <button
+            type="button"
+            className={`search-scope-btn is-${currentScope}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleScope();
+            }}
+            title={getSearchScopeTooltip(currentScope, t)}
+            data-testid="search-scope-btn"
+          >
+            {currentScope === "folder" ? (
+              <FolderIcon />
+            ) : (
+              <GlobeIcon />
+            )}
+          </button>
+        ) : (
+          <FolderIcon className="search-icon" />
+        )}
         <input 
           type="text" 
           className="search-input" 
-          placeholder={t('common.search_placeholder') || "検索..."}
+          placeholder={getSearchPlaceholder(currentScope, everythingEnabled, t)}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={handleSearchKeyDown}
         />
-        <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-        </svg>
       </div>
     </header>
   );

@@ -68,3 +68,6 @@ export interface ImageInfo {
   order: string;
   load_time_ms: number;
 }
+
+export type SearchScope = "folder" | "everything";
+

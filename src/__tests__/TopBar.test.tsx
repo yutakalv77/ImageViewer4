@@ -76,7 +76,7 @@ describe('TopBar', () => {
     fireEvent.change(searchInput, { target: { value: 'cat' } });
     fireEvent.keyDown(searchInput, { key: 'Enter' });
 
-    expect(defaultProps.onSearch).toHaveBeenCalledWith('cat');
+    expect(defaultProps.onSearch).toHaveBeenCalledWith('cat', 'folder');
   });
 
   it('背景のダブルクリックで onMaximize が呼ばれ、ドラッグで onDrag が呼ばれること', () => {
@@ -160,5 +160,61 @@ describe('TopBar', () => {
     expect(preventDefaultSpy).not.toHaveBeenCalled();
     expect(parentContextMenu).not.toHaveBeenCalled();
   });
+
+  it('検索バーに長い文字列を入力しても正しく入力値が保持され、Enterで検索できること', () => {
+    render(<TopBar {...defaultProps} />);
+    const searchInput = screen.getByPlaceholderText('検索...');
+    const longQuery = '長い検索キーワード'.repeat(30);
+    fireEvent.change(searchInput, { target: { value: longQuery } });
+    expect((searchInput as HTMLInputElement).value).toBe(longQuery);
+
+    fireEvent.keyDown(searchInput, { key: 'Enter' });
+    expect(defaultProps.onSearch).toHaveBeenCalledWith(longQuery, 'folder');
+  });
+
+  it('everythingEnabled が false の場合、スコープ切替ボタンが表示されずフォルダアイコンが表示されること', () => {
+    const { container } = render(<TopBar {...defaultProps} everythingEnabled={false} />);
+    expect(screen.queryByTestId('search-scope-btn')).toBeNull();
+    const searchIcon = container.querySelector('.search-icon');
+    expect(searchIcon).not.toBeNull();
+    expect(screen.getByTestId('search-folder-icon')).toBeInTheDocument();
+  });
+
+  it('everythingEnabled が true の場合、スコープ切替ボタンが表示され、クリックでトグルできること', () => {
+    const onToggleSearchScope = vi.fn();
+    render(
+      <TopBar 
+        {...defaultProps} 
+        everythingEnabled={true} 
+        searchScope="folder" 
+        onToggleSearchScope={onToggleSearchScope} 
+      />
+    );
+
+    const scopeBtn = screen.getByTestId('search-scope-btn');
+    expect(scopeBtn).toBeInTheDocument();
+    expect(scopeBtn.classList.contains('is-folder')).toBe(true);
+
+    fireEvent.click(scopeBtn);
+    expect(onToggleSearchScope).toHaveBeenCalledTimes(1);
+  });
+
+  it('Shift+Enter で反対のスコープで検索が実行されること', () => {
+    render(
+      <TopBar 
+        {...defaultProps} 
+        everythingEnabled={true} 
+        searchScope="folder" 
+      />
+    );
+
+    const searchInput = screen.getByPlaceholderText('common.search_placeholder_folder');
+    fireEvent.change(searchInput, { target: { value: 'test' } });
+
+    // Shift + Enter で folder から everything へ切り替わって検索される
+    fireEvent.keyDown(searchInput, { key: 'Enter', shiftKey: true });
+    expect(defaultProps.onSearch).toHaveBeenCalledWith('test', 'everything');
+  });
 });
+
 

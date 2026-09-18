@@ -74,6 +74,12 @@
     "nav_up": "Go up",
     "nav_exit_search": "Exit search and go back",
     "search_placeholder": "Search...",
+    "search_placeholder_folder": "Search folder... (Shift+Enter: Everywhere)",
+    "search_placeholder_everything": "Everything search... (Shift+Enter: Folder)",
+    "search_scope_folder": "Folder",
+    "search_scope_everything": "Everything",
+    "search_scope_folder_tooltip": "Searching current folder (Click to switch to Everything)",
+    "search_scope_everything_tooltip": "Searching with Everything (Click to switch to folder)",
     "reading_direction": "Reading Direction"
   },
   "context_menu": {

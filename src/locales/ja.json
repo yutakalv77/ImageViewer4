@@ -74,6 +74,12 @@
     "nav_up": "1つ上の階層へ",
     "nav_exit_search": "検索を終了して戻る",
     "search_placeholder": "検索...",
+    "search_placeholder_folder": "フォルダ内を検索... (Shift+Enterで全体)",
+    "search_placeholder_everything": "Everything全体検索... (Shift+Enterでフォルダ内)",
+    "search_scope_folder": "フォルダ内",
+    "search_scope_everything": "Everything",
+    "search_scope_folder_tooltip": "現在のフォルダ内を検索中（クリックでEverything全体検索に切替）",
+    "search_scope_everything_tooltip": "Everythingで全体検索中（クリックでフォルダ内検索に切替）",
     "reading_direction": "読み方向"
   },
   "context_menu": {
