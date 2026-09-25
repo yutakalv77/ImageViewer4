@@ -25,11 +25,51 @@ const mockWindowInstance = {
   startResizeDragging: vi.fn(() => Promise.resolve()),
   unmaximize: vi.fn(() => Promise.resolve()),
   onResized: vi.fn(() => Promise.resolve(() => {})),
+  outerPosition: vi.fn(() => Promise.resolve({ x: 100, y: 150 })),
+  outerSize: vi.fn(() => Promise.resolve({ width: 800, height: 600 })),
+  setPosition: vi.fn(() => Promise.resolve()),
+  setSize: vi.fn(() => Promise.resolve()),
 };
 
-vi.mock("@tauri-apps/api/window", () => ({
-  getCurrentWindow: vi.fn(() => mockWindowInstance),
-}));
+vi.mock("@tauri-apps/api/window", () => {
+  const defaultMonitor = {
+    name: "Primary",
+    size: { width: 1920, height: 1080 },
+    position: { x: 0, y: 0 },
+    workArea: {
+      position: { x: 0, y: 0 },
+      size: { width: 1920, height: 1040 },
+    },
+    scaleFactor: 1,
+  };
+  return {
+    getCurrentWindow: vi.fn(() => mockWindowInstance),
+    currentMonitor: vi.fn(() => Promise.resolve(defaultMonitor)),
+    primaryMonitor: vi.fn(() => Promise.resolve(defaultMonitor)),
+  };
+});
+
+vi.mock("@tauri-apps/api/dpi", () => {
+  class PhysicalPosition {
+    type = "Physical";
+    x: number;
+    y: number;
+    constructor(x: number, y: number) {
+      this.x = x;
+      this.y = y;
+    }
+  }
+  class PhysicalSize {
+    type = "Physical";
+    width: number;
+    height: number;
+    constructor(width: number, height: number) {
+      this.width = width;
+      this.height = height;
+    }
+  }
+  return { PhysicalPosition, PhysicalSize };
+});
 
 vi.mock("@tauri-apps/plugin-os", () => ({
   type: vi.fn(() => "windows"),

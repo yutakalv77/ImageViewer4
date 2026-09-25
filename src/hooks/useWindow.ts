@@ -1,10 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { getCurrentWindow, currentMonitor, primaryMonitor } from "@tauri-apps/api/window";
+import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { useOs } from "./useOs";
+import {
+  calculateVerticalFitBounds,
+  PrevVerticalBounds,
+  WindowBounds,
+  WorkArea,
+} from "../utils/windowBoundsUtils";
 
 export function useWindow() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const prevVerticalBoundsRef = useRef<PrevVerticalBounds | null>(null);
   const os = useOs();
   const appWindow = getCurrentWindow();
 
@@ -123,6 +131,73 @@ export function useWindow() {
     }
   }, [appWindow]);
 
+  const toggleVerticalMaximize = useCallback(async () => {
+    try {
+      if (isMaximized || isFullscreen) return;
+
+      let workArea: WorkArea | null = null;
+      let monitor = typeof currentMonitor === "function" ? await currentMonitor() : null;
+      if (!monitor && typeof primaryMonitor === "function") {
+        monitor = await primaryMonitor();
+      }
+
+      if (monitor?.workArea) {
+        workArea = {
+          x: monitor.workArea.position.x,
+          y: monitor.workArea.position.y,
+          width: monitor.workArea.size.width,
+          height: monitor.workArea.size.height,
+        };
+      }
+
+      if (!workArea) {
+        return;
+      }
+
+      const [pos, size] = await Promise.all([
+        typeof appWindow?.outerPosition === "function" ? appWindow.outerPosition() : Promise.resolve(null),
+        typeof appWindow?.outerSize === "function" ? appWindow.outerSize() : Promise.resolve(null),
+      ]);
+
+      if (!pos || !size) return;
+
+      const currentBounds: WindowBounds = {
+        x: pos.x,
+        y: pos.y,
+        width: size.width,
+        height: size.height,
+      };
+
+      const result = calculateVerticalFitBounds(
+        currentBounds,
+        workArea,
+        prevVerticalBoundsRef.current
+      );
+
+      prevVerticalBoundsRef.current = result.nextPrevBounds;
+
+      if (result.action === "restore") {
+        // 復元（縮小）時は先にサイズを小さくしてから位置を移動し、画面下端へのはみ出しを防止
+        if (typeof appWindow?.setSize === "function") {
+          await appWindow.setSize(new PhysicalSize(result.nextBounds.width, result.nextBounds.height));
+        }
+        if (typeof appWindow?.setPosition === "function") {
+          await appWindow.setPosition(new PhysicalPosition(result.nextBounds.x, result.nextBounds.y));
+        }
+      } else {
+        // 垂直フィット（拡大）時は先に上端へ移動してから高さを広げ、画面下端へのはみ出しを防止
+        if (typeof appWindow?.setPosition === "function") {
+          await appWindow.setPosition(new PhysicalPosition(result.nextBounds.x, result.nextBounds.y));
+        }
+        if (typeof appWindow?.setSize === "function") {
+          await appWindow.setSize(new PhysicalSize(result.nextBounds.width, result.nextBounds.height));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to toggle vertical maximize:", err);
+    }
+  }, [appWindow, isMaximized, isFullscreen]);
+
   const startResizing = useCallback((direction: string) => {
     // @ts-ignore
     appWindow.startResizeDragging(direction);
@@ -137,6 +212,7 @@ export function useWindow() {
     isFullscreen,
     handleDrag,
     toggleMaximize,
+    toggleVerticalMaximize,
     toggleFullscreen,
     setFullscreen,
     startResizing,
