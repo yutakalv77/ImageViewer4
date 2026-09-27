@@ -18,3 +18,14 @@ export function formatBytes(bytes: number, decimals: number = 2): string {
   const value = (bytes / Math.pow(k, safeI)).toFixed(dm);
   return `${value} ${sizes[safeI]}`;
 }
+
+/**
+ * Formats a timestamp, date string, or Date object into a locale string.
+ * Returns an empty string if invalid or falsy.
+ */
+export function formatDate(date: number | string | Date | null | undefined): string {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString();
+}

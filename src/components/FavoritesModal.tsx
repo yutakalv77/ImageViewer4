@@ -1,96 +1,151 @@
-import { useState, useEffect } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { FavoriteEntry } from "../types";
-import { useFileSystemContext } from "../context/FileSystemContext";
-import { useUIContext } from "../context/UIContext";
+import { FavoriteSortKey, SortOrder } from "../types";
+import { SettingButton } from "./settings/primitives";
+import { ModalWindow } from "./ModalWindow";
+import { useFavoritesModal } from "../hooks/useFavoritesModal";
+import { formatDate } from "../utils/formatUtils";
 import "./FavoritesModal.css";
 
-export function FavoritesModal() {
-  const { t } = useTranslation();
-  const { 
-    favorites, updateAllFavorites, loadDirectory 
-  } = useFileSystemContext();
-  const { 
-    isFavoritesOpen, setIsFavoritesOpen, setViewerState 
-  } = useUIContext();
+const MODAL_INITIAL_SIZE = { w: 800, h: 600 };
+const MODAL_MIN_SIZE = { w: 400, h: 300 };
 
-  const [tempFavorites, setTempFavorites] = useState<FavoriteEntry[]>([]);
+interface SortableHeaderProps {
+  label: string;
+  columnKey: FavoriteSortKey;
+  currentSortKey: FavoriteSortKey | null;
+  sortOrder: SortOrder;
+  onSort: (key: FavoriteSortKey) => void;
+}
 
-  useEffect(() => {
-    if (isFavoritesOpen) {
-      setTempFavorites([...favorites]);
+function SortableHeader({
+  label,
+  columnKey,
+  currentSortKey,
+  sortOrder,
+  onSort,
+}: SortableHeaderProps) {
+  const isSorted = currentSortKey === columnKey;
+  const ariaSort = isSorted
+    ? sortOrder === "asc"
+      ? "ascending"
+      : "descending"
+    : "none";
+
+  const handleKeyDown = (e: ReactKeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSort(columnKey);
     }
-  }, [isFavoritesOpen, favorites]);
-
-  if (!isFavoritesOpen) return null;
-
-  const onClose = () => setIsFavoritesOpen(false);
-
-  const handleRemove = (path: string) => {
-    setTempFavorites(prev => prev.filter(f => f.path !== path));
-  };
-
-  const handleNavigate = (path: string) => {
-    setViewerState({ isOpen: false, currentIndex: -1 });
-    loadDirectory(path);
-    onClose();
-  };
-
-  const handleOk = () => {
-    updateAllFavorites(tempFavorites);
-    onClose();
   };
 
   return (
-    <div className="settings-overlay favorites-overlay" onClick={onClose}>
-      <div className="settings-modal favorites-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="settings-header">
-          <h2>{t('favorites.title')}</h2>
-          <button className="close-button" onClick={onClose}>&times;</button>
-        </div>
-        
-        <div className="settings-body">
-          <div className="favorites-list-container">
-            {tempFavorites.length > 0 ? (
-              <table className="favorites-table">
-                <thead>
-                  <tr>
-                    <th>{t('common.path')}</th>
-                    <th>{t('common.date')}</th>
-                    <th>{t('common.operation')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tempFavorites.map((fav) => (
-                    <tr key={fav.path}>
-                      <td 
-                        className="fav-path" 
-                        onClick={() => handleNavigate(fav.path)}
-                        title={t('favorites.reveal_hint')}
-                      >
-                        {fav.path}
-                      </td>
-                      <td className="fav-date">
-                        {new Date(fav.addedAt).toLocaleString()}
-                      </td>
-                      <td>
-                        <button className="fav-remove-btn" onClick={() => handleRemove(fav.path)}>{t('common.delete')}</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="empty-msg">{t('favorites.empty')}</div>
-            )}
-          </div>
-        </div>
+    <th
+      className="sortable-th"
+      onClick={() => onSort(columnKey)}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="columnheader"
+      aria-sort={ariaSort}
+    >
+      <div className="th-content">
+        <span>{label}</span>
+        {isSorted && (
+          <span className="sort-indicator" aria-hidden="true">
+            {sortOrder === "asc" ? " ▲" : " ▼"}
+          </span>
+        )}
+      </div>
+    </th>
+  );
+}
 
-        <div className="settings-footer">
-          <button className="settings-button" onClick={onClose}>{t('common.cancel')}</button>
-          <button className="settings-button primary" onClick={handleOk}>{t('common.ok')}</button>
+export function FavoritesModal() {
+  const { t } = useTranslation();
+  const {
+    isOpen,
+    favorites,
+    sortKey,
+    sortOrder,
+    onSort,
+    onClose,
+    onRemove,
+    onNavigate,
+    onOk,
+  } = useFavoritesModal();
+
+  if (!isOpen) return null;
+
+  return (
+    <ModalWindow
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t("favorites.title")}
+      initialSize={MODAL_INITIAL_SIZE}
+      minSize={MODAL_MIN_SIZE}
+      className="favorites-modal"
+      footer={
+        <>
+          <SettingButton onClick={onClose}>{t("common.cancel")}</SettingButton>
+          <SettingButton variant="primary" onClick={onOk}>
+            {t("common.ok")}
+          </SettingButton>
+        </>
+      }
+    >
+      <div className="settings-body">
+        <div className="favorites-list-container">
+          {favorites.length > 0 ? (
+            <table className="favorites-table">
+              <thead>
+                <tr>
+                  <SortableHeader
+                    label={t("common.path")}
+                    columnKey="path"
+                    currentSortKey={sortKey}
+                    sortOrder={sortOrder}
+                    onSort={onSort}
+                  />
+                  <SortableHeader
+                    label={t("common.date")}
+                    columnKey="addedAt"
+                    currentSortKey={sortKey}
+                    sortOrder={sortOrder}
+                    onSort={onSort}
+                  />
+                  <th>{t("common.operation")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {favorites.map((fav) => (
+                  <tr key={fav.path}>
+                    <td className="fav-path" title={fav.path}>
+                      {fav.path}
+                    </td>
+                    <td className="fav-date">{formatDate(fav.addedAt)}</td>
+                    <td className="fav-actions">
+                      <button
+                        className="fav-show-btn"
+                        onClick={() => onNavigate(fav.path)}
+                      >
+                        {t("common.show")}
+                      </button>
+                      <button
+                        className="fav-remove-btn"
+                        onClick={() => onRemove(fav.path)}
+                      >
+                        {t("common.delete")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="empty-msg">{t("favorites.empty")}</div>
+          )}
         </div>
       </div>
-    </div>
+    </ModalWindow>
   );
 }

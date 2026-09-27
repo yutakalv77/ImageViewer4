@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { sortEntries, getFileExtension } from '../../utils/sortUtils';
-import { EntryItem } from '../../types';
+import { sortEntries, getFileExtension, sortFavorites } from '../../utils/sortUtils';
+import { EntryItem, FavoriteEntry } from '../../types';
 
 describe('sortUtils', () => {
   const sampleEntries: EntryItem[] = [
@@ -99,5 +99,50 @@ describe('sortUtils', () => {
 
     const desc = sortEntries(sampleEntries, 'type', 'desc');
     expect(desc[2].name).toBe('photo2.png'); // png
+  });
+
+  describe('sortFavorites', () => {
+    const favorites: FavoriteEntry[] = [
+      { path: 'C:/folder2', addedAt: 2000 },
+      { path: 'C:/folder10', addedAt: 1000 },
+      { path: 'C:/folder1', addedAt: 3000 },
+    ];
+
+    it('パス順（自然順）で昇順ソートされること', () => {
+      const sorted = sortFavorites(favorites, 'path', 'asc');
+      expect(sorted.map(f => f.path)).toEqual([
+        'C:/folder1',
+        'C:/folder2',
+        'C:/folder10',
+      ]);
+    });
+
+    it('パス順（自然順）で降順ソートされること', () => {
+      const sorted = sortFavorites(favorites, 'path', 'desc');
+      expect(sorted.map(f => f.path)).toEqual([
+        'C:/folder10',
+        'C:/folder2',
+        'C:/folder1',
+      ]);
+    });
+
+    it('登録日時順で昇順ソートされること', () => {
+      const sorted = sortFavorites(favorites, 'addedAt', 'asc');
+      expect(sorted.map(f => f.addedAt)).toEqual([1000, 2000, 3000]);
+    });
+
+    it('登録日時順で降順ソートされること', () => {
+      const sorted = sortFavorites(favorites, 'addedAt', 'desc');
+      expect(sorted.map(f => f.addedAt)).toEqual([3000, 2000, 1000]);
+    });
+
+    it('登録日時が等しい場合にパス順でタイブレークされること', () => {
+      const sameDates: FavoriteEntry[] = [
+        { path: 'B', addedAt: 1000 },
+        { path: 'A', addedAt: 1000 },
+      ];
+      const sortedAsc = sortFavorites(sameDates, 'addedAt', 'asc');
+      expect(sortedAsc.map(f => f.path)).toEqual(['A', 'B']);
+    });
   });
 });

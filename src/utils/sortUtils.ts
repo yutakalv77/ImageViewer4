@@ -1,4 +1,4 @@
-import { EntryItem, SortBy, SortOrder } from "../types";
+import { EntryItem, FavoriteEntry, FavoriteSortKey, SortBy, SortOrder } from "../types";
 
 export function getFileExtension(filename: string): string {
   const dotIndex = filename.lastIndexOf(".");
@@ -72,6 +72,33 @@ export function sortEntries(
       return comparison;
     }
 
+    return comparison * orderMultiplier;
+  });
+
+  return sorted;
+}
+
+/**
+ * FavoriteEntry 配列を指定されたキーと順序でソートする純粋関数
+ */
+export function sortFavorites(
+  favorites: FavoriteEntry[],
+  sortBy: FavoriteSortKey = "path",
+  sortOrder: SortOrder = "asc"
+): FavoriteEntry[] {
+  const sorted = [...favorites];
+  const orderMultiplier = sortOrder === "asc" ? 1 : -1;
+
+  sorted.sort((a, b) => {
+    let comparison = 0;
+    if (sortBy === "path") {
+      comparison = a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: "base" });
+    } else if (sortBy === "addedAt") {
+      comparison = a.addedAt - b.addedAt;
+      if (comparison === 0) {
+        comparison = a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: "base" });
+      }
+    }
     return comparison * orderMultiplier;
   });
 

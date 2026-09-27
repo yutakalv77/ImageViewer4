@@ -32,6 +32,8 @@ export interface FavoriteEntry {
   addedAt: number; // timestamp
 }
 
+export type FavoriteSortKey = "path" | "addedAt";
+
 export type ViewMode = "single" | "spread";
 export type ReadingDirection = "rtl" | "ltr";
 export type ThemeMode = "dark" | "light" | "system";
